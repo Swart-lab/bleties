@@ -22,6 +22,11 @@ parser.add_argument("--sam",
                     type=argparse.FileType("r"), 
                     default=sys.stdin, 
                     help="SAM file containing mapping")
+parser.add_argument("--out",
+                    nargs='?',
+                    type=argparse.FileType("w"),
+                    default=sys.stdout,
+                    help="Path to write GFF3 file")
 parser.add_argument("--min_ies_length", # This parameter is hard-coded in the original ParTIES MIRAA
                     type=int,
                     default=25,
@@ -98,4 +103,4 @@ for ctg in sorted(insDict):
                           ".",             # 8 phase
                           ";".join(attr)   # 9 attributes
                           ]
-                print("\t".join(outarr))
+                args.out.write("\t".join(outarr))
