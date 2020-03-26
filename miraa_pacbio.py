@@ -69,10 +69,7 @@ for line in alnfile:
     # linearr = line.split("\t") # Split line by tabs
     pos = int(line.reference_start) + 1 # Convert from 0-based numbering in pysam to 1-based
     rname = line.reference_name
-    # total_mismatch = 0
-    # nmmatch = re.search(r"NM:i:(\d+)", line)
-    # if nmmatch:
-    #     total_mismatch = int(nmmatch.group(1))
+    total_mismatch = line.get_tag("NM")
     cigs = re.findall(r"\d+[\w\=]", line.cigarstring) # Get CIGAR string
     # Initialize counters for how much query or reference seq is consumed
     # TODO: What about hard clipping?
@@ -98,11 +95,10 @@ for line in alnfile:
             ref_consumed += int(cigmatch.group(1))
         if cigmatch.group(2) in ['M', 'I', 'S', '=', 'X']:
             que_consumed += int(cigmatch.group(1))
-    # if int(total_mismatch) - int(total_i) < 0: 
+    if int(total_mismatch) - int(total_i) < 0: 
         # Sanity check - mismatches include inserts, but cannot be fewer than inserts
-        # print ("Uh-oh!")
+        print ("Uh-oh!")
 
-alnfile.close()
 # print(json.dumps(insDict, sort_keys=True, indent = 2))
 
 # Parse the dict and report putative IESs above min coverage
@@ -110,9 +106,14 @@ for ctg in sorted(insDict):
     for ins_start in sorted(insDict[ctg]):
         for ins_len in sorted(insDict[ctg][ins_start]):
             if insDict[ctg][ins_start][ins_len] >= args.min_break_coverage:
+                # Prepare attributes list of key-value pairs
                 attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start),
                         "IES_length="+str(ins_len)
-                       ] # TODO: cigar, average_coverage
+                       ] # TODO: cigar
+                # Get read coverage from BAM file; SAM does not allow random access
+                if aln_mode == "rb":
+                    readcov = alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_start))
+                    attr.append("average_coverage="+str(readcov))
                 outarr = [str(ctg),        # 1 seqid
                           "MILRAA",        # 2 source
                           "segment",       # 3 type
@@ -124,3 +125,5 @@ for ctg in sorted(insDict):
                           ";".join(attr)   # 9 attributes
                           ]
                 args.out.write("\t".join(outarr)+"\n")
+
+alnfile.close()
