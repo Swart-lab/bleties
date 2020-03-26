@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+# MILRAA - Method of Identification by Long Read Alignment Anomalies
 # The MIRAA module in ParTIES uses an alignment of Illumina reads
 # vs somatic genome to look for breakpoints in read alignment
 # This script reimplements the MIRAA workflow for PacBio or other
@@ -15,7 +16,7 @@ import json # for dumping data to debug
 import sys
 from collections import defaultdict
 
-parser = argparse.ArgumentParser(description="MIRAA equivalent for long reads mappings, e.g. PacBio")
+parser = argparse.ArgumentParser(description="MILRAA - MIRAA equivalent for long reads mappings, e.g. PacBio")
 parser.add_argument("--sam",
                     nargs='?', 
                     type=argparse.FileType("r"), 
@@ -36,8 +37,9 @@ parser.add_argument("--max_mismatch", # TODO: Not yet implemented
 args = parser.parse_args()
 
 # dict to store counts of detected inserts
-# keys: contig -> startpos -> endpos -> count
+# keys: contig -> startpos -> ies_length -> count
 insDict = defaultdict(lambda: defaultdict( lambda: defaultdict (int)))
+
 # Open SAM file and parse CIGAR string
 for line in args.sam:
     linearr = line.split("\t") # Split line by tabs
@@ -48,8 +50,6 @@ for line in args.sam:
     if nmmatch:
         total_mismatch = int(nmmatch.group(1))
     cigs = re.findall(r"\d+[\w\=]", linearr[5]) # Get CIGAR string
-    # print(" ".join(cigs))
-    # print(" ".join([str(pos), rname, str(total_mismatch)]))
     # Initialize counters for how much query or reference seq is consumed
     # TODO: What about hard clipping?
     ref_consumed = 0
@@ -67,17 +67,13 @@ for line in args.sam:
             total_i += ins_len # Add up the total insert length 
             if ins_len >= args.min_ies_length: # Check that insert is above min length
                 # Get the start and end positions of the insert
-                ins_pos_start = pos + ref_consumed + 1 # inclusive, 1-based
-                ins_pos_end = pos + ref_consumed + ins_len # inclusive, 1-based
-                insDict[rname][ins_pos_start][ins_pos_end] += 1 # write to dict
+                ins_pos_start = pos + ref_consumed # 1-based, insert is to the right of position
+                insDict[rname][ins_pos_start][ins_len] += 2 # write to dict; counts as 2 because each insert has two ends
         # Count ref and query consumed _after_ the insert has been accounted for
         if cigmatch.group(2) in ['M', 'D', 'N', '=', 'X']:
             ref_consumed += int(cigmatch.group(1))
         if cigmatch.group(2) in ['M', 'I', 'S', '=', 'X']:
             que_consumed += int(cigmatch.group(1))
-    # print("reference sequence consumed = " + str(ref_consumed))
-    # print("query sequence consumed = " + str(que_consumed))
-    # print("total insert = " + str(total_i))
     if int(total_mismatch) - int(total_i) < 0: 
         # Sanity check - mismatches include inserts, but cannot be fewer than inserts
         print ("Uh-oh!")
@@ -87,11 +83,19 @@ for line in args.sam:
 # Parse the dict and report putative IESs above min coverage
 for ctg in sorted(insDict):
     for ins_start in sorted(insDict[ctg]):
-        for ins_end in sorted(insDict[ctg][ins_start]):
-            if insDict[ctg][ins_start][ins_end] >= args.min_break_coverage:
-                outarr = [str(ctg), 
-                          str(ins_start), 
-                          str(ins_end), 
-                          str(int(ins_end) - int(ins_start) + 1), 
-                          str(insDict[ctg][ins_start][ins_end])]
+        for ins_len in sorted(insDict[ctg][ins_start]):
+            if insDict[ctg][ins_start][ins_len] >= args.min_break_coverage:
+                attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start),
+                        "IES_length="+str(ins_len)
+                       ] # TODO: cigar, average_coverage
+                outarr = [str(ctg),        # 1 seqid
+                          "MILRAA",        # 2 source
+                          "segment",       # 3 type
+                          str(ins_start),  # 4 start
+                          str(ins_start),  # 5 end
+                          str(insDict[ctg][ins_start][ins_len]), # 6 score - in this case, breakpoint counts
+                          ".",             # 7 strand
+                          ".",             # 8 phase
+                          ";".join(attr)   # 9 attributes
+                          ]
                 print("\t".join(outarr))
