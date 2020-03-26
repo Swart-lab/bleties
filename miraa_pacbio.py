@@ -14,15 +14,16 @@ import re
 import argparse
 import json # for dumping data to debug
 import sys
+import pysam
 from collections import defaultdict
 
 parser = argparse.ArgumentParser(description="MILRAA - MIRAA equivalent for long reads mappings, e.g. PacBio")
 parser.add_argument("--sam",
-                    nargs='?', 
-                    type=argparse.FileType("r"), 
-                    default=sys.stdin, 
-                    help="SAM file containing mapping")
+                    help="SAM file containing mapping, requires header")
+parser.add_argument("--bam",
+                    help="BAM file containing mapping, must be sorted and indexed")
 parser.add_argument("--out",
+                    "-o",
                     nargs='?',
                     type=argparse.FileType("w"),
                     default=sys.stdout,
@@ -41,20 +42,38 @@ parser.add_argument("--max_mismatch", # TODO: Not yet implemented
                     help="Maximum mismatch in the alignment for a read to be used")
 args = parser.parse_args()
 
+aln_filename = "-"
+aln_mode = "r"
+
+# Check that only either SAM or BAM specified
+if args.sam:
+    if args.bam:
+        sys.exit("Error: Specify either SAM or BAM input, not both")
+    else:
+        aln_filename = args.sam
+        aln_mode = "r"
+if args.bam:
+    if args.sam:
+        sys.exit ("Error: Specify either SAM or BAM input, not both")
+    else:
+        aln_filename=args.bam
+        aln_mode = "rb"
+
 # dict to store counts of detected inserts
 # keys: contig -> startpos -> ies_length -> count
 insDict = defaultdict(lambda: defaultdict( lambda: defaultdict (int)))
 
 # Open SAM file and parse CIGAR string
-for line in args.sam:
-    linearr = line.split("\t") # Split line by tabs
-    pos = int(linearr[3])
-    rname = linearr[2]
-    total_mismatch = 0
-    nmmatch = re.search(r"NM:i:(\d+)", line)
-    if nmmatch:
-        total_mismatch = int(nmmatch.group(1))
-    cigs = re.findall(r"\d+[\w\=]", linearr[5]) # Get CIGAR string
+alnfile = pysam.AlignmentFile(aln_filename, aln_mode)
+for line in alnfile:
+    # linearr = line.split("\t") # Split line by tabs
+    pos = int(line.reference_start) + 1 # Convert from 0-based numbering in pysam to 1-based
+    rname = line.reference_name
+    # total_mismatch = 0
+    # nmmatch = re.search(r"NM:i:(\d+)", line)
+    # if nmmatch:
+    #     total_mismatch = int(nmmatch.group(1))
+    cigs = re.findall(r"\d+[\w\=]", line.cigarstring) # Get CIGAR string
     # Initialize counters for how much query or reference seq is consumed
     # TODO: What about hard clipping?
     ref_consumed = 0
@@ -79,10 +98,11 @@ for line in args.sam:
             ref_consumed += int(cigmatch.group(1))
         if cigmatch.group(2) in ['M', 'I', 'S', '=', 'X']:
             que_consumed += int(cigmatch.group(1))
-    if int(total_mismatch) - int(total_i) < 0: 
+    # if int(total_mismatch) - int(total_i) < 0: 
         # Sanity check - mismatches include inserts, but cannot be fewer than inserts
-        print ("Uh-oh!")
+        # print ("Uh-oh!")
 
+alnfile.close()
 # print(json.dumps(insDict, sort_keys=True, indent = 2))
 
 # Parse the dict and report putative IESs above min coverage
@@ -103,4 +123,4 @@ for ctg in sorted(insDict):
                           ".",             # 8 phase
                           ";".join(attr)   # 9 attributes
                           ]
-                args.out.write("\t".join(outarr))
+                args.out.write("\t".join(outarr)+"\n")
