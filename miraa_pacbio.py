@@ -21,15 +21,19 @@ parser.add_argument("--sam",
                     type=argparse.FileType("r"), 
                     default=sys.stdin, 
                     help="SAM file containing mapping")
-
+parser.add_argument("--min_ies_length", # This parameter is hard-coded in the original ParTIES MIRAA
+                    type=int,
+                    default=25,
+                    help="Minimum length of candidate IES")
+parser.add_argument("--min_break_coverage",
+                    type=int,
+                    default=10,
+                    help="Minimum number of partially aligned reads to define a breakpoint")
+parser.add_argument("--max_mismatch", # TODO: Not yet implemented
+                    type=int,
+                    default=10,
+                    help="Maximum mismatch in the alignment for a read to be used")
 args = parser.parse_args()
-
-# global vars
-minInsertLen = 25 # Minimum insert length to consider for candidate IES feature
-minBreaksCov = 10 # Minimum coverage of a breakpoint to be reported
-
-# TODO: Not yet implemented:
-maxMismatch = 10 # Maximum number of mismatches in an alignment (excluding insertions) before rejecting
 
 # dict to store counts of detected inserts
 # keys: contig -> startpos -> endpos -> count
@@ -61,7 +65,7 @@ for line in args.sam:
         if cigmatch.group(2) == "I": # If insert operation,
             ins_len = int(cigmatch.group(1)) # Length of the current insert
             total_i += ins_len # Add up the total insert length 
-            if ins_len >= minInsertLen: # Check that insert is above min length
+            if ins_len >= args.min_ies_length: # Check that insert is above min length
                 # Get the start and end positions of the insert
                 ins_pos_start = pos + ref_consumed + 1 # inclusive, 1-based
                 ins_pos_end = pos + ref_consumed + ins_len # inclusive, 1-based
@@ -84,7 +88,7 @@ for line in args.sam:
 for ctg in sorted(insDict):
     for ins_start in sorted(insDict[ctg]):
         for ins_end in sorted(insDict[ctg][ins_start]):
-            if insDict[ctg][ins_start][ins_end] > minBreaksCov:
+            if insDict[ctg][ins_start][ins_end] >= args.min_break_coverage:
                 outarr = [str(ctg), 
                           str(ins_start), 
                           str(ins_end), 
