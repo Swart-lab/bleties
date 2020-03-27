@@ -74,7 +74,6 @@ for line in alnfile:
     total_mismatch = line.get_tag("NM") # Get number of mismatches
     cigs = re.findall(r"\d+[\w\=]", line.cigarstring) # Get CIGAR string
     # Initialize counters for how much query or reference seq is consumed
-    # TODO: What about hard clipping?
     ref_consumed = 0
     que_consumed = 0
     total_i = 0 
