@@ -59,8 +59,8 @@ if args.bam:
         aln_mode = "rb"
 
 # dict to store counts of detected inserts keyed by evidence type
-# keys: contig -> startpos -> evidence type -> count
-insDict = defaultdict(lambda: defaultdict( lambda: defaultdict (int)))
+# keys: contig -> startpos -> endpos -> evidence type -> count
+insDict = defaultdict(lambda: defaultdict( lambda: defaultdict ( lambda: defaultdict(int))))
 # dcit to store counts of detected inserts keyed by insert length
 # keys: contig -> startpos -> ies_length -> count
 insLenDict = defaultdict(lambda: defaultdict( lambda: defaultdict (int)))
@@ -81,11 +81,11 @@ for line in alnfile:
     leftclipmatch = re.match(r"(\d+)[HS](\d+)M", line.cigarstring)
     rightclipmatch = re.search(r"(\d+)M(\d+)[HS]$", line.cigarstring)
     if leftclipmatch:
-        insDict[rname][pos]['HSM'] += 1
+        insDict[rname][pos][pos]['HSM'] += 1
     if rightclipmatch:
         refconsumematches = re.findall(r"(\d+)[MDN\=X]", line.cigarstring) # find all ref-consuming operations
         rightclip_refconsumed = sum([int(refconsumematch) for refconsumematch in refconsumematches])
-        insDict[rname][pos + rightclip_refconsumed]['MHS'] += 1
+        insDict[rname][pos + rightclip_refconsumed][pos + rightclip_refconsumed]['MHS'] += 1
     # Look for inserts that are completely spanned by the read (i.e. I operations)
     for cig in cigs: # for each cig in the string
         cigmatch = re.match(r"(\d+)([\w\=])",cig) # Get number and operation
@@ -101,7 +101,14 @@ for line in alnfile:
                 # Get the start and end positions of the insert
                 ins_pos_start = pos + ref_consumed # 1-based, insert is to the right of position
                 insLenDict[rname][ins_pos_start][ins_len] += 1 # record the putative IES length spanned by the read
-                insDict[rname][ins_pos_start]["I"] += 2 # record as "I" type count, like MIRAA; counts as 2 because each insert has two ends
+                insDict[rname][ins_pos_start][ins_pos_start]["I"] += 1 # record as "I" type count, count as 1 unlike MIRAA
+        if cigmatch.group(2) == "D": # If delete operation,
+            del_len = int(cigmatch.group(1)) # Length of current deletion
+            if del_len >= args.min_ies_length:
+                # Get start and end pos of deletion
+                del_pos_start = pos + ref_consumed # 1-based, insert starts to right of position
+                del_pos_end = pos + ref_consumed + del_len # 1-based
+                insDict[rname][del_pos_start][del_pos_end]["D"] += 1
         # Count ref and query consumed _after_ the insert has been accounted for
         if cigmatch.group(2) in ['M', 'D', 'N', '=', 'X']:
             ref_consumed += int(cigmatch.group(1))
@@ -116,30 +123,61 @@ for line in alnfile:
 # Parse the dict and report putative IESs above min coverage
 # We only check breakpoints which are completely spanned by a read ("I" type)
 # however we also report supporting counts from HSM and MSH type mappings
-for ctg in sorted(insLenDict):
-    for ins_start in sorted(insLenDict[ctg]):
-        for ins_len in sorted(insLenDict[ctg][ins_start]):
-            if insLenDict[ctg][ins_start][ins_len] >= args.min_break_coverage:
-                # Prepare attributes list of key-value pairs
-                attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start),
-                        "IES_length="+str(ins_len)
-                       ]
-                # Extend the cigar evidence counts
-                attr.extend(["cigar="+cigartype+" "+str(insDict[ctg][ins_start][cigartype]) for cigartype in sorted(insDict[ctg][ins_start])])
-                # Get read coverage from BAM file; SAM does not allow random access
-                if aln_mode == "rb":
-                    readcov = alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_start))
-                    attr.append("average_coverage="+str(readcov))
-                outarr = [str(ctg),        # 1 seqid
-                          "MILRAA",        # 2 source
-                          "segment",       # 3 type
-                          str(ins_start),  # 4 start
-                          str(ins_start),  # 5 end
-                          str(insLenDict[ctg][ins_start][ins_len]), # 6 score - in this case, breakpoint counts
-                          ".",             # 7 strand
-                          ".",             # 8 phase
-                          ";".join(attr)   # 9 attributes
-                          ]
-                args.out.write("\t".join(outarr)+"\n")
+for ctg in sorted(insDict):
+    for ins_start in sorted(insDict[ctg]):
+        for ins_end in sorted(insDict[ctg][ins_start]):
+            if insDict[ctg][ins_start][ins_end].get("I"): # If there is an insert 
+                for ins_len in sorted(insLenDict[ctg][ins_start]):
+                    if insLenDict[ctg][ins_start][ins_len] >= args.min_break_coverage:
+                        # Prepare attributes list of key-value pairs
+                        attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start)+"_"+str(ins_end),
+                                "IES_length="+str(ins_len)
+                               ]
+                        # Extend the cigar evidence counts
+                        attr.extend(["cigar="+cigartype+" "+str(insDict[ctg][ins_start][ins_end][cigartype]) 
+                                     for cigartype in sorted(insDict[ctg][ins_start][ins_end])
+                                    ])
+                        # Get read coverage from BAM file; SAM does not allow random access
+                        if aln_mode == "rb":
+                            readcov = alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end))
+                            attr.append("average_coverage="+str(readcov))
+                        outarr = [str(ctg),        # 1 seqid
+                                  "MILRAA",        # 2 source
+                                  "segment",       # 3 type
+                                  str(ins_start),  # 4 start
+                                  str(ins_end),  # 5 end
+                                  str(insLenDict[ctg][ins_start][ins_len]), # 6 score - in this case, breakpoint counts
+                                  ".",             # 7 strand
+                                  ".",             # 8 phase
+                                  ";".join(attr)   # 9 attributes
+                                  ]
+                        args.out.write("\t".join(outarr)+"\n")
+            if insDict[ctg][ins_start][ins_end].get("D"): # If there is a deletion
+                if insDict[ctg][ins_start][ins_end]["D"] >= args.min_break_coverage:
+                    ins_len = int(ins_end) - int(ins_start)
+                    attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start)+"_"+str(ins_end),
+                            "IES_length="+str(ins_len)
+                           ]
+                    attr.append("cigar=D "+str(insDict[ctg][ins_start][ins_end]['D']))
+                    # Look for left- and rightclips that fall on the deletion boundaries
+                    if insDict[ctg][ins_start][ins_start].get("MHS") and int(insDict[ctg][ins_start][ins_start]["MHS"]) > 0:
+                        attr.append("cigar=MHS "+str(insDict[ctg][ins_start][ins_start]["MHS"]))
+                    if insDict[ctg][ins_end][ins_end].get("HSM") and int(insDict[ctg][ins_end][ins_end]["HSM"]) > 0:
+                        attr.append("cigar=HSM "+str(insDict[ctg][ins_end][ins_end]["HSM"]))
+                    # Add coverage value
+                    if aln_mode == "rb":
+                        readcov = alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end))
+                        attr.append("average_coverage="+str(readcov))
+                    outarr = [str(ctg),        # 1 seqid
+                              "MILRAA",        # 2 source
+                              "segment",       # 3 type
+                              str(ins_start),  # 4 start
+                              str(ins_end),  # 5 end
+                              str(insDict[ctg][ins_start][ins_end]['D']), # 6 score - in this case, breakpoint counts
+                              ".",             # 7 strand
+                              ".",             # 8 phase
+                              ";".join(attr)   # 9 attributes
+                              ]
+                    args.out.write("\t".join(outarr)+"\n")
 
 alnfile.close()
