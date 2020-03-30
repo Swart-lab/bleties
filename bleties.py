@@ -66,10 +66,33 @@ class IesRecords(object):
     def __init__(self):
         """Constructor creates IesRecords, internaly represented by two dicts"""
         # dict to store counts of detected inserts keyed by evidence type
-        # keys: contig -> startpos -> endpos -> ins_length -> evidence type -> count
-        self._insDict = defaultdict(lambda: defaultdict( lambda: defaultdict ( lambda: defaultdict( lambda: defaultdict(int)))))
+        # keys: contig -> startpos -> endpos -> insert length -> evidence type -> count
+        self._insDict = defaultdict(              # contig
+                lambda: defaultdict(              # startpos
+                    lambda: defaultdict (         # endpos
+                        lambda: defaultdict(      # insert length
+                            lambda: defaultdict(  # evidence type
+                                int)              # count
+                            )
+                        )
+                    )
+                )
 
     def __str__(self):
         """String representation of IesRecords - as a JSON dump"""
         outstr = json.dumps(self._insDict, sort_keys = True, indent = 2)
         return(outstr)
+
+    def addClipsFromCigar(self, rname, cigar, pos):
+        # Look for inserts that are on left or right read ends (i.e. H or S clipping operations)
+        cliparr = getClips(cigar, pos)
+        if len(cliparr) > 0:
+            for (clipstart, clipend, cliptype) in cliparr:
+                self._insDict[rname][clipstart][clipend][0][cliptype] += 1
+
+    def addIndelsFromCigar(self, rname, cigar, pos, minlength):
+        # Look for inserts that are completely spanned by the read (i.e. I operations)
+        indelarr = getIndels(cigar, pos, minlength)
+        if len(indelarr) > 0:
+            for (indelstart, indelend, indellen, indeltype) in indelarr:
+                self._insDict[rname][indelstart][indelend][indellen][indeltype] += 1
