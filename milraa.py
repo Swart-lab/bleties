@@ -65,6 +65,27 @@ insDict = defaultdict(lambda: defaultdict( lambda: defaultdict ( lambda: default
 # keys: contig -> startpos -> ies_length -> count
 insLenDict = defaultdict(lambda: defaultdict( lambda: defaultdict (int)))
 
+def getLeftClips(cigar, pos):
+    """Parse cigar string and alignment position and report left-clipping
+       Return start pos, end pos, and clip type"""
+    # Look for inserts that are on left or right ends of read (i.e. H or S clipping operations)
+    leftclipmatch = re.match(r"(\d+)[HS](\d+)M", cigar)
+    if leftclipmatch:
+        return ((pos, pos, "HSM"))
+    else:
+        return (None, None, None)
+
+def getRightClips(cigar,pos):
+    """Parse cigar string and alignment position and report right-clipping
+       Return start pos, end pos, and clip type"""
+    rightclipmatch = re.search(r"(\d+)M(\d+)[HS]$", cigar)
+    if rightclipmatch:
+        refconsumematches = re.findall(r"(\d+)[MDN\=X]", cigar) # find all ref-consuming operations
+        rightclip_refconsumed = sum([int(refconsumematch) for refconsumematch in refconsumematches])
+        return ((pos + rightclip_refconsumed, pos+rightclip_refconsumed, "MHS"))
+    else:
+        return (None, None, None)
+
 # Open SAM file and parse CIGAR string
 alnfile = pysam.AlignmentFile(aln_filename, aln_mode)
 for line in alnfile:
@@ -78,14 +99,12 @@ for line in alnfile:
     que_consumed = 0
     total_i = 0 
     # Look for inserts that are on left or right ends of read (i.e. H or S clipping operations)
-    leftclipmatch = re.match(r"(\d+)[HS](\d+)M", line.cigarstring)
-    rightclipmatch = re.search(r"(\d+)M(\d+)[HS]$", line.cigarstring)
-    if leftclipmatch:
-        insDict[rname][pos][pos]['HSM'] += 1
-    if rightclipmatch:
-        refconsumematches = re.findall(r"(\d+)[MDN\=X]", line.cigarstring) # find all ref-consuming operations
-        rightclip_refconsumed = sum([int(refconsumematch) for refconsumematch in refconsumematches])
-        insDict[rname][pos + rightclip_refconsumed][pos + rightclip_refconsumed]['MHS'] += 1
+    (lcstart, lcend, lctype) = getLeftClips(line.cigarstring, pos)
+    if lcstart:
+        insDict[rname][lcstart][lcend][lctype] += 1
+    (rcstart, rcend, rctype) = getRightClips(line.cigarstring, pos)
+    if rcstart:
+        insDict[rname][rcstart][rcend][rctype] += 1
     # Look for inserts that are completely spanned by the read (i.e. I operations)
     for cig in cigs: # for each cig in the string
         cigmatch = re.match(r"(\d+)([\w\=])",cig) # Get number and operation
