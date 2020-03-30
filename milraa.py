@@ -80,6 +80,48 @@ def getClips(cigar, pos):
         outarr.append((pos + rightclip_refconsumed, pos+rightclip_refconsumed, "MHS"))
     return(outarr)
 
+def getIndels(cigar, pos, minlength):
+    """Parse cigar string and alignment position and report insertions or deletions
+       Return list of tuples (start pos, end pos, insert length, insertion or deletion)"""
+    outarr = [] # Array to store tuples of results
+    # Lists of reference- and query-consuming operations
+    REFCONSUMING = ['M', 'D', 'N', '=', 'X']
+    QUERYCONSUMING = ['M', 'I', 'S', '=', 'X']
+    # Initialize counters for how much query or reference seq is consumed
+    ref_consumed = 0
+    que_consumed = 0
+    # Split cigar string into individual operations 
+    cigs = re.findall(r"\d+[\w\=]", cigar)
+    for cig in cigs:
+        cigmatch = re.match(r"(\d+)([\w\=])",cig) # Get number and operation
+        # We want to look for insert operations above a min length, 
+        # map their positions on the reference, and count how many reads 
+        # support a given putative insert
+        # This requires that we count the operations that consume reference
+        # and add it to the POS field
+        if cigmatch.group(2) == "I": # If insert operation,
+            ins_len = int(cigmatch.group(1)) # Length of the current insert
+            if ins_len >= minlength: # Check that insert is above min length
+                # Get the start and end positions of the insert
+                ins_pos_start = pos + ref_consumed # 1-based, insert is to the right of position
+                outarr.append((ins_pos_start, ins_pos_start, ins_len, "I"))
+        # We also look for delete operations above a min length
+        # These are already present in the reference, so the "insert length" is 0
+        if cigmatch.group(2) == "D": # If delete operation,
+            del_len = int(cigmatch.group(1)) # Length of current deletion
+            if del_len >= minlength:
+                # Get start and end pos of deletion
+                del_pos_start = pos + ref_consumed # 1-based, insert starts to right of position
+                del_pos_end = pos + ref_consumed + del_len # 1-based
+                outarr.append((del_pos_start, del_pos_end, 0, "D"))
+        # Count ref and query consumed _after_ the insert has been accounted for
+        if cigmatch.group(2) in REFCONSUMING:
+            ref_consumed += int(cigmatch.group(1))
+        if cigmatch.group(2) in QUERYCONSUMING:
+            que_consumed += int(cigmatch.group(1))
+    return(outarr)
+
+
 # Open SAM file and parse CIGAR string
 alnfile = pysam.AlignmentFile(aln_filename, aln_mode)
 for line in alnfile:
@@ -91,43 +133,22 @@ for line in alnfile:
     # Initialize counters for how much query or reference seq is consumed
     ref_consumed = 0
     que_consumed = 0
-    total_i = 0 
+    # total_i = 0 
     # Look for inserts that are on left or right ends of read (i.e. H or S clipping operations)
     cliparr = getClips(line.cigarstring, pos)
     if len(cliparr) > 0:
         for (clipstart, clipend, cliptype) in cliparr:
             insDict[rname][clipstart][clipend][cliptype] += 1
     # Look for inserts that are completely spanned by the read (i.e. I operations)
-    for cig in cigs: # for each cig in the string
-        cigmatch = re.match(r"(\d+)([\w\=])",cig) # Get number and operation
-        # We want to look for insert operations above a min length, 
-        # map their positions on the reference, and count how many reads 
-        # support a given putative insert
-        # This requires that we count the operations that consume reference
-        # and add it to the POS field
-        if cigmatch.group(2) == "I": # If insert operation,
-            ins_len = int(cigmatch.group(1)) # Length of the current insert
-            total_i += ins_len # Add up the total insert length 
-            if ins_len >= args.min_ies_length: # Check that insert is above min length
-                # Get the start and end positions of the insert
-                ins_pos_start = pos + ref_consumed # 1-based, insert is to the right of position
-                insLenDict[rname][ins_pos_start][ins_len] += 1 # record the putative IES length spanned by the read
-                insDict[rname][ins_pos_start][ins_pos_start]["I"] += 1 # record as "I" type count, count as 1 unlike MIRAA
-        if cigmatch.group(2) == "D": # If delete operation,
-            del_len = int(cigmatch.group(1)) # Length of current deletion
-            if del_len >= args.min_ies_length:
-                # Get start and end pos of deletion
-                del_pos_start = pos + ref_consumed # 1-based, insert starts to right of position
-                del_pos_end = pos + ref_consumed + del_len # 1-based
-                insDict[rname][del_pos_start][del_pos_end]["D"] += 1
-        # Count ref and query consumed _after_ the insert has been accounted for
-        if cigmatch.group(2) in ['M', 'D', 'N', '=', 'X']:
-            ref_consumed += int(cigmatch.group(1))
-        if cigmatch.group(2) in ['M', 'I', 'S', '=', 'X']:
-            que_consumed += int(cigmatch.group(1))
-    if int(total_mismatch) - int(total_i) < 0: 
+    indelarr = getIndels(line.cigarstring, pos, args.min_ies_length)
+    if len(indelarr) > 0:
+        for (indelstart, indelend, indellen, indeltype) in indelarr:
+            insDict[rname][indelstart][indelend][indeltype] += 1
+            if indellen > 0:
+                insLenDict[rname][indelstart][indellen] += 1
+    # if int(total_mismatch) - int(total_i) < 0: 
         # Sanity check - mismatches include inserts, but cannot be fewer than inserts
-        print ("Uh-oh!")
+        # print ("Uh-oh!")
 
 # print(json.dumps(insDict, sort_keys=True, indent = 2))
 
