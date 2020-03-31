@@ -116,7 +116,7 @@ class IesRecords(object):
         outstr = json.dumps(self._insDict, sort_keys = True, indent = 2)
         return(outstr)
 
-    def addClipsFromCigar(self, rname, cigar, pos):
+    def _addClipsFromCigar(self, rname, cigar, pos):
         """Check if alignment is clipped at the ends, and record the
         corresponding breakpoints in the _insDict dict, keyed by contig -> start
         position -> end position -> insert length -> evidence type, where
@@ -133,7 +133,7 @@ class IesRecords(object):
             for (clipstart, clipend, cliptype) in cliparr:
                 self._insDict[rname][clipstart][clipend][0][cliptype] += 1
 
-    def addIndelsFromCigar(self, rname, cigar, pos, minlength):
+    def _addIndelsFromCigar(self, rname, cigar, pos, minlength):
         """Check if alignment contains indels above minimum length, and record
         the corresponding breakpoints relative to the reference, and the insert
         length. If the indel is an insert, insert length > 0. If the indel is a
@@ -152,6 +152,22 @@ class IesRecords(object):
         if len(indelarr) > 0:
             for (indelstart, indelend, indellen, indeltype) in indelarr:
                 self._insDict[rname][indelstart][indelend][indellen][indeltype] += 1
+
+    def findPutativeIes(self, minlength):
+        # parse CIGAR string
+        for line in self._alnfile:
+            pos = int(line.reference_start) + 1 # Convert from 0-based numbering in pysam to 1-based in GFF3 and SAM
+            rname = line.reference_name # Get reference name
+            total_mismatch = line.get_tag("NM") # Get number of mismatches
+            # total_i = 0 
+
+            # Find left and right clips and record them
+            self._addClipsFromCigar(rname, line.cigarstring, pos)
+            # Find indels (putative IESs) over the minimum length and record them
+            self._addIndelsFromCigar(rname, line.cigarstring, pos, minlength)
+            # # if int(total_mismatch) - int(total_i) < 0: 
+            #     # Sanity check - mismatches include inserts, but cannot be fewer than inserts
+            #     # print ("Uh-oh!")
 
     def reportPutativeIes(self, minbreaks, fh):
         """After clips and indels have been recorded, report putative IESs above

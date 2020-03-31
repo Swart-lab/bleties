@@ -10,11 +10,9 @@
 #  * Reads are not paired, insert size is not an issue
 #  * Error rate of reads is expected to be higher
 
-import re
 import argparse
 import sys
 import pysam
-from collections import defaultdict
 from bleties import *
 
 parser = argparse.ArgumentParser(description="MILRAA - MIRAA equivalent for long reads mappings, e.g. PacBio")
@@ -66,22 +64,11 @@ if args.bam:
 alnfile = pysam.AlignmentFile(aln_filename, aln_mode)
 # Initialize new IesRecords object to store putative IESs
 iesrecords = IesRecords(alnfile, aln_format)
-# parse CIGAR string
-for line in alnfile:
-    pos = int(line.reference_start) + 1 # Convert from 0-based numbering in pysam to 1-based in GFF3 and SAM
-    rname = line.reference_name # Get reference name
-    total_mismatch = line.get_tag("NM") # Get number of mismatches
-    # total_i = 0 
 
-    # Find left and right clips and record them
-    iesrecords.addClipsFromCigar(rname, line.cigarstring, pos)
-    # Find indels (putative IESs) over the minimum length and record them
-    iesrecords.addIndelsFromCigar(rname, line.cigarstring, pos, args.min_ies_length)
-    # # if int(total_mismatch) - int(total_i) < 0: 
-    #     # Sanity check - mismatches include inserts, but cannot be fewer than inserts
-    #     # print ("Uh-oh!")
+iesrecords.findPutativeIes(args.min_ies_length)
 
-# print(iesrecords) # Dump data to check
+# print(iesrecords) # Print summary of IesRecords object
+# iesrecords.dump() # Dump data to check
 
 iesrecords.reportPutativeIes(args.min_break_coverage, args.out)
 
