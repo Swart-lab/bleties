@@ -6,8 +6,13 @@ from collections import defaultdict
 import pysam
 
 def getClips(cigar, pos):
-    """Parse cigar string and alignment position and report left- and right-clipping
-       Return list of tuples (start pos, end pos, and clip type)"""
+    """Parse cigar string and alignment position and report left- and right-
+    clipping. Return list of tuples (start pos, end pos, and clip type)
+
+    Arguments:
+    cigar -- Cigar string of alignment to process (str)
+    pos -- Alignment start position on reference, 1-based numbering (int)
+    """
     # Look for inserts that are on left or right ends of read (i.e. H or S clipping operations)
     outarr = []
     leftclipmatch = re.match(r"(\d+)[HS](\d+)M", cigar)
@@ -21,8 +26,15 @@ def getClips(cigar, pos):
     return(outarr)
 
 def getIndels(cigar, pos, minlength):
-    """Parse cigar string and alignment position and report insertions or deletions
-       Return list of tuples (start pos, end pos, insert length, insertion or deletion)"""
+    """Parse cigar string and alignment position and report insertions or
+    deletions. Return list of tuples (start pos, end pos, insert length,
+    insertion or deletion)
+
+    Arguments:
+    cigar -- Cigar string of alignment to process (str)
+    pos -- Alignment start position on reference, 1-based numbering (int)
+    minlength -- Minimum length of indel to report (int)
+   """
     outarr = [] # Array to store tuples of results
     # Lists of reference- and query-consuming operations
     REFCONSUMING = ['M', 'D', 'N', '=', 'X']
@@ -30,12 +42,12 @@ def getIndels(cigar, pos, minlength):
     # Initialize counters for how much query or reference seq is consumed
     ref_consumed = 0
     que_consumed = 0
-    # Split cigar string into individual operations 
+    # Split cigar string into individual operations
     cigs = re.findall(r"\d+[\w\=]", cigar)
     for cig in cigs:
         cigmatch = re.match(r"(\d+)([\w\=])",cig) # Get number and operation
-        # We want to look for insert operations above a min length, 
-        # map their positions on the reference, and count how many reads 
+        # We want to look for insert operations above a min length,
+        # map their positions on the reference, and count how many reads
         # support a given putative insert
         # This requires that we count the operations that consume reference
         # and add it to the POS field
@@ -65,7 +77,13 @@ class IesRecords(object):
     """Records of putative IESs from mappings"""
 
     def __init__(self):
-        """Constructor creates IesRecords, internaly represented by two dicts"""
+    # def __init__(self, alnfile, alnformat):
+        """Constructor creates IesRecords, internally represented by a dict
+
+        Arguments:
+        alnfile -- pysam.AlignmentFile object
+        alnformat -- Format of the alignment, either "bam" or "sam"
+        """
         # dict to store counts of detected inserts keyed by evidence type
         # keys: contig -> startpos -> endpos -> insert length -> evidence type -> count
         self._insDict = defaultdict(              # contig
@@ -78,6 +96,8 @@ class IesRecords(object):
                         )
                     )
                 )
+        # self._alnfile = alnfile
+        # self._alnformat = alnformat
 
     def __str__(self):
         """String representation of IesRecords - as a JSON dump"""
@@ -85,7 +105,16 @@ class IesRecords(object):
         return(outstr)
 
     def addClipsFromCigar(self, rname, cigar, pos):
-        """Check if alignment is clipped at the ends, and record the corresponding breakpoints"""
+        """Check if alignment is clipped at the ends, and record the
+        corresponding breakpoints in the _insDict dict, keyed by contig -> start
+        position -> end position -> insert length -> evidence type, where
+        evidence type is either "HSM" (left clip) or "MHS" (right clip).
+
+        Arguments:
+        rname -- Name of reference contig (str)
+        cigar -- Cigar string of the current alignment record (str)
+        pos -- Reference position of the current alignment record (int)
+        """
         # Look for inserts that are on left or right read ends (i.e. H or S clipping operations)
         cliparr = getClips(cigar, pos)
         if len(cliparr) > 0:
@@ -93,8 +122,19 @@ class IesRecords(object):
                 self._insDict[rname][clipstart][clipend][0][cliptype] += 1
 
     def addIndelsFromCigar(self, rname, cigar, pos, minlength):
-        """Check if alignment contains indels above minimum length, and record the corresponding
-           breakpoints and the insert length (if it is an insert operation)"""
+        """Check if alignment contains indels above minimum length, and record
+        the corresponding breakpoints relative to the reference, and the insert
+        length. If the indel is an insert, insert length > 0. If the indel is a
+        deletion, insert length = 0. Recorded in the _insDict dict, keyed by
+        contig -> start pos -> end pos -> insert length -> evidence type, where
+        evidence type is either "I" (insertion) or "D" (deletion).
+
+        Arguments:
+        rname -- Name of reference contig (str)
+        cigar -- Cigar string of the current alignment record (str)
+        pos -- Reference position of the current alignment record (int)
+        minlength -- Minimum length of indel for it to be recorded (int)
+        """
         # Look for inserts that are completely spanned by the read (i.e. I operations)
         indelarr = getIndels(cigar, pos, minlength)
         if len(indelarr) > 0:
@@ -102,9 +142,17 @@ class IesRecords(object):
                 self._insDict[rname][indelstart][indelend][indellen][indeltype] += 1
 
     def reportPutativeIes(self, minbreaks, fh, alnfile, alnformat):
-        """After clips and indels have been recorded, report putative IESs above the minimum
-           coverage, and if the input alignment is a BAM file, then also report average coverage
-           in the breakpoint region. Output is written to open file handle"""
+        """After clips and indels have been recorded, report putative IESs above
+        the minimum coverage, and if the input alignment is a BAM file, then
+        also report average coverage in the breakpoint region. Output is written
+        to open file handle.
+
+        Arguments:
+        minbreaks -- Minimum breakpoint coverage to report (int)
+        fh -- File handle for writing output
+        alnfile -- Alignment which was processed (pysam.AlignmentFile)
+        alnformat -- Format of alignment, either "bam" or "sam"
+        """
         # Parse the dict and report putative IESs above min coverage
         # We only check breakpoints which are completely spanned by a read ("I" or "D" operations)
         # however we also report supporting counts from HSM and MSH type mappings
@@ -122,7 +170,7 @@ class IesRecords(object):
                                             "IES_length="+str(ins_len)
                                            ]
                                     # Extend the cigar evidence counts
-                                    attr.extend(["cigar="+cigartype+" "+str(self._insDict[ctg][ins_start][ins_end][ins_len][cigartype]) 
+                                    attr.extend(["cigar="+cigartype+" "+str(self._insDict[ctg][ins_start][ins_end][ins_len][cigartype])
                                                  for cigartype in sorted(self._insDict[ctg][ins_start][ins_end][ins_len])
                                                 ])
                                     # Get read coverage from BAM file; SAM does not allow random access
