@@ -3,6 +3,7 @@
 import re
 import json
 from collections import defaultdict
+import pysam
 
 def getClips(cigar, pos):
     """Parse cigar string and alignment position and report left- and right-clipping
@@ -84,6 +85,7 @@ class IesRecords(object):
         return(outstr)
 
     def addClipsFromCigar(self, rname, cigar, pos):
+        """Check if alignment is clipped at the ends, and record the corresponding breakpoints"""
         # Look for inserts that are on left or right read ends (i.e. H or S clipping operations)
         cliparr = getClips(cigar, pos)
         if len(cliparr) > 0:
@@ -91,8 +93,78 @@ class IesRecords(object):
                 self._insDict[rname][clipstart][clipend][0][cliptype] += 1
 
     def addIndelsFromCigar(self, rname, cigar, pos, minlength):
+        """Check if alignment contains indels above minimum length, and record the corresponding
+           breakpoints and the insert length (if it is an insert operation)"""
         # Look for inserts that are completely spanned by the read (i.e. I operations)
         indelarr = getIndels(cigar, pos, minlength)
         if len(indelarr) > 0:
             for (indelstart, indelend, indellen, indeltype) in indelarr:
                 self._insDict[rname][indelstart][indelend][indellen][indeltype] += 1
+
+    def reportPutativeIes(self, minbreaks, fh, alnfile, alnformat):
+        """After clips and indels have been recorded, report putative IESs above the minimum
+           coverage, and if the input alignment is a BAM file, then also report average coverage
+           in the breakpoint region. Output is written to open file handle"""
+        # Parse the dict and report putative IESs above min coverage
+        # We only check breakpoints which are completely spanned by a read ("I" or "D" operations)
+        # however we also report supporting counts from HSM and MSH type mappings
+        for ctg in sorted(self._insDict):
+            for ins_start in sorted(self._insDict[ctg]):
+                for ins_end in sorted(self._insDict[ctg][ins_start]):
+                    for ins_len in sorted(self._insDict[ctg][ins_start][ins_end]):
+                        for evidencetype in self._insDict[ctg][ins_start][ins_end][ins_len]:
+                            countvalue = self._insDict[ctg][ins_start][ins_end][ins_len][evidencetype]
+                            # If the breakpoint is an insert type
+                            if evidencetype == "I":
+                                if countvalue >= minbreaks:
+                                    # Prepare attributes list of key-value pairs
+                                    attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start)+"_"+str(ins_end),
+                                            "IES_length="+str(ins_len)
+                                           ]
+                                    # Extend the cigar evidence counts
+                                    attr.extend(["cigar="+cigartype+" "+str(self._insDict[ctg][ins_start][ins_end][ins_len][cigartype]) 
+                                                 for cigartype in sorted(self._insDict[ctg][ins_start][ins_end][ins_len])
+                                                ])
+                                    # Get read coverage from BAM file; SAM does not allow random access
+                                    if alnformat == "bam":
+                                        readcov = alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end)) # TODO: Check for off-by-one errors
+                                        attr.append("average_coverage="+str(readcov))
+                                    outarr = [str(ctg),        # 1 seqid
+                                              "MILRAA",        # 2 source
+                                              "segment",       # 3 type
+                                              str(ins_start),  # 4 start
+                                              str(ins_end),  # 5 end
+                                              str(countvalue), # 6 score - in this case, breakpoint counts for insert operation only
+                                              ".",             # 7 strand
+                                              ".",             # 8 phase
+                                              ";".join(attr)   # 9 attributes
+                                              ]
+                                    fh.write("\t".join(outarr)+"\n")
+                            # If the breakpoint is a deletion type
+                            elif evidencetype == "D":
+                                if countvalue >= minbreaks:
+                                    del_len = int(ins_end) - int(ins_start) # TODO: Check for off-by-one errors
+                                    attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start)+"_"+str(ins_end),
+                                            "IES_length="+str(del_len)
+                                           ]
+                                    attr.append("cigar=D "+str(countvalue))
+                                    # Look for left- and rightclips that fall on the deletion boundaries
+                                    if self._insDict[ctg][ins_start][ins_start][ins_len].get("MHS") and int(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]) > 0:
+                                        attr.append("cigar=MHS "+str(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]))
+                                    if self._insDict[ctg][ins_end][ins_end][ins_len].get("HSM") and int(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]) > 0:
+                                        attr.append("cigar=HSM "+str(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]))
+                                    # Add coverage value
+                                    if alnformat == "bam":
+                                        readcov = alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end))
+                                        attr.append("average_coverage="+str(readcov))
+                                    outarr = [str(ctg),        # 1 seqid
+                                              "MILRAA",        # 2 source
+                                              "segment",       # 3 type
+                                              str(ins_start),  # 4 start
+                                              str(ins_end),  # 5 end
+                                              str(countvalue), # 6 score - in this case, breakpoint counts for delete operation only
+                                              ".",             # 7 strand
+                                              ".",             # 8 phase
+                                              ";".join(attr)   # 9 attributes
+                                              ]
+                                    fh.write("\t".join(outarr)+"\n")
