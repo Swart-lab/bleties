@@ -209,15 +209,15 @@ class IesRecords(object):
                                     if self._alnformat == "bam":
                                         readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end)) # TODO: Check for off-by-one errors
                                         attr.append("average_coverage="+str(readcov))
-                                    outarr = [str(ctg),        # 1 seqid
-                                              "MILRAA",        # 2 source
-                                              "segment",       # 3 type
-                                              str(ins_start),  # 4 start
-                                              str(ins_end),  # 5 end
-                                              str(countvalue), # 6 score - in this case, breakpoint counts for insert operation only
-                                              ".",             # 7 strand
-                                              ".",             # 8 phase
-                                              ";".join(attr)   # 9 attributes
+                                    outarr = [str(ctg),            # 1 seqid
+                                              "MILRAA",            # 2 source
+                                              "segment",           # 3 type
+                                              str(ins_start),      # 4 start
+                                              str(ins_end),        # 5 end
+                                              str(countvalue),     # 6 score - in this case, breakpoint counts for insert operation only
+                                              ".",                 # 7 strand
+                                              ".",                 # 8 phase
+                                              ";".join(attr)+";"   # 9 attributes
                                               ]
                                     fh.write("\t".join(outarr)+"\n")
                             # If the breakpoint is a deletion type
@@ -237,14 +237,14 @@ class IesRecords(object):
                                     if self._alnformat == "bam":
                                         readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end))
                                         attr.append("average_coverage="+str(readcov))
-                                    outarr = [str(ctg),        # 1 seqid
-                                              "MILRAA",        # 2 source
-                                              "segment",       # 3 type
-                                              str(ins_start),  # 4 start
-                                              str(ins_end),  # 5 end
-                                              str(countvalue), # 6 score - in this case, breakpoint counts for delete operation only
-                                              ".",             # 7 strand
-                                              ".",             # 8 phase
-                                              ";".join(attr)   # 9 attributes
+                                    outarr = [str(ctg),            # 1 seqid
+                                              "MILRAA",            # 2 source
+                                              "segment",           # 3 type
+                                              str(ins_start),      # 4 start
+                                              str(ins_end),        # 5 end
+                                              str(countvalue),     # 6 score - in this case, breakpoint counts for delete operation only
+                                              ".",                 # 7 strand
+                                              ".",                 # 8 phase
+                                              ";".join(attr)+";"   # 9 attributes
                                               ]
                                     fh.write("\t".join(outarr)+"\n")
