@@ -76,12 +76,11 @@ def getIndels(cigar, pos, minlength):
 class IesRecords(object):
     """Records of putative IESs from mappings"""
 
-    def __init__(self):
-    # def __init__(self, alnfile, alnformat):
+    def __init__(self, alnfile, alnformat):
         """Constructor creates IesRecords, internally represented by a dict
 
         Arguments:
-        alnfile -- pysam.AlignmentFile object
+        alnfile -- Alignment to parse (pysam.AlignmentFile)
         alnformat -- Format of the alignment, either "bam" or "sam"
         """
         # dict to store counts of detected inserts keyed by evidence type
@@ -96,8 +95,8 @@ class IesRecords(object):
                         )
                     )
                 )
-        # self._alnfile = alnfile
-        # self._alnformat = alnformat
+        self._alnfile = alnfile
+        self._alnformat = alnformat
 
     def __str__(self):
         """String representation of IesRecords - as a JSON dump"""
@@ -141,7 +140,7 @@ class IesRecords(object):
             for (indelstart, indelend, indellen, indeltype) in indelarr:
                 self._insDict[rname][indelstart][indelend][indellen][indeltype] += 1
 
-    def reportPutativeIes(self, minbreaks, fh, alnfile, alnformat):
+    def reportPutativeIes(self, minbreaks, fh):
         """After clips and indels have been recorded, report putative IESs above
         the minimum coverage, and if the input alignment is a BAM file, then
         also report average coverage in the breakpoint region. Output is written
@@ -150,8 +149,6 @@ class IesRecords(object):
         Arguments:
         minbreaks -- Minimum breakpoint coverage to report (int)
         fh -- File handle for writing output
-        alnfile -- Alignment which was processed (pysam.AlignmentFile)
-        alnformat -- Format of alignment, either "bam" or "sam"
         """
         # Parse the dict and report putative IESs above min coverage
         # We only check breakpoints which are completely spanned by a read ("I" or "D" operations)
@@ -174,8 +171,8 @@ class IesRecords(object):
                                                  for cigartype in sorted(self._insDict[ctg][ins_start][ins_end][ins_len])
                                                 ])
                                     # Get read coverage from BAM file; SAM does not allow random access
-                                    if alnformat == "bam":
-                                        readcov = alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end)) # TODO: Check for off-by-one errors
+                                    if self._alnformat == "bam":
+                                        readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end)) # TODO: Check for off-by-one errors
                                         attr.append("average_coverage="+str(readcov))
                                     outarr = [str(ctg),        # 1 seqid
                                               "MILRAA",        # 2 source
@@ -202,8 +199,8 @@ class IesRecords(object):
                                     if self._insDict[ctg][ins_end][ins_end][ins_len].get("HSM") and int(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]) > 0:
                                         attr.append("cigar=HSM "+str(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]))
                                     # Add coverage value
-                                    if alnformat == "bam":
-                                        readcov = alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end))
+                                    if self._alnformat == "bam":
+                                        readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end))
                                         attr.append("average_coverage="+str(readcov))
                                     outarr = [str(ctg),        # 1 seqid
                                               "MILRAA",        # 2 source

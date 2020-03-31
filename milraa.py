@@ -61,11 +61,12 @@ if args.bam:
         aln_format = "bam"
         aln_mode = "rb"
 
-# Initialize new IesRecords object to store putative IESs
-iesrecords = IesRecords()
 
-# Open SAM file and parse CIGAR string
+# Open SAM or BAM file 
 alnfile = pysam.AlignmentFile(aln_filename, aln_mode)
+# Initialize new IesRecords object to store putative IESs
+iesrecords = IesRecords(alnfile, aln_format)
+# parse CIGAR string
 for line in alnfile:
     pos = int(line.reference_start) + 1 # Convert from 0-based numbering in pysam to 1-based in GFF3 and SAM
     rname = line.reference_name # Get reference name
@@ -82,6 +83,6 @@ for line in alnfile:
 
 # print(iesrecords) # Dump data to check
 
-iesrecords.reportPutativeIes(args.min_break_coverage, args.out, alnfile, aln_format)
+iesrecords.reportPutativeIes(args.min_break_coverage, args.out)
 
 alnfile.close()
