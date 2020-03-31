@@ -154,6 +154,12 @@ class IesRecords(object):
                 self._insDict[rname][indelstart][indelend][indellen][indeltype] += 1
 
     def findPutativeIes(self, minlength):
+        """Search alignment for clips and indels to identify putative IESs.
+        Record them in the _insDict dict. 
+
+        Arguments:
+        minlength -- Record only putative IESs of this length and above (int)
+        """
         # parse CIGAR string
         for line in self._alnfile:
             pos = int(line.reference_start) + 1 # Convert from 0-based numbering in pysam to 1-based in GFF3 and SAM
