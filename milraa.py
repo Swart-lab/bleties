@@ -16,7 +16,8 @@ import sys
 import pysam
 import bleties
 
-parser = argparse.ArgumentParser(description="MILRAA - MIRAA equivalent for long reads mappings, e.g. PacBio")
+parser = argparse.ArgumentParser(description="MILRAA - MIRAA equivalent for long reads mappings, e.g. PacBio",
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--sam",
                     help="SAM file containing mapping, requires header")
 parser.add_argument("--bam",
