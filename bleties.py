@@ -99,7 +99,20 @@ class IesRecords(object):
         self._alnformat = alnformat
 
     def __str__(self):
-        """String representation of IesRecords - as a JSON dump"""
+        """Report summary stats of IesRecords object"""
+        dictlen = len(self._insDict)
+        nref = self._alnfile.nreferences
+        mapped = self._alnfile.mapped
+        return("bleties.IesRecords object with dict of length "
+                + str(dictlen)
+                + " and alignment with " 
+                + str(nref) 
+                + " references and "
+                + str(mapped) 
+                + " mapped reads")
+
+    def dump(self):
+        """Data dump of IesRecords._insDict in JSON format"""
         outstr = json.dumps(self._insDict, sort_keys = True, indent = 2)
         return(outstr)
 
