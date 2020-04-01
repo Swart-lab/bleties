@@ -73,7 +73,7 @@ iesrecords.findPutativeIes(args.min_ies_length)
 
 if args.dump:
     print(iesrecords) # Print summary of IesRecords object
-    iesrecords.dump() # Dump data to check
+    print(iesrecords.dump()) # Dump data to check
 
 # Write gff version header and command line as comment
 args.out.write("##gff-version 3\n")
