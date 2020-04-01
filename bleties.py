@@ -211,7 +211,7 @@ class IesRecords(object):
                                         attr.append("average_coverage="+str(readcov))
                                     outarr = [str(ctg),            # 1 seqid
                                               "MILRAA",            # 2 source
-                                              "segment",           # 3 type
+                                              "junction",          # 3 type
                                               str(ins_start),      # 4 start
                                               str(ins_end),        # 5 end
                                               str(countvalue),     # 6 score - in this case, breakpoint counts for insert operation only
@@ -239,7 +239,7 @@ class IesRecords(object):
                                         attr.append("average_coverage="+str(readcov))
                                     outarr = [str(ctg),            # 1 seqid
                                               "MILRAA",            # 2 source
-                                              "segment",           # 3 type
+                                              "region",            # 3 type
                                               str(ins_start),      # 4 start
                                               str(ins_end),        # 5 end
                                               str(countvalue),     # 6 score - in this case, breakpoint counts for delete operation only
