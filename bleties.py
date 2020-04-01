@@ -201,9 +201,11 @@ class IesRecords(object):
                                     attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start)+"_"+str(ins_end),
                                             "IES_length="+str(ins_len)
                                            ]
-                                    # Extend the cigar evidence counts
-                                    attr.extend(["cigar="+cigartype+" "+str(self._insDict[ctg][ins_start][ins_end][ins_len][cigartype])
-                                                 for cigartype in sorted(self._insDict[ctg][ins_start][ins_end][ins_len])
+                                    attr.append("cigar=I "+str(countvalue))
+                                    # Extend the cigar evidence counts with clipped reads that are also at this junction
+                                    # Clippings are recorded with nominal insert length of zero
+                                    attr.extend(["cigar="+cigartype+" "+str(self._insDict[ctg][ins_start][ins_end][0][cigartype])
+                                                 for cigartype in sorted(self._insDict[ctg][ins_start][ins_end][0])
                                                 ])
                                     # Get read coverage from BAM file; SAM does not allow random access
                                     if self._alnformat == "bam":
