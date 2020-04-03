@@ -20,6 +20,9 @@ Differences of long read to Illumina alignments:
 
 ## Usage
 
+Depends on the `pysam` module. A Conda environment definition with dependencies
+can be found in the `milraa_env.yaml` file. 
+
 ```
 ./milraa.py --help
 ```
