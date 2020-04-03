@@ -14,6 +14,7 @@ Differences to Illumina alignments:
 import argparse
 import sys
 import pysam
+from Bio import SeqIO
 import bleties
 
 parser = argparse.ArgumentParser(description="MILRAA - MIRAA equivalent for long reads mappings, e.g. PacBio",
@@ -22,6 +23,8 @@ parser.add_argument("--sam",
                     help="SAM file containing mapping, requires header")
 parser.add_argument("--bam",
                     help="BAM file containing mapping, must be sorted and indexed")
+parser.add_argument("--ref",
+                    help="FASTA file containing genomic contigs used as reference for the mapping")
 parser.add_argument("--out",
                     "-o",
                     nargs='?',
@@ -70,8 +73,10 @@ if args.bam:
 
 # Open SAM or BAM file 
 alnfile = pysam.AlignmentFile(aln_filename, aln_mode)
+# Read reference Fasta file into memory
+refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
 # Initialize new IesRecords object to store putative IESs
-iesrecords = bleties.IesRecords(alnfile, aln_format)
+iesrecords = bleties.IesRecords(alnfile, aln_format, refgenome)
 # Process alignment to find putative IESs 
 iesrecords.findPutativeIes(args.min_ies_length)
 

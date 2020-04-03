@@ -4,6 +4,7 @@ import re
 import json
 from collections import defaultdict
 import pysam
+from Bio import SeqIO
 
 def getClips(cigar, pos):
     """Parse cigar string and alignment position and report left- and right-
@@ -58,6 +59,7 @@ def getIndels(cigar, pos, minlength, qseq):
             if ins_len >= minlength: # Check that insert is above min length
                 # Get the start and end positions of the insert
                 ins_pos_start = pos + ref_consumed # 1-based, insert is to the right of position
+                # Get the sequence of the insert
                 ins_seq = qseq[que_consumed:que_consumed + ins_len] # 0-based, following pysam convention
                 outarr.append((ins_pos_start, ins_pos_start, ins_len, "I", ins_seq))
         # We also look for delete operations above a min length
@@ -79,12 +81,13 @@ def getIndels(cigar, pos, minlength, qseq):
 class IesRecords(object):
     """Records of putative IESs from mappings"""
 
-    def __init__(self, alnfile, alnformat):
+    def __init__(self, alnfile, alnformat, refgenome):
         """Constructor creates IesRecords, internally represented by a dict
 
         Arguments:
         alnfile -- Alignment to parse (pysam.AlignmentFile)
         alnformat -- Format of the alignment, either "bam" or "sam"
+        refgenome -- Reference genome sequences (Bio.SeqIO.SeqRecord)
         """
         # dict to store counts of detected inserts keyed by evidence type
         # keys: contig -> startpos -> endpos -> insert length -> evidence type -> count
@@ -105,8 +108,12 @@ class IesRecords(object):
                         list)               # list of sequences (str)
                     )
                 )
+        # pysam.AlignmentFile object representing the SAM/BAM mapping
         self._alnfile = alnfile
+        # Format of the alignment "bam" or "sam"
         self._alnformat = alnformat
+        # Genome sequence used as reference for the mapping
+        self._refgenome = refgenome
 
     def __str__(self):
         """Report summary stats of IesRecords object"""
@@ -167,6 +174,27 @@ class IesRecords(object):
                 if indeltype == "I": # If insertion, record the inserted sequence to dict
                     self._insSeqDict[rname][indelstart][indelend].append(indelseq)
 
+    def _getDeletedSequences(self):
+        """Record sequences of deletions. Sequences of insertions are recorded 
+        when parsing each alignment, because they are extracted from the query.
+        However deletions are extracted from the reference, so they can be done
+        in a single pass.
+
+        Returns: Changes object in-place
+        """
+        for rname in self._insDict: # Get contig name
+            # Get reference sequence from Fasta file
+            refctgseq = self._refgenome[rname].seq
+            # For each start and stop position
+            for indelstart in self._insDict[rname]:
+                for indelend in self._insDict[rname][indelstart]:
+                    # If there is a deletion 
+                    if self._insDict[rname][indelstart][indelend][0]["D"]:
+                        # Record the sequence to the insSelfDict
+                        # Convert from 1-based to 0-based numbering for slicing
+                        indelseq = str(refctgseq[int(indelstart)-1:int(indelend)-1]) # TODO: Check for off-by-one errors
+                        self._insSeqDict[rname][indelstart][indelend].append(indelseq)
+
     def findPutativeIes(self, minlength):
         """Search alignment for clips and indels to identify putative IESs.
         Record them in the _insDict dict. 
@@ -189,6 +217,8 @@ class IesRecords(object):
             # # if int(total_mismatch) - int(total_i) < 0: 
             #     # Sanity check - mismatches include inserts, but cannot be fewer than inserts
             #     # print ("Uh-oh!")
+        # Go through insDict and extract sequences of deleted regions, too
+        self._getDeletedSequences()
 
     def reportPutativeIes(self, mininsbreaks, mindelbreaks, fh):
         """After clips and indels have been recorded, report putative IESs above
