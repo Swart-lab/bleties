@@ -72,7 +72,7 @@ iesrecords = bleties.IesRecords(alnfile, aln_format)
 iesrecords.findPutativeIes(args.min_ies_length)
 
 if args.dump:
-    print(iesrecords) # Print summary of IesRecords object
+    sys.stderr.write(str(iesrecords) + "\n") # Print summary of IesRecords object
     print(iesrecords.dump()) # Dump data to check
 
 # Write gff version header and command line as comment
