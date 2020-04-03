@@ -25,15 +25,17 @@ def getClips(cigar, pos):
         outarr.append((pos + rightclip_refconsumed, pos+rightclip_refconsumed, "MHS"))
     return(outarr)
 
-def getIndels(cigar, pos, minlength):
+def getIndels(cigar, pos, minlength, qseq):
     """Parse cigar string and alignment position and report insertions or
     deletions. Return list of tuples (start pos, end pos, insert length,
-    insertion or deletion)
+    insertion or deletion, insert sequence). If it is a deletion then there is
+    no insert sequence reported because that can be parsed from the reference.
 
     Arguments:
     cigar -- Cigar string of alignment to process (str)
     pos -- Alignment start position on reference, 1-based numbering (int)
     minlength -- Minimum length of indel to report (int)
+    qseq -- Query sequence (str)
    """
     outarr = [] # Array to store tuples of results
     # Lists of reference- and query-consuming operations
@@ -56,7 +58,8 @@ def getIndels(cigar, pos, minlength):
             if ins_len >= minlength: # Check that insert is above min length
                 # Get the start and end positions of the insert
                 ins_pos_start = pos + ref_consumed # 1-based, insert is to the right of position
-                outarr.append((ins_pos_start, ins_pos_start, ins_len, "I"))
+                ins_seq = qseq[que_consumed:que_consumed + ins_len] # 0-based, following pysam convention
+                outarr.append((ins_pos_start, ins_pos_start, ins_len, "I", ins_seq))
         # We also look for delete operations above a min length
         # These are already present in the reference, so the "insert length" is 0
         if cigmatch.group(2) == "D": # If delete operation,
@@ -65,7 +68,7 @@ def getIndels(cigar, pos, minlength):
                 # Get start and end pos of deletion
                 del_pos_start = pos + ref_consumed # 1-based, insert starts to right of position
                 del_pos_end = pos + ref_consumed + del_len # 1-based
-                outarr.append((del_pos_start, del_pos_end, 0, "D"))
+                outarr.append((del_pos_start, del_pos_end, 0, "D", "")) # If deletion, no insert sequence reported
         # Count ref and query consumed _after_ the insert has been accounted for
         if cigmatch.group(2) in REFCONSUMING:
             ref_consumed += int(cigmatch.group(1))
@@ -95,6 +98,13 @@ class IesRecords(object):
                         )
                     )
                 )
+        # dict to store sequences of detected inserts/deletions 
+        self._insSeqDict = defaultdict(     # contig
+                lambda: defaultdict(        # startpos
+                    lambda: defaultdict(    # endpos
+                        list)               # list of sequences (str)
+                    )
+                )
         self._alnfile = alnfile
         self._alnformat = alnformat
 
@@ -114,7 +124,8 @@ class IesRecords(object):
     def dump(self):
         """Data dump of IesRecords._insDict in JSON format"""
         outstr = json.dumps(self._insDict, sort_keys = True, indent = 2)
-        return(outstr)
+        outstr_seq = json.dumps(self._insSeqDict, sort_keys=True, indent=2)
+        return(outstr + "\n" + outstr_seq)
 
     def _addClipsFromCigar(self, rname, cigar, pos):
         """Check if alignment is clipped at the ends, and record the
@@ -133,7 +144,7 @@ class IesRecords(object):
             for (clipstart, clipend, cliptype) in cliparr:
                 self._insDict[rname][clipstart][clipend][0][cliptype] += 1
 
-    def _addIndelsFromCigar(self, rname, cigar, pos, minlength):
+    def _addIndelsFromCigar(self, rname, cigar, pos, minlength, qseq):
         """Check if alignment contains indels above minimum length, and record
         the corresponding breakpoints relative to the reference, and the insert
         length. If the indel is an insert, insert length > 0. If the indel is a
@@ -146,12 +157,15 @@ class IesRecords(object):
         cigar -- Cigar string of the current alignment record (str)
         pos -- Reference position of the current alignment record (int)
         minlength -- Minimum length of indel for it to be recorded (int)
+        qseq -- Query sequence of the read (str)
         """
         # Look for inserts that are completely spanned by the read (i.e. I operations)
-        indelarr = getIndels(cigar, pos, minlength)
+        indelarr = getIndels(cigar, pos, minlength, qseq)
         if len(indelarr) > 0:
-            for (indelstart, indelend, indellen, indeltype) in indelarr:
+            for (indelstart, indelend, indellen, indeltype, indelseq) in indelarr:
                 self._insDict[rname][indelstart][indelend][indellen][indeltype] += 1
+                if indeltype == "I": # If insertion, record the inserted sequence to dict
+                    self._insSeqDict[rname][indelstart][indelend].append(indelseq)
 
     def findPutativeIes(self, minlength):
         """Search alignment for clips and indels to identify putative IESs.
@@ -166,11 +180,12 @@ class IesRecords(object):
             rname = line.reference_name # Get reference name
             total_mismatch = line.get_tag("NM") # Get number of mismatches
             # total_i = 0 
+            qseq = line.query_sequence # Get query sequence
 
             # Find left and right clips and record them
             self._addClipsFromCigar(rname, line.cigarstring, pos)
             # Find indels (putative IESs) over the minimum length and record them
-            self._addIndelsFromCigar(rname, line.cigarstring, pos, minlength)
+            self._addIndelsFromCigar(rname, line.cigarstring, pos, minlength, qseq)
             # # if int(total_mismatch) - int(total_i) < 0: 
             #     # Sanity check - mismatches include inserts, but cannot be fewer than inserts
             #     # print ("Uh-oh!")
