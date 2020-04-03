@@ -175,14 +175,17 @@ class IesRecords(object):
             #     # Sanity check - mismatches include inserts, but cannot be fewer than inserts
             #     # print ("Uh-oh!")
 
-    def reportPutativeIes(self, minbreaks, fh):
+    def reportPutativeIes(self, mininsbreaks, mindelbreaks, fh):
         """After clips and indels have been recorded, report putative IESs above
         the minimum coverage, and if the input alignment is a BAM file, then
         also report average coverage in the breakpoint region. Output is written
-        to open file handle.
+        to open file handle. Min coverage for deletion breakpoints is expected
+        to be lower because we are mapping to somatic genome in the typical use
+        case, and reads with alternative excisions are thought to be rare. 
 
         Arguments:
-        minbreaks -- Minimum breakpoint coverage to report (int)
+        mininsbreaks -- Minimum breakpoint coverage to report potential insertion (int)
+        mindelbreaks -- Minimum breakpoint coverage to report potential deletion (int)
         fh -- File handle for writing output
         """
         # Parse the dict and report putative IESs above min coverage
@@ -196,7 +199,7 @@ class IesRecords(object):
                             countvalue = self._insDict[ctg][ins_start][ins_end][ins_len][evidencetype]
                             # If the breakpoint is an insert type
                             if evidencetype == "I":
-                                if countvalue >= minbreaks:
+                                if countvalue >= mininsbreaks:
                                     # Prepare attributes list of key-value pairs
                                     attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start)+"_"+str(ins_end),
                                             "IES_length="+str(ins_len)
@@ -224,7 +227,7 @@ class IesRecords(object):
                                     fh.write("\t".join(outarr)+"\n")
                             # If the breakpoint is a deletion type
                             elif evidencetype == "D":
-                                if countvalue >= minbreaks:
+                                if countvalue >= mindelbreaks:
                                     del_len = int(ins_end) - int(ins_start) # TODO: Check for off-by-one errors
                                     attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start)+"_"+str(ins_end),
                                             "IES_length="+str(del_len)

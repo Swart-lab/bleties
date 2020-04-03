@@ -2,7 +2,8 @@
 
  [x] Tidy and document code, make it more object-oriented
  [ ] Look for Ds that directly abut I inserts, as proxy for alternative excision boundaries?
- [ ] Separate mapping count cutoffs for inserts and deletions
+ [x] Separate mapping count cutoffs for inserts and deletions
+    - However should keep them high at first, because the cutoffs depend on read quality. If reads are noisy then this is GIGO
  [x] The HSM and MHS are not being reported at I insert junctions, because they are keyed by insert length 0
  [ ] Question: How many putative IES junctions are spanned by each read?
     - How "chimeric" is a given read? I.e. if a read contains non-excised IESs, does it have more non-excised IESs on average?

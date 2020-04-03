@@ -32,10 +32,14 @@ parser.add_argument("--min_ies_length", # This parameter is hard-coded in the or
                     type=int,
                     default=25,
                     help="Minimum length of candidate IES")
-parser.add_argument("--min_break_coverage",
+parser.add_argument("--min_break_coverage", # For insertions
                     type=int,
                     default=10,
-                    help="Minimum number of partially aligned reads to define a breakpoint")
+                    help="Minimum number of partially aligned reads to define a putative IES insertion breakpoint")
+parser.add_argument("--min_del_coverage", # For deletions (sensu MILORD)
+                    type=int,
+                    default=10,
+                    help="Minimum number of partially aligned reads to define a deletion relative to reference")
 parser.add_argument("--max_mismatch", # TODO: Not yet implemented
                     type=int,
                     default=10,
@@ -79,6 +83,6 @@ if args.dump:
 args.out.write("##gff-version 3\n")
 args.out.write("# " + " ".join(sys.argv) + "\n")
 # Report putative IESs and write to GFF3 file
-iesrecords.reportPutativeIes(args.min_break_coverage, args.out)
+iesrecords.reportPutativeIes(args.min_break_coverage, args.min_del_coverage, args.out)
 # Close AlignmentFile
 alnfile.close()
