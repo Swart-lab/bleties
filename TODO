@@ -9,6 +9,8 @@
     - How "chimeric" is a given read? I.e. if a read contains non-excised IESs, does it have more non-excised IESs on average?
     - Per-read IES retention score - a measure of "linkage" between IES retention events
  [ ] Group putative IESs that are overlapping into clusters, to identify potential alternative excisions
+ [x] Report inserted and deleted sequences that are putative IESs
+ [ ] Use "dumb consensus" to get consensus inserted sequence for coverage > 10
  [ ] Implement Assembly module 
     - Will have to chop up the reads because PacBio reads are long, also want to include some of the context. 
     - Have to somehow deal with the potential mapping ambiguities at boundaries of inserts
