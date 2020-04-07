@@ -213,12 +213,13 @@ class IesRecords(object):
             for indelstart in self._insDict[rname]:
                 for indelend in self._insDict[rname][indelstart]:
                     # If there is a deletion 
-                    if self._insDict[rname][indelstart][indelend][0]["D"]:
-                        # Record the sequence to the insSelfDict
-                        # Convert from 1-based to 0-based numbering for slicing
-                        indellen = int(indelend) - int(indelstart)
-                        indelseq = str(refctgseq[int(indelstart)-1:int(indelend)-1]) # TODO: Check for off-by-one errors
-                        self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
+                    if 0 in self._insDict[rname][indelstart][indelend]:
+                        if "D" in self._insDict[rname][indelstart][indelend][0]:
+                            # Record the sequence to the insSelfDict
+                            # Convert from 1-based to 0-based numbering for slicing
+                            indellen = int(indelend) - int(indelstart)
+                            indelseq = str(refctgseq[int(indelstart)-1:int(indelend)-1]) # TODO: Check for off-by-one errors
+                            self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
 
     def findPutativeIes(self, minlength):
         """Search alignment for clips and indels to identify putative IESs.
