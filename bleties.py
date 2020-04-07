@@ -82,7 +82,16 @@ class IesRecords(object):
     """Records of putative IESs from mappings"""
 
     def __init__(self, alnfile, alnformat, refgenome):
-        """Constructor creates IesRecords, internally represented by a dict
+        """Constructor creates IesRecords, internally represented by:
+        _insDict -- dict to store counts of detected inserts/deletions, keyed
+            by evidence type. Keys: contig (str) -> start pos (int) -> end 
+            pos (int) -> insert length (int) -> evidence type (str) -> count (int)
+        _insSeqDict -- dict of sequences of detected inserts/deletions. Keys:
+            contig (str) -> startpos (int) -> endpos (int) -> sequences (list of 
+            str)
+        _alnfile -- as below
+        _alnformat -- as below
+        _refgenome -- as below
 
         Arguments:
         alnfile -- Alignment to parse (pysam.AlignmentFile)
