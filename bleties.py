@@ -87,8 +87,8 @@ class IesRecords(object):
             by evidence type. Keys: contig (str) -> start pos (int) -> end 
             pos (int) -> insert length (int) -> evidence type (str) -> count (int)
         _insSeqDict -- dict of sequences of detected inserts/deletions. Keys:
-            contig (str) -> startpos (int) -> endpos (int) -> sequences (list of 
-            str)
+            contig (str) -> startpos (int) -> endpos (int) -> indel len (int) ->
+            sequences (list of str)
         _alnfile -- as below
         _alnformat -- as below
         _refgenome -- as below
@@ -111,10 +111,12 @@ class IesRecords(object):
                     )
                 )
         # dict to store sequences of detected inserts/deletions 
-        self._insSeqDict = defaultdict(     # contig
-                lambda: defaultdict(        # startpos
-                    lambda: defaultdict(    # endpos
-                        list)               # list of sequences (str)
+        self._insSeqDict = defaultdict(      # contig
+                lambda: defaultdict(         # startpos
+                    lambda: defaultdict(     # endpos
+                        lambda: defaultdict( # indel length
+                            list)            # list of sequences (str)
+                        )
                     )
                 )
         # pysam.AlignmentFile object representing the SAM/BAM mapping
@@ -187,8 +189,9 @@ class IesRecords(object):
         if len(indelarr) > 0:
             for (indelstart, indelend, indellen, indeltype, indelseq) in indelarr:
                 self._insDict[rname][indelstart][indelend][indellen][indeltype] += 1
-                if indeltype == "I": # If insertion, record the inserted sequence to dict
-                    self._insSeqDict[rname][indelstart][indelend].append(indelseq)
+                # If insertion, record the inserted sequence to dict
+                if indeltype == "I": 
+                    self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
 
     def _getDeletedSequences(self):
         """Record sequences of deletions. Sequences of insertions are recorded 
@@ -208,8 +211,9 @@ class IesRecords(object):
                     if self._insDict[rname][indelstart][indelend][0]["D"]:
                         # Record the sequence to the insSelfDict
                         # Convert from 1-based to 0-based numbering for slicing
+                        indellen = int(indelend) - int(indelstart)
                         indelseq = str(refctgseq[int(indelstart)-1:int(indelend)-1]) # TODO: Check for off-by-one errors
-                        self._insSeqDict[rname][indelstart][indelend].append(indelseq)
+                        self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
 
     def findPutativeIes(self, minlength):
         """Search alignment for clips and indels to identify putative IESs.
@@ -233,6 +237,7 @@ class IesRecords(object):
             # # if int(total_mismatch) - int(total_i) < 0: 
             #     # Sanity check - mismatches include inserts, but cannot be fewer than inserts
             #     # print ("Uh-oh!")
+
         # Go through insDict and extract sequences of deleted regions, too
         self._getDeletedSequences()
 
