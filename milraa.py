@@ -15,7 +15,7 @@ import argparse
 import sys
 import pysam
 from Bio import SeqIO
-import bleties
+from bleties import *
 
 parser = argparse.ArgumentParser(description="MILRAA - MIRAA equivalent for long reads mappings, e.g. PacBio",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -76,7 +76,7 @@ alnfile = pysam.AlignmentFile(aln_filename, aln_mode)
 # Read reference Fasta file into memory
 refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
 # Initialize new IesRecords object to store putative IESs
-iesrecords = bleties.IesRecords(alnfile, aln_format, refgenome)
+iesrecords = IesRecords.IesRecords(alnfile, aln_format, refgenome)
 # Process alignment to find putative IESs 
 iesrecords.findPutativeIes(args.min_ies_length)
 
