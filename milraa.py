@@ -15,6 +15,7 @@ import argparse
 import sys
 import pysam
 from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
 from bleties import *
 
 parser = argparse.ArgumentParser(description="MILRAA - MIRAA equivalent for long reads mappings, e.g. PacBio",

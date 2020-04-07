@@ -5,6 +5,11 @@ import json
 from collections import defaultdict
 import pysam
 from Bio import SeqIO
+from Bio.Alphabet import generic_dna
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+from Bio.Align import MultipleSeqAlignment
+from Bio.Align import AlignInfo
 
 def getClips(cigar, pos):
     """Parse cigar string and alignment position and report left- and right-
@@ -263,9 +268,12 @@ class IesRecords(object):
                     for ins_len in sorted(self._insDict[ctg][ins_start][ins_end]):
                         for evidencetype in self._insDict[ctg][ins_start][ins_end][ins_len]:
                             countvalue = self._insDict[ctg][ins_start][ins_end][ins_len][evidencetype]
+
                             # If the breakpoint is an insert type
                             if evidencetype == "I":
                                 if countvalue >= mininsbreaks:
+                                    # Testing: Get indel consensus
+                                    consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, ins_len)
                                     # Prepare attributes list of key-value pairs
                                     attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start)+"_"+str(ins_end),
                                             "IES_length="+str(ins_len)
@@ -288,13 +296,16 @@ class IesRecords(object):
                                               str(countvalue),     # 6 score - in this case, breakpoint counts for insert operation only
                                               ".",                 # 7 strand
                                               ".",                 # 8 phase
-                                              ";".join(attr)+";"   # 9 attributes
+                                              ";".join(attr)+";",   # 9 attributes
+                                              str(consseq.seq)
                                               ]
                                     fh.write("\t".join(outarr)+"\n")
                             # If the breakpoint is a deletion type
                             elif evidencetype == "D":
                                 if countvalue >= mindelbreaks:
                                     del_len = int(ins_end) - int(ins_start) # TODO: Check for off-by-one errors
+                                    # Testing: Get indel consensus
+                                    consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, del_len)
                                     attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start)+"_"+str(ins_end),
                                             "IES_length="+str(del_len)
                                            ]
@@ -316,6 +327,40 @@ class IesRecords(object):
                                               str(countvalue),     # 6 score - in this case, breakpoint counts for delete operation only
                                               ".",                 # 7 strand
                                               ".",                 # 8 phase
-                                              ";".join(attr)+";"   # 9 attributes
+                                              ";".join(attr)+";",   # 9 attributes
+                                              str(consseq.seq)
                                               ]
                                     fh.write("\t".join(outarr)+"\n")
+
+    def reportIndelConsensusSeq(self, ctg, indelstart, indelend, indellen):
+        """Report consensus of indel sequence
+        Returns: Bio.SeqRecord object
+
+        Arguments:
+        ctg -- name of contig (str)
+        indelstart -- start position, 1-based (int)
+        indelend -- end position, 1-based (int)
+        indellen -- length of indel (int) 
+        """
+
+        # Name for the output consensus sequence
+        consname = "_".join(["BREAK_POINTS_SEQ",
+                             str(ctg),
+                             str(indelstart),
+                             str(indelend),
+                             "len_"+str(indellen)])
+        # If there is only one sequence in the array, report that sequence
+        # if len(self._insSeqDict[ctg][indelstart][indelend][indellen]) == 1:
+        #     outseq = self._insSeqDict[ctg][indelstart][indelend][indellen][0]
+        #     return(SeqRecord(Seq(outseq, generic_dna), id=consname))
+        # else:
+        # From list of sequences as str, make a list of SeqRecord objects
+        seqrecs = [SeqRecord(Seq(i, generic_dna)) for i in self._insSeqDict[ctg][indelstart][indelend][indellen]]
+        # Make a pseudo-alignment from the list of SeqRecord objects
+        aln = MultipleSeqAlignment(seqrecs)
+        # Summarize alignment, and get dumb consensus sequence
+        alninf = AlignInfo.SummaryInfo(aln)
+        alncons = alninf.dumb_consensus()
+        alnconsrec = SeqRecord(alncons, id=consname)
+        return(alnconsrec)
+

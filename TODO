@@ -10,6 +10,7 @@
     - Per-read IES retention score - a measure of "linkage" between IES retention events
  [ ] Group putative IESs that are overlapping into clusters, to identify potential alternative excisions
  [x] Report inserted and deleted sequences that are putative IESs
+ [ ] Add ins_len to the BREAK_POINTS ID in GFF output
  [ ] Use "dumb consensus" to get consensus inserted sequence for coverage > 10
  [ ] Implement Assembly module 
     - Will have to chop up the reads because PacBio reads are long, also want to include some of the context. 
