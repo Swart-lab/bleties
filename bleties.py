@@ -126,12 +126,19 @@ class IesRecords(object):
 
     def __str__(self):
         """Report summary stats of IesRecords object"""
-        dictlen = len(self._insDict)
+        insdictlen = len(self._insDict)
+        insseqdictlen = len(self._insSeqDict)
         nref = self._alnfile.nreferences
+        alnformat = self._alnformat
         mapped = self._alnfile.mapped
-        return("bleties.IesRecords object with dict of length "
-                + str(dictlen)
-                + " and alignment with " 
+        return("bleties.IesRecords object with "
+                + " insDict of length "
+                + str(insdictlen)
+                + " and insSeqDict of length "
+                + str(insseqdictlen)
+                + " and alignment of format "
+                + str(alnformat)
+                + " with " 
                 + str(nref) 
                 + " references and "
                 + str(mapped) 
