@@ -32,6 +32,8 @@ parser.add_argument("--out",
                     type=argparse.FileType("w"),
                     default=sys.stdout,
                     help="Path to write GFF3 file")
+parser.add_argument("--out_fasta",
+                    help="Path to write Fasta file of putative IES sequences")
 parser.add_argument("--min_ies_length", # This parameter is hard-coded in the original ParTIES MIRAA
                     type=int,
                     default=25,
@@ -85,10 +87,19 @@ if args.dump:
     sys.stderr.write(str(iesrecords) + "\n") # Print summary of IesRecords object
     print(iesrecords.dump()) # Dump data to check
 
+# Report putative IESs as list of GFF records and list of SeqRecord objects
+(iesgff, iesseq) = iesrecords.reportPutativeIes(args.min_break_coverage, args.min_del_coverage)
+
 # Write gff version header and command line as comment
 args.out.write("##gff-version 3\n")
 args.out.write("# " + " ".join(sys.argv) + "\n")
-# Report putative IESs and write to GFF3 file
-iesrecords.reportPutativeIes(args.min_break_coverage, args.min_del_coverage, args.out)
+# Write each GFF entry as a tab-separated line
+for rec in iesgff:
+    args.out.write("\t".join(rec)+"\n")
+
+# Write Fasta file of putative IES sequences
+if args.out_fasta:
+    SeqIO.write(iesseq, args.out_fasta, "fasta")
+
 # Close AlignmentFile
 alnfile.close()

@@ -246,7 +246,7 @@ class IesRecords(object):
         # Go through insDict and extract sequences of deleted regions, too
         self._getDeletedSequences()
 
-    def reportPutativeIes(self, mininsbreaks, mindelbreaks, fh):
+    def reportPutativeIes(self, mininsbreaks, mindelbreaks):
         """After clips and indels have been recorded, report putative IESs above
         the minimum coverage, and if the input alignment is a BAM file, then
         also report average coverage in the breakpoint region. Output is written
@@ -257,8 +257,10 @@ class IesRecords(object):
         Arguments:
         mininsbreaks -- Minimum breakpoint coverage to report potential insertion (int)
         mindelbreaks -- Minimum breakpoint coverage to report potential deletion (int)
-        fh -- File handle for writing output
         """
+        # Create lists to hold SeqRecord objects and GFF output
+        outseq = []
+        outgff = []
         # Parse the dict and report putative IESs above min coverage
         # We only check breakpoints which are completely spanned by a read ("I" or "D" operations)
         # however we also report supporting counts from HSM and MSH type mappings
@@ -268,14 +270,12 @@ class IesRecords(object):
                     for ins_len in sorted(self._insDict[ctg][ins_start][ins_end]):
                         for evidencetype in self._insDict[ctg][ins_start][ins_end][ins_len]:
                             countvalue = self._insDict[ctg][ins_start][ins_end][ins_len][evidencetype]
-
                             # If the breakpoint is an insert type
                             if evidencetype == "I":
                                 if countvalue >= mininsbreaks:
-                                    # Testing: Get indel consensus
-                                    consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, ins_len)
+                                    breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(ins_len)])
                                     # Prepare attributes list of key-value pairs
-                                    attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start)+"_"+str(ins_end),
+                                    attr = ["ID="+breakpointid,
                                             "IES_length="+str(ins_len)
                                            ]
                                     attr.append("cigar=I "+str(countvalue))
@@ -288,6 +288,12 @@ class IesRecords(object):
                                     if self._alnformat == "bam":
                                         readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end)) # TODO: Check for off-by-one errors
                                         attr.append("average_coverage="+str(readcov))
+                                    # Get indel consensus
+                                    consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, ins_len)
+                                    consseq.id = breakpointid
+                                    consseq.description = ";".join(attr)+";"
+                                    outseq.append(consseq)
+                                    # Build GFF entry
                                     outarr = [str(ctg),            # 1 seqid
                                               "MILRAA",            # 2 source
                                               "junction",          # 3 type
@@ -296,17 +302,16 @@ class IesRecords(object):
                                               str(countvalue),     # 6 score - in this case, breakpoint counts for insert operation only
                                               ".",                 # 7 strand
                                               ".",                 # 8 phase
-                                              ";".join(attr)+";",   # 9 attributes
-                                              str(consseq.seq)
+                                              ";".join(attr)+";"   # 9 attributes
                                               ]
-                                    fh.write("\t".join(outarr)+"\n")
+                                    outgff.append(outarr)
                             # If the breakpoint is a deletion type
                             elif evidencetype == "D":
                                 if countvalue >= mindelbreaks:
                                     del_len = int(ins_end) - int(ins_start) # TODO: Check for off-by-one errors
-                                    # Testing: Get indel consensus
-                                    consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, del_len)
-                                    attr = ["ID=BREAK_POINTS_"+str(ctg)+"_"+str(ins_start)+"_"+str(ins_end),
+                                    breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
+                                    # Build attributes field
+                                    attr = ["ID="+breakpointid,
                                             "IES_length="+str(del_len)
                                            ]
                                     attr.append("cigar=D "+str(countvalue))
@@ -319,6 +324,12 @@ class IesRecords(object):
                                     if self._alnformat == "bam":
                                         readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end))
                                         attr.append("average_coverage="+str(readcov))
+                                    # Get indel consensus
+                                    consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, del_len)
+                                    consseq.id = breakpointid
+                                    consseq.description = ";".join(attr)+";"
+                                    outseq.append(consseq)
+                                    # Build GFF entry
                                     outarr = [str(ctg),            # 1 seqid
                                               "MILRAA",            # 2 source
                                               "region",            # 3 type
@@ -327,10 +338,10 @@ class IesRecords(object):
                                               str(countvalue),     # 6 score - in this case, breakpoint counts for delete operation only
                                               ".",                 # 7 strand
                                               ".",                 # 8 phase
-                                              ";".join(attr)+";",   # 9 attributes
-                                              str(consseq.seq)
+                                              ";".join(attr)+";"   # 9 attributes
                                               ]
-                                    fh.write("\t".join(outarr)+"\n")
+                                    outgff.append(outarr)
+        return(outgff, outseq)
 
     def reportIndelConsensusSeq(self, ctg, indelstart, indelend, indellen):
         """Report consensus of indel sequence
@@ -343,17 +354,6 @@ class IesRecords(object):
         indellen -- length of indel (int) 
         """
 
-        # Name for the output consensus sequence
-        consname = "_".join(["BREAK_POINTS_SEQ",
-                             str(ctg),
-                             str(indelstart),
-                             str(indelend),
-                             "len_"+str(indellen)])
-        # If there is only one sequence in the array, report that sequence
-        # if len(self._insSeqDict[ctg][indelstart][indelend][indellen]) == 1:
-        #     outseq = self._insSeqDict[ctg][indelstart][indelend][indellen][0]
-        #     return(SeqRecord(Seq(outseq, generic_dna), id=consname))
-        # else:
         # From list of sequences as str, make a list of SeqRecord objects
         seqrecs = [SeqRecord(Seq(i, generic_dna)) for i in self._insSeqDict[ctg][indelstart][indelend][indellen]]
         # Make a pseudo-alignment from the list of SeqRecord objects
@@ -361,6 +361,7 @@ class IesRecords(object):
         # Summarize alignment, and get dumb consensus sequence
         alninf = AlignInfo.SummaryInfo(aln)
         alncons = alninf.dumb_consensus()
-        alnconsrec = SeqRecord(alncons, id=consname)
+        # alnconsrec = SeqRecord(alncons, id=consname)
+        alnconsrec = SeqRecord(alncons)
         return(alnconsrec)
 
