@@ -16,9 +16,9 @@
     - Will have to chop up the reads because PacBio reads are long, also want to include some of the context. 
     - Have to somehow deal with the potential mapping ambiguities at boundaries of inserts
  [ ] Implement MIRET (MILRET) module to report IES retention score
-    [ ] For each junction, report M operations spanning that junction -- Representing for IES- form
-    [ ] Also report D operations spanning that junction. If there are many D operations spanning that junction, something odd is going on!
-    [ ] Report I operations at that junction, of all insert lengths -- Representing IES+ form
+    [x] For each junction, report M operations spanning that junction -- Representing for IES- form
+    [x] Also report D operations spanning that junction. If there are many D operations spanning that junction, something odd is going on!
+    [x] Report I operations at that junction, of all insert lengths -- Representing IES+ form
     [ ] ? Report soft/hard clips that touch that junction (for completeness' sake)
     - Should provide a separate shortlist of IES breakpoints, which can be from MILRAA, but should not directly get the result from MILRAA. This is because user may already have a curated set of IES junctions and is just seeking a retention score calculation, vs. de novo prediction of IESs.
     - Should also report how many potential IESs are not in the provided shortlist.
