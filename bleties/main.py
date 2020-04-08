@@ -3,6 +3,7 @@
 import re
 import sys
 import pysam
+import json
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from bleties import *
@@ -57,4 +58,12 @@ def milraa(args):
     # Close AlignmentFile
     alnfile.close()
 
-
+def milret(args):
+    # Read BAM file - SAM not supported because we need random access
+    alnfile = pysam.AlignmentFile(args.bam, "rb") 
+    # Initialize IesRetentionsMacOnly object
+    iesretentions = Milret.IesRetentionsMacOnly(args.ies, alnfile)
+    # Count mapping operations per site
+    iesretentions.findMappingOps()
+    # Dump output for checking
+    print(json.dumps(iesretentions._countsDict, indent=2))

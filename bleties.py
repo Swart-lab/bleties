@@ -8,7 +8,7 @@ from bleties import main
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 subparsers = parser.add_subparsers()
 
-# MILRAA
+# MILRAA -----------------------------------------------------------------------
 milraa_parser = subparsers.add_parser(name="milraa",
                                       description="MILRAA - Method of Identification by Long Read Alignment Anomalies")
 milraa_parser.add_argument("--sam",
@@ -47,7 +47,19 @@ milraa_parser.add_argument("--dump",
 # Assign function to this subparser
 milraa_parser.set_defaults(func=main.milraa) 
 
-# Parse arguments
+# MILRET -----------------------------------------------------------------------
+milret_parser = subparsers.add_parser(name="milret",
+                                      description="""MILRET - Method of IES Long-read RETention""")
+milret_parser.add_argument("--bam",
+                        help="BAM file containing mapping, must be sorted and indexed")
+milret_parser.add_argument("--ref",
+                        help="FASTA file containing genomic contigs used as reference for the mapping")
+milret_parser.add_argument("--ies",
+                        help="GFF3 file containing coordinates of IES junctions in MAC genome")
+# Assign function to this subparser
+milret_parser.set_defaults(func=main.milret)
+
+# Parse arguments --------------------------------------------------------------
 args = parser.parse_args()
 # Execute respective functions for each subparser
 args.func(args)

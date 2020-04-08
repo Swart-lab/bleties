@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import re
+from collections import defaultdict
 from bleties.SharedValues import SharedValues
 from bleties.SharedFunctions import SharedFunctions
 from bleties.SharedFunctions import Gff
@@ -47,4 +48,58 @@ def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatc
                 if int(cigmatch.group(1)) > mininslength:
                     return(cigmatch.group(2))
 
+class IesRetentionsMacOnly(object):
+    def __init__(self, gfffile, alnfile):
+        """Construct object to store IES retention data.
+        Using only mapping to MAC genome assembly. Unlike ParTIES MIRET which
+        uses both mapping to somatic and germline genomes
 
+        Arguments:
+        gfffile - Path to GFF3 file of IES annotations (str)
+        alnfile - pysam.AlignmentFile object containing mapping of interest
+        """
+        self._gfffile = gfffile
+        self._alnfile = alnfile
+        # Read in GFF file to memory
+        self._gff = Gff()
+        self._gff.file2gff(gfffile)
+        # Initialize dict to hold counts of operations at IES junctions
+        self._countsDict = defaultdict( # ID of GFF feature
+                lambda: defaultdict(    # Operation (M, D, I)
+                    int)                # Count of op at junction
+                )
+        # Initialize dict to hold retention scores calculated from counts
+        self._scoresDict = defaultdict(float) 
+
+    def findMappingOps(self):
+        """Find mapping operations at the IES junctions, and count how many of
+        each type. Match operations (M) that span the IES junction are treated
+        as representing IES- form, because the mapping reference is somatic
+        genome. Insert operations (I) that are exactly at the IES junction are
+        treated as representing IES+ form.
+        """
+        # TODO: Set cutoff for minimum length of match oepration, and/or min
+        # distance for the match boundaries from the IES junction
+        # TODO: Only count insert operations that are within X bases in length
+        # different from the reported IES length
+        for gffid in self._gff._gffDict: # Each IES ID
+            seqid = self._gff._gffDict[gffid]['seqid']
+            start = int(self._gff._gffDict[gffid]['start'])
+            end = int(self._gff._gffDict[gffid]['end'])
+            # GFF allows zero-length features. However, to fetched alignments
+            # from pysam.AlignmentFile, we need nonzero interval
+            if start == end:
+                end += 1
+            # TODO: Also get average coverage at this position, using pysam
+            # Get alignments that span this position
+            for alnrec in self._alnfile.fetch(seqid, start, end):
+                # For this aligned read, which alignment operation spans this
+                # position?
+                res = getOperationAtRefPos(start,
+                                           alnrec.reference_start+1, # Convert 0-based pysam numbering to 1-based in GFF TODO check off-by-one errors
+                                           alnrec.cigarstring,
+                                           1, # TODO: Let user choose thresholds
+                                           1)
+                if res: # If there is no operation, will return None
+                    # Record the count
+                    self._countsDict[gffid][res] +=1 
