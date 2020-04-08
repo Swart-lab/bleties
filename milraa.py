@@ -45,10 +45,10 @@ parser.add_argument("--min_del_coverage", # For deletions (sensu MILORD)
                     type=int,
                     default=10,
                     help="Minimum number of partially aligned reads to define a deletion relative to reference")
-parser.add_argument("--max_mismatch", # TODO: Not yet implemented
-                    type=int,
-                    default=10,
-                    help="Maximum mismatch in the alignment for a read to be used")
+# parser.add_argument("--max_mismatch", # TODO: Not yet implemented
+#                     type=int,
+#                     default=10,
+#                     help="Maximum mismatch in the alignment for a read to be used")
 parser.add_argument("--dump",
                     action="store_true",
                     help="Dump contents of dict for troubleshooting")
