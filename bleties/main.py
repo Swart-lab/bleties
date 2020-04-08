@@ -32,7 +32,7 @@ def milraa(args):
     # Read reference Fasta file into memory
     refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
     # Initialize new IesRecords object to store putative IESs
-    iesrecords = IesRecords.IesRecords(alnfile, aln_format, refgenome)
+    iesrecords = Milraa.IesRecords(alnfile, aln_format, refgenome)
     # Process alignment to find putative IESs 
     iesrecords.findPutativeIes(args.min_ies_length)
 
