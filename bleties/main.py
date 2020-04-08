@@ -66,4 +66,8 @@ def milret(args):
     # Count mapping operations per site
     iesretentions.findMappingOps()
     # Dump output for checking
-    print(json.dumps(iesretentions._countsDict, indent=2))
+    # print(json.dumps(iesretentions._countsDict, indent=2))
+    # print(json.dumps(iesretentions._scoresDict, indent=2))
+    # Report retention scores to file
+    iesretentions.calculateRetentionScores()
+    iesretentions.reportRetentionScores(args.out)

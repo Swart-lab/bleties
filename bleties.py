@@ -56,6 +56,12 @@ milret_parser.add_argument("--ref",
                         help="FASTA file containing genomic contigs used as reference for the mapping")
 milret_parser.add_argument("--ies",
                         help="GFF3 file containing coordinates of IES junctions in MAC genome")
+milret_parser.add_argument("--out",
+                           "-o",
+                           nargs='?',
+                           type=argparse.FileType("w"),
+                           default=sys.stdout,
+                           help="Path to write table of retention scores per IES")
 # Assign function to this subparser
 milret_parser.set_defaults(func=main.milret)
 

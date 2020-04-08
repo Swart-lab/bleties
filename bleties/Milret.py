@@ -103,3 +103,33 @@ class IesRetentionsMacOnly(object):
                 if res: # If there is no operation, will return None
                     # Record the count
                     self._countsDict[gffid][res] +=1 
+    
+    def calculateRetentionScores(self):
+        """Calculate retention scores from counts of I and M operations per site
+        after findMappingOps() has been applied.
+        Equation: R = IES+ / (IES+ + IES-)
+        """
+
+        for gffid in self._countsDict:
+            iesplus = 0
+            iesminus = 0
+            if 'M' in self._countsDict[gffid]:
+                iesplus = self._countsDict[gffid]['M']
+            if 'I' in self._countsDict[gffid]:
+                iesminus = self._countsDict[gffid]['I']
+            if iesplus + iesminus > 0:
+                score = iesplus / (iesplus + iesminus)
+            else:
+                score = None
+            self._scoresDict[gffid] = score
+
+    def reportRetentionScores(self, fh):
+        """Report retention scores after running calculateRetentionScores().
+        Writes to filehandle.
+
+        Arguments:
+        fh - Filehandle to write results
+        """
+
+        for gffid in sorted(self._scoresDict):
+            fh.write("\t".join([gffid, str(self._scoresDict[gffid])]) + "\n")
