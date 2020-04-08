@@ -7,9 +7,8 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from bleties import *
 
-parser = argparse.ArgumentParser(description=
-"""MILRAA - Method of Identification by Long Read Alignment Anomalies
-The MIRAA module in ParTIES uses an alignment of Illumina reads vs somatic 
+parser = argparse.ArgumentParser(description="MILRAA - Method of Identification by Long Read Alignment Anomalies",
+                                 epilog="""The MIRAA module in ParTIES uses an alignment of Illumina reads vs somatic 
 genome to look for breakpoints in read alignment. This script reimplements the 
 MIRAA workflow for PacBio or other long read alignments.
 
