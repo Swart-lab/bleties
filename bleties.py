@@ -2,13 +2,13 @@
 
 import argparse
 import sys
-import pysam
-from Bio import SeqIO
-from Bio.SeqRecord import SeqRecord
 from bleties import main
 
+# Argument parser
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 subparsers = parser.add_subparsers()
+
+# MILRAA
 milraa_parser = subparsers.add_parser(name="milraa",
                                       description="MILRAA - Method of Identification by Long Read Alignment Anomalies")
 milraa_parser.add_argument("--sam",
@@ -44,8 +44,12 @@ milraa_parser.add_argument("--min_del_coverage", # For deletions (sensu MILORD)
 milraa_parser.add_argument("--dump",
                             action="store_true",
                             help="Dump contents of dict for troubleshooting")
-milraa_parser.set_defaults(func=main.milraa)
+# Assign function to this subparser
+milraa_parser.set_defaults(func=main.milraa) 
+
+# Parse arguments
 args = parser.parse_args()
+# Execute respective functions for each subparser
 args.func(args)
 
 """The MIRAA module in ParTIES uses an alignment of Illumina reads vs somatic 
@@ -57,4 +61,3 @@ Differences to Illumina alignments:
 * Reads are not paired, insert size is not an issue
 * Error rate of reads is expected to be higher
 """
-# main.milraa(args)
