@@ -45,9 +45,6 @@ def getIndels(cigar, pos, minlength, qseq):
     qseq -- Query sequence (str)
     """
     outarr = [] # Array to store tuples of results
-    # Lists of reference- and query-consuming operations
-    REFCONSUMING = ['M', 'D', 'N', '=', 'X']
-    QUERYCONSUMING = ['M', 'I', 'S', '=', 'X']
     # Initialize counters for how much query or reference seq is consumed
     ref_consumed = 0
     que_consumed = 0
@@ -78,55 +75,12 @@ def getIndels(cigar, pos, minlength, qseq):
                 del_pos_end = pos + ref_consumed + del_len # 1-based
                 outarr.append((del_pos_start, del_pos_end, 0, "D", "")) # If deletion, no insert sequence reported
         # Count ref and query consumed _after_ the insert has been accounted for
-        if cigmatch.group(2) in REFCONSUMING:
+        if cigmatch.group(2) in SharedValues.REFCONSUMING:
             ref_consumed += int(cigmatch.group(1))
-        if cigmatch.group(2) in QUERYCONSUMING:
+        if cigmatch.group(2) in SharedValues.QUERYCONSUMING:
             que_consumed += int(cigmatch.group(1))
     return(outarr)
 
-def isMatchAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatchlength):
-    """Identify whether a given reference position is covered by a reference-
-    consuming operation. 
-    Returns the operation that covers that position. If no operation covers
-    that position, nothing is returned
-
-    Arguments:
-    reftargetpos -- Target position on the reference sequence, 1-based (int)
-    refstartpos -- Start position of the alignment on reference, 1-based (int)
-    cigar -- CIGAR string of the alignment (str)
-    mininslength -- Minimum length of insert to report (int)
-    minmatchlength - Minimum length of match to report (int)
-    """
-    
-    # Lists of reference- and query-consuming operations
-    REFCONSUMING = ['M', 'D', 'N', '=', 'X']
-    curr_int_start = refstartpos
-    curr_int_end = refstartpos
-    # Split cigar string into individual operations
-    cigs = re.findall(r"\d+[\w\=]", cigar)
-    for cig in cigs:
-        cigmatch = re.match(r"(\d+)([\w\=])",cig) # Get number and operation
-        # If reference is consumed:
-        if cigmatch.group(2) in REFCONSUMING:
-            # Update the current interval
-            curr_int_start = curr_int_end
-            curr_int_end = curr_int_end + int(cigmatch.group(1))
-        # Otherwise if query is consumed
-        else:
-            curr_int_start = curr_int_end # current operation has extent zero on ref
-
-        # If current operation is ref-consuming
-        if curr_int_end > curr_int_start:
-            # Check whether the target position is contained in the current interval
-            if reftargetpos in range(curr_int_start,curr_int_end): # TODO check off-by-one errors
-                if int(cigmatch.group(1)) > minmatchlength:
-                    return(cigmatch.group(2))
-        # If current operation interval is zero (i.e. not ref-consuming)
-        elif curr_int_end == curr_int_start:
-            # and it matches exactly the target poosition
-            if reftargetpos == curr_int_end:
-                if int(cigmatch.group(1)) > mininslength:
-                    return(cigmatch.group(2))
 
 class IesRecords(object):
     """Records of putative IESs from mappings"""
