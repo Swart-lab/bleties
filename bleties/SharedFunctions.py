@@ -2,6 +2,7 @@
 
 """Functions shared between all Bleties scripts"""
 
+import re
 from bleties.SharedValues import SharedValues
 
 class SharedFunctions():
