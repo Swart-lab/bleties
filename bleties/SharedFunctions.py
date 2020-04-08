@@ -106,3 +106,19 @@ class Gff(object):
         outarr = [map(str, linearr) for linearr in outarr]
         outarr = ["\t".join(linearr) for linearr in outarr]
         return(outarr)
+
+    def file2gff(self, filename):
+        """Read in GFF3 file directly to Gff object
+        """
+        with open(filename, "r") as fh:
+            slurp = [line.rstrip() for line in fh]
+            self.list2gff(slurp)
+
+    def gff2file(self, filename):
+        """Write Gff object directly to GFF3 file
+        """
+        fh = open(filename,"w")
+        outarr = self.gff2list()
+        for line in outarr:
+            fh.write(line+"\n")
+        fh.close()
