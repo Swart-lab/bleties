@@ -97,3 +97,10 @@ class Gff(object):
         for line in outarr:
             fh.write(line+"\n")
         fh.close()
+
+    def gff2fh(self, fh):
+        """Write Gff object to open filehandle
+        """
+        outarr = self.gff2list()
+        for line in outarr:
+            fh.write(line+"\n")

@@ -4,13 +4,16 @@ import re
 import json
 from collections import defaultdict
 import pysam
+
 from Bio import SeqIO
 from Bio.Alphabet import generic_dna
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
 from Bio.Align import AlignInfo
+
 from bleties.SharedValues import SharedValues
+from bleties.SharedFunctions import Gff
 
 def getClips(cigar, pos):
     """Parse cigar string and alignment position and report left- and right-
@@ -254,16 +257,22 @@ class IesRecords(object):
         to be lower because we are mapping to somatic genome in the typical use
         case, and reads with alternative excisions are thought to be rare. 
 
+        Return:
+        SharedFunctions.Gff object
+        List of consensus sequences for putative IESs
+
         Arguments:
         mininsbreaks -- Minimum breakpoint coverage to report potential insertion (int)
         mindelbreaks -- Minimum breakpoint coverage to report potential deletion (int)
+        gff -- SharedFunctions.Gff object
         """
         # Create lists to hold SeqRecord objects and GFF output
+        gff = Gff()
         outseq = []
-        outgff = []
         # Parse the dict and report putative IESs above min coverage
         # We only check breakpoints which are completely spanned by a read ("I" or "D" operations)
         # however we also report supporting counts from HSM and MSH type mappings
+        # TODO Reduce code duplication here, incorporate Gff module
         for ctg in sorted(self._insDict):
             for ins_start in sorted(self._insDict[ctg]):
                 for ins_end in sorted(self._insDict[ctg][ins_start]):
@@ -304,7 +313,7 @@ class IesRecords(object):
                                               ".",                 # 8 phase
                                               ";".join(attr)+";"   # 9 attributes
                                               ]
-                                    outgff.append(outarr)
+                                    gff.addEntry(outarr, None)
                             # If the breakpoint is a deletion type
                             elif evidencetype == "D":
                                 if countvalue >= mindelbreaks:
@@ -340,8 +349,8 @@ class IesRecords(object):
                                               ".",                 # 8 phase
                                               ";".join(attr)+";"   # 9 attributes
                                               ]
-                                    outgff.append(outarr)
-        return(outgff, outseq)
+                                    gff.addEntry(outarr, None)
+        return(gff, outseq)
 
     def reportIndelConsensusSeq(self, ctg, indelstart, indelend, indellen):
         """Report consensus of indel sequence

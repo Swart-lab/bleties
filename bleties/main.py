@@ -27,7 +27,6 @@ def milraa(args):
             aln_filename=args.bam
             aln_format = "bam"
             aln_mode = "rb"
-
     # Open SAM or BAM file 
     alnfile = pysam.AlignmentFile(aln_filename, aln_mode)
     # Read reference Fasta file into memory
@@ -36,25 +35,19 @@ def milraa(args):
     iesrecords = Milraa.IesRecords(alnfile, aln_format, refgenome)
     # Process alignment to find putative IESs 
     iesrecords.findPutativeIes(args.min_ies_length)
-
     if args.dump:
         sys.stderr.write(str(iesrecords) + "\n") # Print summary of IesRecords object
         print(iesrecords.dump()) # Dump data to check
-
     # Report putative IESs as list of GFF records and list of SeqRecord objects
     (iesgff, iesseq) = iesrecords.reportPutativeIes(args.min_break_coverage, args.min_del_coverage)
-
     # Write gff version header and command line as comment
     args.out.write("##gff-version 3\n")
     args.out.write("# " + " ".join(sys.argv) + "\n")
     # Write each GFF entry as a tab-separated line
-    for rec in iesgff:
-        args.out.write("\t".join(rec)+"\n")
-
+    iesgff.gff2fh(args.out)
     # Write Fasta file of putative IES sequences
     if args.out_fasta:
         SeqIO.write(iesseq, args.out_fasta, "fasta")
-
     # Close AlignmentFile
     alnfile.close()
 
@@ -65,9 +58,6 @@ def milret(args):
     iesretentions = Milret.IesRetentionsMacOnly(args.ies, alnfile)
     # Count mapping operations per site
     iesretentions.findMappingOps()
-    # Dump output for checking
-    # print(json.dumps(iesretentions._countsDict, indent=2))
-    # print(json.dumps(iesretentions._scoresDict, indent=2))
     # Report retention scores to file
     iesretentions.calculateRetentionScores()
     iesretentions.reportRetentionScores(args.out)
