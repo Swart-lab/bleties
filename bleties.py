@@ -2,10 +2,18 @@
 
 import argparse
 import sys
+import logging
 from bleties import main
 
+logging.basicConfig(format='[%(asctime)s] %(message)s', level=logging.INFO)
+logging.info("Started BleTIES")
+logging.info("Command line:")
+logging.info(" ".join(sys.argv))
 # Argument parser
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument("--log",
+                    help="Log file",
+                    default=sys.stderr)
 subparsers = parser.add_subparsers()
 
 # MILRAA -----------------------------------------------------------------------
