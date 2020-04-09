@@ -23,6 +23,33 @@ class Gff(object):
         # Create dict 
         self._gffDict = defaultdict(dict)
 
+    def addEntry(self, linearr, gffid):
+        """ Add single GFF entry to Gff object
+
+        Arguments:
+        linearr -- List of GFF3 fields, length 9 (list)
+        gffid -- ID attribute of the entry
+        """
+        # Check that GFF line has only nine fields
+        if len(linearr) != 9:
+            raise Exception('GFF3 input encountered with incorrect number of fields')
+        idval = ""
+        idsearch = re.search(r"ID=([^;]+);", linearr[8])
+        if idsearch:
+            idval = idsearch.group(1)
+        elif gffid:
+            idval = gffid
+        else:
+            raise Exception('GFF3 input without ID field')
+        # Make a dict of each GFF3 column name and value
+        self._gffDict[idval] = dict(zip(SharedValues.GFF3COLUMNS, linearr))
+        # Split attributes field into key-value pairs and make a dict of it
+        attrs = re.findall(r"([^;=]+)=([^;=]+)[;$]", linearr[8])
+        attrkeys = [match[0] for match in attrs]
+        attrvals = [match[1] for match in attrs]
+        attrdict = dict(zip(attrkeys, attrvals))
+        self._gffDict[idval]['attrdict'] = attrdict
+
     def list2gff(self, gfflist):
         """Add entries to Gff object from a list of GFF3 lines.
         
@@ -33,20 +60,7 @@ class Gff(object):
         for line in gfflist:
             line = line.rstrip() # Strip trailing whitespace
             linearr = line.split("\t")
-            # Check that GFF line has only nine fields
-            if len(linearr) != 9:
-                raise Exception('GFF3 input encountered with incorrect number of fields')
-            # Get ID from attr field
-            idsearch = re.search(r"ID=([^;]+);", linearr[8])
-            idval = idsearch.group(1)
-            # Make a dict of each GFF3 column name and value
-            self._gffDict[idval] = dict(zip(SharedValues.GFF3COLUMNS, linearr))
-            # Split attributes field into key-value pairs and make a dict of it
-            attrs = re.findall(r"([^;=]+)=([^;=]+)[;$]", linearr[8])
-            attrkeys = [match[0] for match in attrs]
-            attrvals = [match[1] for match in attrs]
-            attrdict = dict(zip(attrkeys, attrvals))
-            self._gffDict[idval]['attrdict'] = attrdict
+            self.addEntry(linearr, None)
 
     def gff2list(self):
         """Write Gff3 object to list of strings, for printing.
