@@ -58,9 +58,10 @@ class Gff(object):
         """
         # Iterate through list, split each line into columns
         for line in gfflist:
-            line = line.rstrip() # Strip trailing whitespace
-            linearr = line.split("\t")
-            self.addEntry(linearr, None)
+            if not re.match(r"#", line): # Skip header lines
+                line = line.rstrip() # Strip trailing whitespace
+                linearr = line.split("\t")
+                self.addEntry(linearr, None)
 
     def gff2list(self):
         """Write Gff3 object to list of strings, for printing.
