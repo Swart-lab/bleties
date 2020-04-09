@@ -130,6 +130,18 @@ class IesRetentionsMacOnly(object):
         Arguments:
         fh - Filehandle to write results
         """
-
+        # Create header line
+        headerarr = ['ID', 'score']
+        headerarr.extend(SharedValues.ALLCIGAROPS)
+        fh.write("\t".join(headerarr)+"\n")
+        # Report for each IES junction
         for gffid in sorted(self._scoresDict):
-            fh.write("\t".join([gffid, str(self._scoresDict[gffid])]) + "\n")
+            # Report scores
+            outarr = [gffid, str(self._scoresDict[gffid])]
+            # Report counts per CIGAR op, zero if not recorded for this junction
+            for op in SharedValues.ALLCIGAROPS:
+                if self._countsDict[gffid][op]:
+                    outarr.append(str(self._countsDict[gffid][op]))
+                else:
+                    outarr.append("0")
+            fh.write("\t".join(outarr) + "\n")
