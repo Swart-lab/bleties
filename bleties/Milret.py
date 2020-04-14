@@ -114,9 +114,9 @@ class IesRetentionsMacOnly(object):
             iesplus = 0
             iesminus = 0
             if 'M' in self._countsDict[gffid]:
-                iesplus = self._countsDict[gffid]['M']
+                iesminus  = self._countsDict[gffid]['M']
             if 'I' in self._countsDict[gffid]:
-                iesminus = self._countsDict[gffid]['I']
+                iesplus = self._countsDict[gffid]['I']
             if iesplus + iesminus > 0:
                 score = iesplus / (iesplus + iesminus)
             else:
