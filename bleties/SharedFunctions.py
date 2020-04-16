@@ -50,6 +50,39 @@ class Gff(object):
         attrdict = dict(zip(attrkeys, attrvals))
         self._gffDict[idval]['attrdict'] = attrdict
 
+    def getValue(self, gffid, column):
+        """Get value of column for a given GFF entry.
+        GFF entry is specified by the ID.
+        Returns the value.
+
+        Arguments:
+        gffid -- ID of the GFF entry
+        column -- Name of the column to retrieve
+        """
+        if column in SharedValues.GFF3COLUMNS:
+            if gffid in self._gffDict:
+                return(self._gffDict[gffid][column])
+            else:
+                raise Exception("Unknown GFF3 ID " + gffid)
+        else:
+            raise Exception("Unknown GFF3 column name " + column)
+
+    def getAttr(self, gffid, attribute):
+        """Get value from attributes field of a GFF entry.
+
+        Arguments:
+        gffid -- ID of the GFF entry
+        attribute -- Key of the attribute requested
+        """
+        if gffid in self._gffDict:
+            if attribute in self._gffDict[gffid]['attrdict']:
+                return(self._gffDict[gffid]['attrdict'][attribute])
+            else:
+                raise Exception("Unknown attribute " + attribute + "for GFF3 ID " + gffid)
+        else:
+            raise Exception("Unknown GFF3 ID " + gffid)
+
+
     def list2gff(self, gfflist):
         """Add entries to Gff object from a list of GFF3 lines.
         
