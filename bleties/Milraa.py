@@ -259,7 +259,7 @@ class IesRecords(object):
 
         Return:
         SharedFunctions.Gff object
-        List of consensus sequences for putative IESs
+        Dict of consensus sequences for putative IESs
 
         Arguments:
         mininsbreaks -- Minimum breakpoint coverage to report potential insertion (int)
@@ -268,7 +268,7 @@ class IesRecords(object):
         """
         # Create lists to hold SeqRecord objects and GFF output
         gff = Gff()
-        outseq = []
+        outseq = {}
         # Parse the dict and report putative IESs above min coverage
         # We only check breakpoints which are completely spanned by a read ("I" or "D" operations)
         # however we also report supporting counts from HSM and MSH type mappings
@@ -301,7 +301,7 @@ class IesRecords(object):
                                     consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, ins_len)
                                     consseq.id = breakpointid
                                     consseq.description = ";".join(attr)+";"
-                                    outseq.append(consseq)
+                                    outseq[consseq.id] = consseq
                                     # Build GFF entry
                                     outarr = [str(ctg),            # 1 seqid
                                               "MILRAA",            # 2 source
@@ -337,7 +337,7 @@ class IesRecords(object):
                                     consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, del_len)
                                     consseq.id = breakpointid
                                     consseq.description = ";".join(attr)+";"
-                                    outseq.append(consseq)
+                                    outseq[consseq.id] = consseq
                                     # Build GFF entry
                                     outarr = [str(ctg),            # 1 seqid
                                               "MILRAA",            # 2 source

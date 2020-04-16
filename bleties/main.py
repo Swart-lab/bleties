@@ -50,7 +50,7 @@ def milraa(args):
         logging.info("Dumping data in JSON format to STDOUT")
         # sys.stderr.write(str(iesrecords) + "\n") # Print summary of IesRecords object
         print(iesrecords.dump()) # Dump data to check
-    # Report putative IESs as list of GFF records and list of SeqRecord objects
+    # Report putative IESs as list of GFF records and dict of SeqRecord objects
     logging.info("Reporting putative IESs in GFF format")
     (iesgff, iesseq) = iesrecords.reportPutativeIes(args.min_break_coverage, args.min_del_coverage)
     # Write gff version header and command line as comment
@@ -61,7 +61,7 @@ def milraa(args):
     # Write Fasta file of putative IES sequences
     if args.out_fasta:
         logging.info("Reporting consensus sequences of putative IESs to Fasta file "+args.out_fasta)
-        SeqIO.write(iesseq, args.out_fasta, "fasta")
+        SeqIO.write(iesseq.values(), args.out_fasta, "fasta")
     # Close AlignmentFile
     alnfile.close()
     logging.info("Finished MILRAA")
