@@ -9,6 +9,7 @@
     - How "chimeric" is a given read? I.e. if a read contains non-excised IESs, does it have more non-excised IESs on average?
     - Per-read IES retention score - a measure of "linkage" between IES retention events
  [ ] Group putative IESs that are overlapping into clusters, to identify potential alternative excisions
+ [ ] Check for flanking TAs 
  [x] Report inserted and deleted sequences that are putative IESs
  [x] Add ins_len to the BREAK_POINTS ID in GFF output
  [x] Use "dumb consensus" to get consensus inserted sequence for coverage > 10
