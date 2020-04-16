@@ -23,6 +23,12 @@ class Gff(object):
         # Create dict 
         self._gffDict = defaultdict(dict)
 
+    def __iter__(self):
+        """Return iterator object for GFF.
+        Iterate over keys of the _gffDict object
+        """
+        return(iter(self._gffDict.keys()))
+
     def addEntry(self, linearr, gffid):
         """ Add single GFF entry to Gff object
 
