@@ -42,6 +42,12 @@ milraa_parser.add_argument("--out",
                            help="Path to write GFF3 file")
 milraa_parser.add_argument("--out_fasta",
                             help="Path to write Fasta file of putative IES sequences")
+milraa_parser.add_argument("--out_junction",
+                            help="Path to write table of flanking sequences at putative IES junctions")
+milraa_parser.add_argument("--junction_flank",
+                            type=int,
+                            default=5,
+                            help="Length of flanking sequence to report to --out_junction")
 milraa_parser.add_argument("--min_ies_length", # This parameter is hard-coded in the original ParTIES MIRAA
                             type=int,
                             default=25,
