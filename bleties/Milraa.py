@@ -53,7 +53,6 @@ def getIndels(cigar, pos, minlength, qseq):
     que_consumed = 0
     # Split cigar string into individual operations
     cigs = re.findall(r"\d+[\w\=]", cigar)
-    precigs = ""
     for cig in cigs:
         cigmatch = re.match(r"(\d+)([\w\=])",cig) # Get number and operation
         # We want to look for insert operations above a min length,
@@ -68,7 +67,7 @@ def getIndels(cigar, pos, minlength, qseq):
                 ins_pos_start = pos + ref_consumed - 1 # 1-based, insert is to the right of position
                 # Get the sequence of the insert
                 ins_seq = qseq[que_consumed:que_consumed + ins_len] # 0-based, following pysam convention
-                outarr.append((ins_pos_start, ins_pos_start, ins_len, "I", ins_seq, precigs, cig, que_consumed, ref_consumed, pos))
+                outarr.append((ins_pos_start, ins_pos_start, ins_len, "I", ins_seq))
         # We also look for delete operations above a min length
         # These are already present in the reference, so the "insert length" is 0
         if cigmatch.group(2) == "D": # If delete operation,
@@ -77,14 +76,12 @@ def getIndels(cigar, pos, minlength, qseq):
                 # Get start and end pos of deletion
                 del_pos_start = pos + ref_consumed # 1-based, deletion starts ON this position
                 del_pos_end = pos + ref_consumed + del_len - 1 # 1-based, deletion ends ON this position
-                outarr.append((del_pos_start, del_pos_end, 0, "D", "", precigs, cig, que_consumed, ref_consumed, pos)) # If deletion, no insert sequence reported
+                outarr.append((del_pos_start, del_pos_end, 0, "D", "")) # If deletion, no insert sequence reported
         # Count ref and query consumed _after_ the insert has been accounted for
         if cigmatch.group(2) in SharedValues.REFCONSUMING:
             ref_consumed += int(cigmatch.group(1))
         if cigmatch.group(2) in SharedValues.QUERYCONSUMING:
             que_consumed += int(cigmatch.group(1))
-        # Append cigs already processed
-        precigs = precigs + cig
     return(outarr)
 
 
@@ -265,9 +262,8 @@ class IesRecords(object):
         # Look for inserts that are completely spanned by the read (i.e. I operations)
         indelarr = getIndels(cigar, pos, minlength, qseq)
         if len(indelarr) > 0:
-            for (indelstart, indelend, indellen, indeltype, indelseq, precigs, cig, que_consumed, ref_consumed, pos) in indelarr:
+            for (indelstart, indelend, indellen, indeltype, indelseq) in indelarr:
                 self._insDict[rname][indelstart][indelend][indellen][indeltype] += 1
-                print("\t".join([str(indelstart), str(indelend), str(indellen), indeltype, precigs, cig, str(que_consumed), str(ref_consumed), str(pos)]))
                 # If insertion, record the inserted sequence to dict
                 if indeltype == "I": 
                     self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
