@@ -106,6 +106,7 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
         flankleftseq = ""
         flankrightseq = ""
         indel = ""
+        refunedited = ""
         # Check if this is insertion junction or deletion region
         # If insertion, add 1 to end, because GFF convention is to record zero-
         # length features with start=end, and junction site is to right of 
@@ -140,12 +141,18 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
             # In GFF, start and end are 1-based and BOTH inclusive
             flankleftseq = flankleftseq + ref[ctg][start-1: start-1+flanklen].seq.upper()
             flankrightseq = ref[ctg][end-flanklen:end].seq.upper() + flankrightseq
+        # Get the reference sequence
+        if indel =="I":
+            refunedited = ref[ctg][start-flanklen:end+flanklen].seq.lower()
+        elif indel =="D":
+            # Start minus one because for deletion, start is ON the deleted region
+            refunedited = ref[ctg][start-flanklen-1:end+flanklen].seq.lower()
         # Put everything together and return
         outseqs.append([breakpointid, 
                         str(flankleftseq), 
                         str(flankrightseq), 
                         str(iesconsseq[breakpointid].seq),
-                        str(ref[ctg][start-flanklen:end+flanklen].seq.lower())
+                        str(refunedited)
                         ])
     return(outseqs)
 
