@@ -53,6 +53,7 @@ def getIndels(cigar, pos, minlength, qseq):
     que_consumed = 0
     # Split cigar string into individual operations
     cigs = re.findall(r"\d+[\w\=]", cigar)
+    precigs = ""
     for cig in cigs:
         cigmatch = re.match(r"(\d+)([\w\=])",cig) # Get number and operation
         # We want to look for insert operations above a min length,
@@ -64,26 +65,89 @@ def getIndels(cigar, pos, minlength, qseq):
             ins_len = int(cigmatch.group(1)) # Length of the current insert
             if ins_len >= minlength: # Check that insert is above min length
                 # Get the start and end positions of the insert
-                ins_pos_start = pos + ref_consumed # 1-based, insert is to the right of position
+                ins_pos_start = pos + ref_consumed - 1 # 1-based, insert is to the right of position
                 # Get the sequence of the insert
                 ins_seq = qseq[que_consumed:que_consumed + ins_len] # 0-based, following pysam convention
-                outarr.append((ins_pos_start, ins_pos_start, ins_len, "I", ins_seq))
+                outarr.append((ins_pos_start, ins_pos_start, ins_len, "I", ins_seq, precigs, cig, que_consumed, ref_consumed, pos))
         # We also look for delete operations above a min length
         # These are already present in the reference, so the "insert length" is 0
         if cigmatch.group(2) == "D": # If delete operation,
             del_len = int(cigmatch.group(1)) # Length of current deletion
             if del_len >= minlength:
                 # Get start and end pos of deletion
-                del_pos_start = pos + ref_consumed # 1-based, insert starts to right of position
-                del_pos_end = pos + ref_consumed + del_len # 1-based
-                outarr.append((del_pos_start, del_pos_end, 0, "D", "")) # If deletion, no insert sequence reported
+                del_pos_start = pos + ref_consumed # 1-based, deletion starts ON this position
+                del_pos_end = pos + ref_consumed + del_len - 1 # 1-based, deletion ends ON this position
+                outarr.append((del_pos_start, del_pos_end, 0, "D", "", precigs, cig, que_consumed, ref_consumed, pos)) # If deletion, no insert sequence reported
         # Count ref and query consumed _after_ the insert has been accounted for
         if cigmatch.group(2) in SharedValues.REFCONSUMING:
             ref_consumed += int(cigmatch.group(1))
         if cigmatch.group(2) in SharedValues.QUERYCONSUMING:
             que_consumed += int(cigmatch.group(1))
+        # Append cigs already processed
+        precigs = precigs + cig
     return(outarr)
 
+
+def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
+    """Get sequence at indel junctions.
+    Returns list of list (breakpoint, left junction seq, right junction seq)
+
+    Arguments:
+    iesgff -- Gff object listing insertions and deletions (output from reportPutativeIes)
+    iesconsseq -- Dict of SeqRecords for indels (output from reportPutativeIes)
+    refgenome -- Reference genome (dict of SeqRecord objects)
+    flanklen -- Length of flanking sequence at junctions to report
+    """
+    outseqs = []
+    for breakpointid in iesgff:
+        ctg = iesgff.getValue(breakpointid,'seqid')
+        start = int(iesgff.getValue(breakpointid,'start'))
+        end = int(iesgff.getValue(breakpointid,'end'))
+        flankleftseq = ""
+        flankrightseq = ""
+        indel = ""
+        # Check if this is insertion junction or deletion region
+        # If insertion, add 1 to end, because GFF convention is to record zero-
+        # length features with start=end, and junction site is to right of 
+        # coordinate. 
+        if start == end: # insertion junction
+            # end += 1
+            indel = "I"
+        elif start < end:
+            indel = "D"
+        else:
+            raise Exception("Start cannot be less than end, feature " + breakpointid)
+        # Get the left flanking junction on reference
+        # Check whether sequence with flanking will run off the end
+        if start >= flanklen: # TODO Check off-by-one
+            if indel == "I": # For insert, feature starts on RIGHT of coordinate
+                flankleftseq = ref[ctg][start - flanklen: start].seq.lower()
+            elif indel == "D": # For deletion, feature starts ON the coordinate
+                flankleftseq = ref[ctg][start-1-flanklen:start-1].seq.lower() 
+        else: # Pad the left side 
+            flankleftseq = (flanklen - start) * "-" + ref[ctg][0:start].seq.lower()
+        # Get the right flanking junction on reference
+        # Check whether sequence with flanking will run off the end
+        if (end + flanklen) <= len(ref[ctg]):
+            flankrightseq = ref[ctg][end: end + flanklen].seq.lower() # TODO check if gff end inclusive
+        else:
+            flankrightseq = ref[ctg][end:].seq.lower()
+        # Add the IES sequence fragment
+        if indel == "I":
+            flankleftseq = flankleftseq + iesconsseq[breakpointid][0:flanklen].seq.upper()
+            flankrightseq = iesconsseq[breakpointid][-flanklen:].seq.upper() + flankrightseq
+        elif indel == "D":
+            # In GFF, start and end are 1-based and BOTH inclusive
+            flankleftseq = flankleftseq + ref[ctg][start-1: start-1+flanklen].seq.upper()
+            flankrightseq = ref[ctg][end-flanklen:end].seq.upper() + flankrightseq
+        # Put everything together and return
+        outseqs.append([breakpointid, 
+                        str(flankleftseq), 
+                        str(flankrightseq), 
+                        str(iesconsseq[breakpointid].seq),
+                        str(ref[ctg][start-flanklen:end+flanklen].seq.lower())
+                        ])
+    return(outseqs)
 
 class IesRecords(object):
     """Records of putative IESs from mappings"""
@@ -194,8 +258,9 @@ class IesRecords(object):
         # Look for inserts that are completely spanned by the read (i.e. I operations)
         indelarr = getIndels(cigar, pos, minlength, qseq)
         if len(indelarr) > 0:
-            for (indelstart, indelend, indellen, indeltype, indelseq) in indelarr:
+            for (indelstart, indelend, indellen, indeltype, indelseq, precigs, cig, que_consumed, ref_consumed, pos) in indelarr:
                 self._insDict[rname][indelstart][indelend][indellen][indeltype] += 1
+                print("\t".join([str(indelstart), str(indelend), str(indellen), indeltype, precigs, cig, str(que_consumed), str(ref_consumed), str(pos)]))
                 # If insertion, record the inserted sequence to dict
                 if indeltype == "I": 
                     self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
@@ -219,8 +284,10 @@ class IesRecords(object):
                         if "D" in self._insDict[rname][indelstart][indelend][0]:
                             # Record the sequence to the insSelfDict
                             # Convert from 1-based to 0-based numbering for slicing
-                            indellen = int(indelend) - int(indelstart)
-                            indelseq = str(refctgseq[int(indelstart)-1:int(indelend)-1]) # TODO: Check for off-by-one errors
+                            # Plus one because end and start in GFF features are BOTH inclusive
+                            indellen = int(indelend) - int(indelstart) + 1
+                            # Get sequence of indel sequence, note that end is also inclusive
+                            indelseq = str(refctgseq[int(indelstart)-1:int(indelend)]) # TODO: Check for off-by-one errors
                             self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
 
     def findPutativeIes(self, minlength):
@@ -317,7 +384,8 @@ class IesRecords(object):
                             # If the breakpoint is a deletion type
                             elif evidencetype == "D":
                                 if countvalue >= mindelbreaks:
-                                    del_len = int(ins_end) - int(ins_start) # TODO: Check for off-by-one errors
+                                    # Add 1 because both start and end are inclusive
+                                    del_len = int(ins_end) - int(ins_start) + 1 # TODO: Check for off-by-one errors
                                     breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
                                     # Build attributes field
                                     attr = ["ID="+breakpointid,

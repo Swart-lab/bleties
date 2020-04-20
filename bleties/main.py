@@ -62,6 +62,11 @@ def milraa(args):
     if args.out_fasta:
         logging.info("Reporting consensus sequences of putative IESs to Fasta file "+args.out_fasta)
         SeqIO.write(iesseq.values(), args.out_fasta, "fasta")
+    # Report junction sequences
+    junctionseqs = Milraa.getIndelJunctionSeqs(iesgff, iesseq, refgenome, 5)
+    with open("testjunction.out", "w") as fhjunc:
+        for junc in junctionseqs:
+            fhjunc.write("\t".join(junc) + "\n")
     # Close AlignmentFile
     alnfile.close()
     logging.info("Finished MILRAA")
