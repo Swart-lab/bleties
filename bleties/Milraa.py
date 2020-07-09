@@ -325,7 +325,7 @@ class IesRecords(object):
         also report average coverage in the breakpoint region. Output is written
         to open file handle. Min coverage for deletion breakpoints is expected
         to be lower because we are mapping to somatic genome in the typical use
-        case, and reads with alternative excisions are thought to be rare. 
+        case, and reads with alternative excisions are thought to be rare.
 
         Return:
         SharedFunctions.Gff object

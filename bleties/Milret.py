@@ -92,7 +92,7 @@ class IesRetentionsMacOnly(object):
                 end += 1
             # TODO: Also get average coverage at this position, using pysam
             # Get alignments that span this position
-            for alnrec in self._alnfile.fetch(seqid, start, end):
+            for alnrec in self._alnfile.fetch(seqid, start, end): # fetch() method uses 1-based SAM coordinates, unlike rest of Pysam!
                 # For this aligned read, which alignment operation spans this
                 # position?
                 res = getOperationAtRefPos(start,
