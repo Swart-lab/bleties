@@ -27,7 +27,8 @@ Differences to Illumina alignments:
 * Error rate of reads is expected to be higher
 """
 milraa_parser = subparsers.add_parser(name="milraa",
-                                      description="MILRAA - Method of Identification by Long Read Alignment Anomalies")
+                                      description="MILRAA - Method of Identification by Long Read Alignment Anomalies",
+                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 milraa_parser.add_argument("--sam",
                            help="SAM file containing mapping, requires header")
 milraa_parser.add_argument("--bam",
@@ -96,7 +97,8 @@ Points to note and address in the future:
 """
 
 milret_parser = subparsers.add_parser(name="milret",
-                                      description="""MILRET - Method of IES Long-read RETention""")
+                                      description="""MILRET - Method of IES Long-read RETention""",
+                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 milret_parser.add_argument("--bam",
                         help="BAM file containing mapping, must be sorted and indexed")
 milret_parser.add_argument("--ref",
