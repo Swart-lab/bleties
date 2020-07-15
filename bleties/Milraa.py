@@ -445,3 +445,41 @@ class IesRecords(object):
         alnconsrec = SeqRecord(alncons)
         return(alnconsrec)
 
+    def reportIndelReadMismatchPc(self, ctg, indelstart, indelend, indellen):
+        """Report sequence mismatch % of query reads containing indel at a 
+        specific position vs. reads without indel.
+        This is to flag indels that may originate from paralogs and hence are 
+        probably not true IESs.
+
+        Arguments:
+        ctg -- name of contig (str)
+        indelstart -- start position of indel, 1-based (int)
+        indelend -- end position, 1 based (int)
+        indellen -- length of indel (int)
+
+        Returns:
+        ins_mm -- list of floats, mismatch % of query reads containing indel at 
+                  target position
+        non_mm -- list of floats, mismatch % of query reads without indel at pos
+        """
+        MIN_IES_LEN = 10                                                        # TODO: replace magic number
+        # GFF allows start==end, but pysam does not recognise
+        dummyend = indelend
+        if indelend == indelstart:
+            dummyend += 1 
+        # Get segments that overlap indel of interest
+        itrr = self._alnfile.fetch(ctg, indelstart - 1, dummyend - 1) # minus 1 for pysam uses 0-based coords
+        segs = [seg for seg in itrr] # Segments aligning to position of interest
+        # initialize lists to report mismatch percentages
+        non_mm = []
+        ins_mm = []
+        # for each segment, check if it contains indel at position of interest
+        for seg in segs:
+            indels = getIndels(seg.cigarstring, int(seg.reference_start), MIN_IES_LEN, seg.query_sequence)
+            indelcoords = set([(int(indel[0]),int(indel[1])) for indel in indels])
+            mismatch_pc = 100 * float(seg.get_tag("NM")) / float(seg.query_length) # number of mismatchs / query length * 100 pc
+            if (indelstart - 1, indelend - 1) in indelcoords:
+                ins_mm.append(mismatch_pc)
+            else:
+                non_mm.append(mismatch_pc)
+        return(ins_mm, non_mm)
