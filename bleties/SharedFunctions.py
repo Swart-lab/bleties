@@ -29,6 +29,12 @@ class Gff(object):
         """
         return(iter(self._gffDict.keys()))
 
+    def __len__(self):
+        """Length of a Gff object.
+        Same as length of internal _gffDict object
+        """
+        return(len(self._gffDict))
+
     def addEntry(self, linearr, gffid):
         """ Add single GFF entry to Gff object
 
