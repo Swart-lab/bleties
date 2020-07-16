@@ -26,4 +26,5 @@
     - Should also report how many potential IESs are not in the provided shortlist. <- Actually this is better done by just running MILRAA separately and comparing the results.
     - ParTIES MIRET uses mapping to both MAC and MIC genomes to compare counts of reads spanning IES- version vs. reads spanning IES+ version. With PacBio reads, and known IES junctions, why don't we just rely on the Insert operation of the mapper? 
  [ ] Implement Insert/Remove module, to remove putative IESs from assembly, or add them back in
-
+ [x] Screen predicted IESs from MILRAA for possible mis-mappings and misassemblies by mismatch % of reads with or without indel of interest
+ [ ] MILRAA prediction of inserts: how to deal with fuzzy boundaries and variable insert lengths? Will be more of a problem with subreads vs. CCS reads. Maybe give user option to specify "error profile" of input reads
