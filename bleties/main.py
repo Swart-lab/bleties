@@ -8,6 +8,7 @@ import json
 import statistics as stats
 from scipy.stats import mannwhitneyu
 from scipy.stats import ttest_ind
+from collections import defaultdict
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -121,7 +122,7 @@ def miser(args):
     logging.info("Reporting possibly spurious IESs due to misassembly or mapped paralogs")
     # test_type = 'mann-whitney' # TODO: user option
 
-    out_gff_split = {} # dict to hold split GFF file keyed by diagnosis
+    out_gff_split = defaultdict(list) # dict to hold split GFF file keyed by diagnosis
 
     with open(args.out,"w") as fh_mm:
         fh_mm.write("\t".join(['ID',
@@ -185,12 +186,20 @@ def miser(args):
                 diagnosis = "low_coverage"
             outarr.append(diagnosis)
 
+            out_gff_split[diagnosis].append(iesgff.getEntry(bpid))
+
             # Write output
             fh_mm.write("\t".join([str(i) for i in outarr]))
             fh_mm.write("\n")
             # fh_mm.write(" ".join([str(i) for i in ins_mm]) + "\n")
             # fh_mm.write(" ".join([str(i) for i in non_mm]) + "\n")
 
+    for diag in out_gff_split:
+        outfile = f"{args.gff}.{diag}.gff3"
+        with open(outfile, "w") as fh_spl:
+            for line in out_gff_split[diag]:
+                fh_spl.write("\t".join([str(i) for i in line]))
+                fh_spl.write("\n")
 
 def milret(args):
     logging.info("Started MILRET")
