@@ -80,31 +80,49 @@ def milraa(args):
                     int(iesgff.getValue(bpid,'end')),
                     int(iesgff.getAttr(bpid,'IES_length'))
                 )
-                if args.spurious_ies_test == 'mann-whitney':
-                    # Mann-Whitney U test for whether mismatch % with indel of interest
-                    # is greater than without
-                    mwstat, mwpval = mannwhitneyu(ins_mm, non_mm, alternative='greater')
+                # Perform test of mismatch % if more than 2 reads with inserts 
+                # (otherwise stdev meaningless)
+                if len(ins_mm) > 2 and len(non_mm) > 2: 
+                    if args.spurious_ies_test == 'mann-whitney':
+                        # Mann-Whitney U test for whether mismatch % with indel of interest
+                        # is greater than without
+                        mwstat, mwpval = mannwhitneyu(ins_mm, non_mm, alternative='greater')
+                    else:
+                        # Ward's t-test (non-equal population variances)
+                        mwstat, mwpval = ttest_ind(ins_mm, non_mm, equal_var=False)
+                    # Report
+                    outarr = [bpid, 
+                        round(stats.mean(ins_mm),2),
+                        round(stats.mean(non_mm),2),
+                        round(stats.stdev(ins_mm),2),
+                        round(stats.stdev(non_mm),2),
+                        round(mwstat,2),
+                        '%.2E' % mwpval, # scientific notation
+                        len(ins_mm),
+                        len(non_mm)]
+                    # Diagnosis
+                    diagnosis = "ok" 
+                    if stats.mean(ins_mm) > 5 or stats.mean(non_mm) > 5:
+                        diagnosis = "high error"
+                    if len(ins_mm) > len(non_mm):
+                        diagnosis = 'misassembly?'
+                    # PVAL_UNCORR = 0.05 # TODO magic number
+                    pval_corr = args.spurious_ies_pvalue / len(iesgff) # Bonferroni correction
+                    if mwpval < pval_corr and stats.mean(ins_mm) > stats.mean(non_mm):
+                        diagnosis = "paralog?"
+                    outarr.append(diagnosis)
                 else:
-                    # Ward's t-test (non-equal population variances)
-                    mwstat, mwpval = ttest_ind(ins_mm, non_mm, equal_var=False)
-                # Report
-                outarr = [bpid, 
-                    round(stats.mean(ins_mm),2),
-                    round(stats.mean(non_mm),2),
-                    round(stats.stdev(ins_mm),2),
-                    round(stats.stdev(non_mm),2),
-                    round(mwstat,2),
-                    '%.2E' % mwpval, # scientific notation
-                    len(ins_mm),
-                    len(non_mm)]
-                diagnosis = "ok"
-                if len(ins_mm) > len(non_mm):
-                    diagnosis = 'misassembly?'
-                # PVAL_UNCORR = 0.05 # TODO magic number
-                pval_corr = args.spurious_ies_pvalue / len(iesgff) # Bonferroni correction
-                if mwpval < pval_corr and stats.mean(ins_mm) > stats.mean(non_mm):
-                    diagnosis = "paralog?"
-                outarr.append(diagnosis)
+                    outarr = [bpid, 
+                        round(stats.mean(ins_mm),2),
+                        round(stats.mean(non_mm),2),
+                        "NA",
+                        "NA",
+                        "NA",
+                        "NA",
+                        len(ins_mm),
+                        len(non_mm),
+                        "NA"]
+                # Write output
                 fh_mm.write("\t".join([str(i) for i in outarr]))
                 fh_mm.write("\n")
                 # fh_mm.write(" ".join([str(i) for i in ins_mm]) + "\n")
