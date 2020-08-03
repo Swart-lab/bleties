@@ -57,58 +57,58 @@ def milraa(args):
     logging.info("Reporting putative IESs in GFF format")
     (iesgff, iesseq) = iesrecords.reportPutativeIes(args.min_break_coverage, args.min_del_coverage)
 
-    # TEST: Report mismatch percentages of reads with and without each putative IES
-    logging.info("Reporting possibly spurious IESs due to misassembly or mapped paralogs")
-    test_type = 'mann-whitney' # TODO: user option
-    # test_type = 't'
-    with open("mismatch_pc.tsv","w") as fh_mm:
-        fh_mm.write("\t".join(['ID',
-            'mean_mismatch_reads_with_indel',
-            'mean_mismatch_without_indel',
-            'stdev_with_indel',
-            'stdev_without_indel',
-            'statistic',
-            'p-value',
-            'no_reads_with_indel',
-            'no_reads_without_indel',
-            'diagnosis']))
-        fh_mm.write("\n")
-        for bpid in iesgff:
-            ins_mm, non_mm = iesrecords.reportIndelReadMismatchPc(
-                iesgff.getValue(bpid,'seqid'),
-                int(iesgff.getValue(bpid,'start')),
-                int(iesgff.getValue(bpid,'end')),
-                int(iesgff.getAttr(bpid,'IES_length'))
-            )
-            if test_type == 'mann-whitney':
-                # Mann-Whitney U test for whether mismatch % with indel of interest
-                # is greater than without
-                mwstat, mwpval = mannwhitneyu(ins_mm, non_mm, alternative='greater')
-            else:
-                # Ward's t-test (non-equal population variances)
-                mwstat, mwpval = ttest_ind(ins_mm, non_mm, equal_var=False)
-            # Report
-            outarr = [bpid, 
-                round(stats.mean(ins_mm),2),
-                round(stats.mean(non_mm),2),
-                round(stats.stdev(ins_mm),2),
-                round(stats.stdev(non_mm),2),
-                round(mwstat,2),
-                '%.2E' % mwpval, # scientific notation
-                len(ins_mm),
-                len(non_mm)]
-            diagnosis = "ok"
-            if len(ins_mm) > len(non_mm):
-                diagnosis = 'misassembly?'
-            PVAL_UNCORR = 0.05 # TODO magic number
-            pval_corr = PVAL_UNCORR / len(iesgff) # Bonferroni correction
-            if mwpval < pval_corr and stats.mean(ins_mm) > stats.mean(non_mm):
-                diagnosis = "paralog?"
-            outarr.append(diagnosis)
-            fh_mm.write("\t".join([str(i) for i in outarr]))
+    if args.out_spurious_ies:
+        # TEST: Report mismatch percentages of reads with and without each putative IES
+        logging.info("Reporting possibly spurious IESs due to misassembly or mapped paralogs")
+        # test_type = 'mann-whitney' # TODO: user option
+        with open(args.out_spurious_ies,"w") as fh_mm:
+            fh_mm.write("\t".join(['ID',
+                'mean_mismatch_reads_with_indel',
+                'mean_mismatch_without_indel',
+                'stdev_with_indel',
+                'stdev_without_indel',
+                'statistic',
+                'p-value',
+                'no_reads_with_indel',
+                'no_reads_without_indel',
+                'diagnosis']))
             fh_mm.write("\n")
-            # fh_mm.write(" ".join([str(i) for i in ins_mm]) + "\n")
-            # fh_mm.write(" ".join([str(i) for i in non_mm]) + "\n")
+            for bpid in iesgff:
+                ins_mm, non_mm = iesrecords.reportIndelReadMismatchPc(
+                    iesgff.getValue(bpid,'seqid'),
+                    int(iesgff.getValue(bpid,'start')),
+                    int(iesgff.getValue(bpid,'end')),
+                    int(iesgff.getAttr(bpid,'IES_length'))
+                )
+                if args.spurious_ies_test == 'mann-whitney':
+                    # Mann-Whitney U test for whether mismatch % with indel of interest
+                    # is greater than without
+                    mwstat, mwpval = mannwhitneyu(ins_mm, non_mm, alternative='greater')
+                else:
+                    # Ward's t-test (non-equal population variances)
+                    mwstat, mwpval = ttest_ind(ins_mm, non_mm, equal_var=False)
+                # Report
+                outarr = [bpid, 
+                    round(stats.mean(ins_mm),2),
+                    round(stats.mean(non_mm),2),
+                    round(stats.stdev(ins_mm),2),
+                    round(stats.stdev(non_mm),2),
+                    round(mwstat,2),
+                    '%.2E' % mwpval, # scientific notation
+                    len(ins_mm),
+                    len(non_mm)]
+                diagnosis = "ok"
+                if len(ins_mm) > len(non_mm):
+                    diagnosis = 'misassembly?'
+                # PVAL_UNCORR = 0.05 # TODO magic number
+                pval_corr = args.spurious_ies_pvalue / len(iesgff) # Bonferroni correction
+                if mwpval < pval_corr and stats.mean(ins_mm) > stats.mean(non_mm):
+                    diagnosis = "paralog?"
+                outarr.append(diagnosis)
+                fh_mm.write("\t".join([str(i) for i in outarr]))
+                fh_mm.write("\n")
+                # fh_mm.write(" ".join([str(i) for i in ins_mm]) + "\n")
+                # fh_mm.write(" ".join([str(i) for i in non_mm]) + "\n")
 
     # Write gff version header and command line as comment
     args.out.write("##gff-version 3\n")

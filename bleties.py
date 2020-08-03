@@ -45,6 +45,16 @@ milraa_parser.add_argument("--out_fasta",
                             help="Path to write Fasta file of putative IES sequences")
 milraa_parser.add_argument("--out_junction",
                             help="Path to write table of flanking sequences at putative IES junctions")
+milraa_parser.add_argument("--out_spurious_ies",
+                           help="Path to write report on possibly spurious IESs due to misassembly or mapped paralogs")
+milraa_parser.add_argument("--spurious_ies_test",
+                           type=str,
+                           default="mann-whitney",
+                           help="Test to use to evaluate spurious IESs by mismatch percentage comparisons")
+milraa_parser.add_argument("--spurious_ies_pvalue",
+                           type=float,
+                           default=0.05,
+                           help="P-value cutoff (uncorrected) to use for spurious IES mismatch test")
 milraa_parser.add_argument("--junction_flank",
                             type=int,
                             default=5,
