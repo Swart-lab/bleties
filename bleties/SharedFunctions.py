@@ -94,6 +94,11 @@ class Gff(object):
         else:
             raise Exception("Unknown GFF3 ID " + gffid)
 
+    def getEntry(self, gffid):
+        """Get entry from Gff object with ID key, returns a list
+        """
+        linearr = [self._gffDict[gffid][colname] for colname in SharedValues.GFF3COLUMNS]
+        return(linearr)
 
     def list2gff(self, gfflist):
         """Add entries to Gff object from a list of GFF3 lines.
@@ -116,7 +121,7 @@ class Gff(object):
 
         outarr=[]
         for gffid in self._gffDict: # ID value
-            linearr = [self._gffDict[gffid][colname] for colname in SharedValues.GFF3COLUMNS]
+            linearr = self.getEntry(gffid)
             # Make numeric fields int - necessary for correct sorting later
             linearr[3] = int(linearr[3])
             linearr[4] = int(linearr[4])
