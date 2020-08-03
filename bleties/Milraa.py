@@ -302,19 +302,20 @@ class IesRecords(object):
         """
         # parse CIGAR string
         for line in self._alnfile:
-            pos = int(line.reference_start) + 1 # Convert from 0-based numbering in pysam to 1-based in GFF3 and SAM
-            rname = line.reference_name # Get reference name
-            total_mismatch = line.get_tag("NM") # Get number of mismatches
-            # total_i = 0 
-            qseq = line.query_sequence # Get query sequence
+            if line.flag != 4: # Skip unmapped reads
+                pos = int(line.reference_start) + 1 # Convert from 0-based numbering in pysam to 1-based in GFF3 and SAM
+                rname = line.reference_name # Get reference name
+                # total_mismatch = line.get_tag("NM") # Get number of mismatches
+                # total_i = 0 
+                qseq = line.query_sequence # Get query sequence
 
-            # Find left and right clips and record them
-            self._addClipsFromCigar(rname, line.cigarstring, pos)
-            # Find indels (putative IESs) over the minimum length and record them
-            self._addIndelsFromCigar(rname, line.cigarstring, pos, minlength, qseq)
-            # # if int(total_mismatch) - int(total_i) < 0: 
-            #     # Sanity check - mismatches include inserts, but cannot be fewer than inserts
-            #     # print ("Uh-oh!")
+                # Find left and right clips and record them
+                self._addClipsFromCigar(rname, line.cigarstring, pos)
+                # Find indels (putative IESs) over the minimum length and record them
+                self._addIndelsFromCigar(rname, line.cigarstring, pos, minlength, qseq)
+                # # if int(total_mismatch) - int(total_i) < 0: 
+                #     # Sanity check - mismatches include inserts, but cannot be fewer than inserts
+                #     # print ("Uh-oh!")
 
         # Go through insDict and extract sequences of deleted regions, too
         self._getDeletedSequences()
