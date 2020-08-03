@@ -45,16 +45,6 @@ milraa_parser.add_argument("--out_fasta",
                             help="Path to write Fasta file of putative IES sequences")
 milraa_parser.add_argument("--out_junction",
                             help="Path to write table of flanking sequences at putative IES junctions")
-milraa_parser.add_argument("--out_spurious_ies",
-                           help="Path to write report on possibly spurious IESs due to misassembly or mapped paralogs")
-milraa_parser.add_argument("--spurious_ies_test",
-                           type=str,
-                           default="mann-whitney",
-                           help="Test to use to evaluate spurious IESs by mismatch percentage comparisons")
-milraa_parser.add_argument("--spurious_ies_pvalue",
-                           type=float,
-                           default=0.05,
-                           help="P-value cutoff (uncorrected) to use for spurious IES mismatch test")
 milraa_parser.add_argument("--junction_flank",
                             type=int,
                             default=5,
@@ -80,6 +70,48 @@ milraa_parser.add_argument("--dump",
                             help="Dump contents of dict for troubleshooting")
 # Assign function to this subparser
 milraa_parser.set_defaults(func=main.milraa) 
+
+# MISER ------------------------------------------------------------------------
+"""MISER takes an existing set of IES predictions, produced by MILRAA, and 
+screens it for potential mispredictions caused by paralogy, misassembly, or 
+erroneous mappings. 
+
+For each putative IES (insertion or deletion), the set of reads mapping to that 
+site is found, and split into two subsets: those containing the indel and those
+without. For each subset, the mean percent mismatch of alignments vs. the 
+reference is taken. 
+
+ * If either subset has high (>5%) mismatch rate, "high error" is reported.
+ * If the subset with indel has a significantly higher mismatch than the subset
+   without, possible paralog is reported.
+ * If the subset without indel has a significantly higher mismatch, possible 
+   misassembly is reported.
+ * Otherwise the putative IES is "ok".
+"""
+miser_parser = subparsers.add_parser(name="miser",
+                                      description="MISER - Method of IES Spurious or Erroneous Reporting",
+                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+miser_parser.add_argument("--sam",
+                           help="SAM file containing mapping, requires header")
+miser_parser.add_argument("--bam",
+                           help="BAM file containing mapping, must be sorted and indexed")
+miser_parser.add_argument("--ref",
+                           help="FASTA file containing genomic contigs used as reference for the mapping")
+miser_parser.add_argument("--gff",
+        help="GFF file containing coordinates for putative IESs")
+miser_parser.add_argument("--out",
+                          default="spurious_ies.tsv",
+                           help="Path to write report on possibly spurious IESs due to misassembly or mapped paralogs")
+miser_parser.add_argument("--spurious_ies_test",
+                           type=str,
+                           default="mann-whitney",
+                           help="Test to use to evaluate spurious IESs by mismatch percentage comparisons")
+miser_parser.add_argument("--spurious_ies_pvalue",
+                           type=float,
+                           default=0.05,
+                           help="P-value cutoff (uncorrected) to use for spurious IES mismatch test")
+# Assign function to this subparser
+miser_parser.set_defaults(func=main.miser) 
 
 # MILRET -----------------------------------------------------------------------
 """The MIRET pipeline in ParTIES compares mappings of the same reads to the 

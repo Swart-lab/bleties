@@ -12,6 +12,7 @@ from scipy.stats import ttest_ind
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from bleties import *
+from bleties import SharedFunctions
 
 def milraa(args):
     logging.info("Started MILRAA")
@@ -57,77 +58,6 @@ def milraa(args):
     logging.info("Reporting putative IESs in GFF format")
     (iesgff, iesseq) = iesrecords.reportPutativeIes(args.min_break_coverage, args.min_del_coverage)
 
-    if args.out_spurious_ies:
-        # TEST: Report mismatch percentages of reads with and without each putative IES
-        logging.info("Reporting possibly spurious IESs due to misassembly or mapped paralogs")
-        # test_type = 'mann-whitney' # TODO: user option
-        with open(args.out_spurious_ies,"w") as fh_mm:
-            fh_mm.write("\t".join(['ID',
-                'mean_mismatch_reads_with_indel',
-                'mean_mismatch_without_indel',
-                'stdev_with_indel',
-                'stdev_without_indel',
-                'statistic',
-                'p-value',
-                'no_reads_with_indel',
-                'no_reads_without_indel',
-                'diagnosis']))
-            fh_mm.write("\n")
-            for bpid in iesgff:
-                ins_mm, non_mm = iesrecords.reportIndelReadMismatchPc(
-                    iesgff.getValue(bpid,'seqid'),
-                    int(iesgff.getValue(bpid,'start')),
-                    int(iesgff.getValue(bpid,'end')),
-                    int(iesgff.getAttr(bpid,'IES_length'))
-                )
-                # Perform test of mismatch % if more than 2 reads with inserts 
-                # (otherwise stdev meaningless)
-                if len(ins_mm) > 2 and len(non_mm) > 2: 
-                    if args.spurious_ies_test == 'mann-whitney':
-                        # Mann-Whitney U test for whether mismatch % with indel of interest
-                        # is greater than without
-                        mwstat, mwpval = mannwhitneyu(ins_mm, non_mm, alternative='greater')
-                    else:
-                        # Ward's t-test (non-equal population variances)
-                        mwstat, mwpval = ttest_ind(ins_mm, non_mm, equal_var=False)
-                    # Report
-                    outarr = [bpid, 
-                        round(stats.mean(ins_mm),2),
-                        round(stats.mean(non_mm),2),
-                        round(stats.stdev(ins_mm),2),
-                        round(stats.stdev(non_mm),2),
-                        round(mwstat,2),
-                        '%.2E' % mwpval, # scientific notation
-                        len(ins_mm),
-                        len(non_mm)]
-                    # Diagnosis
-                    diagnosis = "ok" 
-                    if stats.mean(ins_mm) > 5 or stats.mean(non_mm) > 5:
-                        diagnosis = "high error"
-                    if len(ins_mm) > len(non_mm):
-                        diagnosis = 'misassembly?'
-                    # PVAL_UNCORR = 0.05 # TODO magic number
-                    pval_corr = args.spurious_ies_pvalue / len(iesgff) # Bonferroni correction
-                    if mwpval < pval_corr and stats.mean(ins_mm) > stats.mean(non_mm):
-                        diagnosis = "paralog?"
-                    outarr.append(diagnosis)
-                else:
-                    outarr = [bpid, 
-                        round(stats.mean(ins_mm),2),
-                        round(stats.mean(non_mm),2),
-                        "NA",
-                        "NA",
-                        "NA",
-                        "NA",
-                        len(ins_mm),
-                        len(non_mm),
-                        "NA"]
-                # Write output
-                fh_mm.write("\t".join([str(i) for i in outarr]))
-                fh_mm.write("\n")
-                # fh_mm.write(" ".join([str(i) for i in ins_mm]) + "\n")
-                # fh_mm.write(" ".join([str(i) for i in non_mm]) + "\n")
-
     # Write gff version header and command line as comment
     args.out.write("##gff-version 3\n")
     args.out.write("# " + " ".join(sys.argv) + "\n")
@@ -148,6 +78,119 @@ def milraa(args):
     # Close AlignmentFile
     alnfile.close()
     logging.info("Finished MILRAA")
+
+def miser(args):
+    logging.info("Started MISER")
+    # Check that only either SAM or BAM specified
+    aln_filename = "-"
+    aln_format = "sam"
+    aln_mode = "r"
+    if args.sam:
+        if args.bam:
+            sys.exit("Error: Specify either SAM or BAM input, not both")
+        else:
+            aln_filename = args.sam
+            aln_format = "sam"
+            aln_mode = "r"
+    if args.bam:
+        if args.sam:
+            sys.exit ("Error: Specify either SAM or BAM input, not both")
+        else:
+            aln_filename=args.bam
+            aln_format = "bam"
+            aln_mode = "rb"
+    # Open SAM or BAM file 
+    logging.info("Opening alignment file "+aln_filename)
+    alnfile = pysam.AlignmentFile(aln_filename, aln_mode)
+    logging.info("Alignment file contains " 
+                 + str(alnfile.mapped) 
+                 + " reads mapped to " 
+                 + str(alnfile.nreferences)
+                 + " reference sequences")
+    # Read reference Fasta file into memory
+    logging.info("Reading mapping sequence file to memory "+args.ref)
+    refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
+    # Initialize new IesRecords object to store putative IESs
+    iesrecords = Milraa.IesRecords(alnfile, aln_format, refgenome)
+
+    # Read in IES GFF file produced by Milraa
+    iesgff = SharedFunctions.Gff()
+    iesgff.file2gff(args.gff)
+
+    # TEST: Report mismatch percentages of reads with and without each putative IES
+    logging.info("Reporting possibly spurious IESs due to misassembly or mapped paralogs")
+    # test_type = 'mann-whitney' # TODO: user option
+
+    out_gff_split = {} # dict to hold split GFF file keyed by diagnosis
+
+    with open(args.out,"w") as fh_mm:
+        fh_mm.write("\t".join(['ID',
+            'mean_mismatch_pc_with_indel',
+            'mean_mismatch_pc_no_indel',
+            'stdev_with_indel',
+            'stdev_no_indel',
+            'statistic',
+            'p-value',
+            'num_reads_with_indel',
+            'num_reads_no_indel',
+            'diagnosis']))
+        fh_mm.write("\n")
+        for bpid in iesgff:
+            ins_mm, non_mm = iesrecords.reportIndelReadMismatchPc(
+                iesgff.getValue(bpid,'seqid'),
+                int(iesgff.getValue(bpid,'start')),
+                int(iesgff.getValue(bpid,'end')),
+                int(iesgff.getAttr(bpid,'IES_length'))
+            )
+            # Perform test of mismatch % if more than 2 reads with inserts 
+            # (otherwise stdev meaningless)
+            if len(ins_mm) > 2 and len(non_mm) > 2: 
+                if args.spurious_ies_test == 'mann-whitney':
+                    # Mann-Whitney U test for whether mismatch % with indel of interest
+                    # is greater than without
+                    mwstat, mwpval = mannwhitneyu(ins_mm, non_mm, alternative='greater')
+                else:
+                    # Ward's t-test (non-equal population variances)
+                    mwstat, mwpval = ttest_ind(ins_mm, non_mm, equal_var=False)
+                # Report
+                outarr = [bpid, 
+                    round(stats.mean(ins_mm),2),
+                    round(stats.mean(non_mm),2),
+                    round(stats.stdev(ins_mm),2),
+                    round(stats.stdev(non_mm),2),
+                    round(mwstat,2),
+                    '%.2E' % mwpval, # scientific notation
+                    len(ins_mm),
+                    len(non_mm)]
+                # Diagnosis
+                diagnosis = "ok" 
+                if stats.mean(ins_mm) > 5 or stats.mean(non_mm) > 5:
+                    diagnosis = "high_error"
+                if len(ins_mm) > len(non_mm):
+                    diagnosis = 'misassembly'
+                # PVAL_UNCORR = 0.05 # TODO magic number
+                pval_corr = args.spurious_ies_pvalue / len(iesgff) # Bonferroni correction
+                if mwpval < pval_corr and stats.mean(ins_mm) > stats.mean(non_mm):
+                    diagnosis = "paralog"
+            else:
+                outarr = [bpid, 
+                    round(stats.mean(ins_mm),2),
+                    round(stats.mean(non_mm),2),
+                    "NA",
+                    "NA",
+                    "NA",
+                    "NA",
+                    len(ins_mm),
+                    len(non_mm)]
+                diagnosis = "low_coverage"
+            outarr.append(diagnosis)
+
+            # Write output
+            fh_mm.write("\t".join([str(i) for i in outarr]))
+            fh_mm.write("\n")
+            # fh_mm.write(" ".join([str(i) for i in ins_mm]) + "\n")
+            # fh_mm.write(" ".join([str(i) for i in non_mm]) + "\n")
+
 
 def milret(args):
     logging.info("Started MILRET")
