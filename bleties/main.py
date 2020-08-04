@@ -182,6 +182,10 @@ def miser(args):
         for diag in out_gff_split:
             outfile = f"{args.gff}.{diag}.gff3"
             with open(outfile, "w") as fh_spl:
+                # Write gff version header and comment some info on this file
+                fh_spl.write("##gff-version 3\n")
+                fh_spl.write("# " + " ".join(sys.argv) + "\n")
+                fh_spl.write(f"# BleTIES MISER putative IESs classified as {diag}\n")
                 for line in out_gff_split[diag]:
                     fh_spl.write("\t".join([str(i) for i in line]))
                     fh_spl.write("\n")
