@@ -66,6 +66,9 @@ def getIndels(cigar, pos, minlength, qseq):
                 # Get the start and end positions of the insert
                 ins_pos_start = pos + ref_consumed - 1 # 1-based, insert is to the right of position
                 # Get the sequence of the insert
+                # if qseq is None:
+                #     print(f"qseq {qseq} is none!")
+                # else:
                 ins_seq = qseq[que_consumed:que_consumed + ins_len] # 0-based, following pysam convention
                 outarr.append((ins_pos_start, ins_pos_start, ins_len, "I", ins_seq))
         # We also look for delete operations above a min length
@@ -308,14 +311,17 @@ class IesRecords(object):
                 # total_mismatch = line.get_tag("NM") # Get number of mismatches
                 # total_i = 0 
                 qseq = line.query_sequence # Get query sequence
-
-                # Find left and right clips and record them
-                self._addClipsFromCigar(rname, line.cigarstring, pos)
-                # Find indels (putative IESs) over the minimum length and record them
-                self._addIndelsFromCigar(rname, line.cigarstring, pos, minlength, qseq)
-                # # if int(total_mismatch) - int(total_i) < 0: 
-                #     # Sanity check - mismatches include inserts, but cannot be fewer than inserts
-                #     # print ("Uh-oh!")
+                # Skip if qseq is empty for some reason
+                if qseq is None:
+                    print (f"Query {line.query_name} is none!")
+                else:
+                    # Find left and right clips and record them
+                    self._addClipsFromCigar(rname, line.cigarstring, pos)
+                    # Find indels (putative IESs) over the minimum length and record them
+                    self._addIndelsFromCigar(rname, line.cigarstring, pos, minlength, qseq)
+                    # # if int(total_mismatch) - int(total_i) < 0: 
+                    #     # Sanity check - mismatches include inserts, but cannot be fewer than inserts
+                    #     # print ("Uh-oh!")
 
         # Go through insDict and extract sequences of deleted regions, too
         self._getDeletedSequences()
@@ -476,6 +482,8 @@ class IesRecords(object):
         ins_mm = []
         # for each segment, check if it contains indel at position of interest
         for seg in segs:
+            # if seg.query_sequence is None:
+            #     print(f"Query {seg.query_name} is None!")
             indels = getIndels(seg.cigarstring, int(seg.reference_start), MIN_IES_LEN, seg.query_sequence)
             indelcoords = set([(int(indel[0]),int(indel[1])) for indel in indels])
             mismatch_pc = 100 * float(seg.get_tag("NM")) / float(seg.query_length) # number of mismatchs / query length * 100 pc
