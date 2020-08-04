@@ -15,8 +15,12 @@ from Bio.SeqRecord import SeqRecord
 from bleties import *
 from bleties import SharedFunctions
 
-def milraa(args):
-    logging.info("Started MILRAA")
+def read_sam_bam_ref(args):
+    """Read input SAM or BAM alignment and reference Fasta file.
+    Returns Milraa.IesRecords object (alignment), pysam.AlignmentFile object
+    (alignment), and SeqIO object (reference).
+    This function is used by both milraa() and miser().
+    """
     # Check that only either SAM or BAM specified
     aln_filename = "-"
     aln_format = "sam"
@@ -48,6 +52,13 @@ def milraa(args):
     refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
     # Initialize new IesRecords object to store putative IESs
     iesrecords = Milraa.IesRecords(alnfile, aln_format, refgenome)
+    # Return alignment and reference objects
+    return(iesrecords,alnfile,refgenome)
+
+def milraa(args):
+    logging.info("Started MILRAA")
+    # Read input files
+    iesrecords,alnfile,refgenome = read_sam_bam_ref(args)
     # Process alignment to find putative IESs 
     logging.info("Processing alignment to find putative IESs")
     iesrecords.findPutativeIes(args.min_ies_length)
@@ -82,48 +93,17 @@ def milraa(args):
 
 def miser(args):
     logging.info("Started MISER")
-    # Check that only either SAM or BAM specified
-    aln_filename = "-"
-    aln_format = "sam"
-    aln_mode = "r"
-    if args.sam:
-        if args.bam:
-            sys.exit("Error: Specify either SAM or BAM input, not both")
-        else:
-            aln_filename = args.sam
-            aln_format = "sam"
-            aln_mode = "r"
-    if args.bam:
-        if args.sam:
-            sys.exit ("Error: Specify either SAM or BAM input, not both")
-        else:
-            aln_filename=args.bam
-            aln_format = "bam"
-            aln_mode = "rb"
-    # Open SAM or BAM file 
-    logging.info("Opening alignment file "+aln_filename)
-    alnfile = pysam.AlignmentFile(aln_filename, aln_mode)
-    logging.info("Alignment file contains " 
-                 + str(alnfile.mapped) 
-                 + " reads mapped to " 
-                 + str(alnfile.nreferences)
-                 + " reference sequences")
-    # Read reference Fasta file into memory
-    logging.info("Reading mapping sequence file to memory "+args.ref)
-    refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
-    # Initialize new IesRecords object to store putative IESs
-    iesrecords = Milraa.IesRecords(alnfile, aln_format, refgenome)
-
+    # Read input files
+    iesrecords,alnfile,refgenome = read_sam_bam_ref(args)
     # Read in IES GFF file produced by Milraa
+    logging.info("Reading GFF file containing putative IESs")
     iesgff = SharedFunctions.Gff()
     iesgff.file2gff(args.gff)
 
-    # TEST: Report mismatch percentages of reads with and without each putative IES
+    # Compare mean mismatch percentage of reads with and without putative IES 
+    # for each putative IES
     logging.info("Reporting possibly spurious IESs due to misassembly or mapped paralogs")
-    # test_type = 'mann-whitney' # TODO: user option
-
     out_gff_split = defaultdict(list) # dict to hold split GFF file keyed by diagnosis
-
     with open(args.out,"w") as fh_mm:
         fh_mm.write("\t".join(['ID',
             'mean_mismatch_pc_with_indel',
@@ -185,21 +165,24 @@ def miser(args):
                     len(non_mm)]
                 diagnosis = "low_coverage"
             outarr.append(diagnosis)
-
+            # Split the input GFF entries into each diagnosis group
             out_gff_split[diagnosis].append(iesgff.getEntry(bpid))
-
             # Write output
             fh_mm.write("\t".join([str(i) for i in outarr]))
             fh_mm.write("\n")
             # fh_mm.write(" ".join([str(i) for i in ins_mm]) + "\n")
             # fh_mm.write(" ".join([str(i) for i in non_mm]) + "\n")
 
+    # Output split GFF files
     for diag in out_gff_split:
         outfile = f"{args.gff}.{diag}.gff3"
         with open(outfile, "w") as fh_spl:
             for line in out_gff_split[diag]:
                 fh_spl.write("\t".join([str(i) for i in line]))
                 fh_spl.write("\n")
+
+    # Close alignment filehandle
+    alnfile.close()
 
 def milret(args):
     logging.info("Started MILRET")
