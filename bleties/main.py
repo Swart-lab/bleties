@@ -40,7 +40,7 @@ def read_sam_bam_ref(args):
             aln_format = "bam"
             aln_mode = "rb"
     # Open SAM or BAM file 
-    logging.info("Opening alignment file "+aln_filename)
+    logging.info(f"Opening alignment file {aln_filename}")
     alnfile = pysam.AlignmentFile(aln_filename, aln_mode)
     logging.info("Alignment file contains " 
                  + str(alnfile.mapped) 
@@ -48,7 +48,7 @@ def read_sam_bam_ref(args):
                  + str(alnfile.nreferences)
                  + " reference sequences")
     # Read reference Fasta file into memory
-    logging.info("Reading mapping sequence file to memory "+args.ref)
+    logging.info(f"Reading mapping sequence file to memory {args.ref}")
     refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
     # Initialize new IesRecords object to store putative IESs
     iesrecords = Milraa.IesRecords(alnfile, aln_format, refgenome)
@@ -79,12 +79,12 @@ def milraa(args):
     iesgff.gff2fh(args.out)
     # Write Fasta file of putative IES sequences
     if args.out_fasta:
-        logging.info("Reporting consensus sequences of putative IESs to Fasta file "+args.out_fasta)
+        logging.info(f"Reporting consensus sequences of putative IESs to Fasta file {args.out_fasta}")
         SeqIO.write(iesseq.values(), args.out_fasta, "fasta")
     # Report junction sequences
     if args.out_junction and args.junction_flank:
         junctionseqs = Milraa.getIndelJunctionSeqs(iesgff, iesseq, refgenome, args.junction_flank)
-        logging.info("Reporting flanking sequences of putative IESs to file "+args.out_junction)
+        logging.info(f"Reporting flanking sequences of putative IESs to file {args.out_junction}")
         with open(args.out_junction, "w") as fhjunc:
             fhjunc.write("\t".join(['id','leftflank','rightflank','indel','ref'])+"\n") # header
             for junc in junctionseqs:
@@ -178,27 +178,30 @@ def miser(args):
             # fh_mm.write(" ".join([str(i) for i in non_mm]) + "\n")
 
     # Output split GFF files
-    for diag in out_gff_split:
-        outfile = f"{args.gff}.{diag}.gff3"
-        with open(outfile, "w") as fh_spl:
-            for line in out_gff_split[diag]:
-                fh_spl.write("\t".join([str(i) for i in line]))
-                fh_spl.write("\n")
+    if args.split_gff:
+        logging.info("Splitting input GFF entries into inferred categories")
+        for diag in out_gff_split:
+            outfile = f"{args.gff}.{diag}.gff3"
+            with open(outfile, "w") as fh_spl:
+                for line in out_gff_split[diag]:
+                    fh_spl.write("\t".join([str(i) for i in line]))
+                    fh_spl.write("\n")
 
     # Close alignment filehandle
     alnfile.close()
+    logging.info("Finished MISER")
 
 def milret(args):
     logging.info("Started BleTIES MILRET")
     logging.info("Command line:")
     logging.info(" ".join(sys.argv))
     # Read BAM file - SAM not supported because we need random access
-    logging.info("Opening alignment file +"+args.bam)
+    logging.info(f"Opening alignment file {args.bam}")
     alnfile = pysam.AlignmentFile(args.bam, "rb") 
     # Initialize IesRetentionsMacOnly object
     iesretentions = Milret.IesRetentionsMacOnly(args.ies, alnfile)
     # Count mapping operations per site
-    logging.info("Counting IES+ and IES- forms at each junction in file "+args.ies)
+    logging.info(f"Counting IES+ and IES- forms at each junction in file {args.ies}")
     iesretentions.findMappingOps()
     # Report retention scores to file
     logging.info("Calculating retention scores per junction")

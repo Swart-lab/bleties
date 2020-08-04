@@ -110,6 +110,9 @@ miser_parser.add_argument("--spurious_ies_pvalue",
     type=float,
     default=0.05,
     help="P-value cutoff (uncorrected) to use for spurious IES mismatch test")
+miser_parser.add_argument("--split_gff",
+    action="store_true",
+    help="Split input GFF entries into separate files for each category (ok, misassembly, paralog, ...), using input GFF filename as prefix")
 # Assign function to this subparser
 miser_parser.set_defaults(func=main.miser) 
 
