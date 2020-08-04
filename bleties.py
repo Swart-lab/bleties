@@ -6,9 +6,6 @@ import logging
 from bleties import main
 
 logging.basicConfig(format='[%(asctime)s] %(message)s', level=logging.INFO)
-logging.info("Started BleTIES")
-logging.info("Command line:")
-logging.info(" ".join(sys.argv))
 # Argument parser
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--log",
@@ -27,47 +24,47 @@ Differences to Illumina alignments:
 * Error rate of reads is expected to be higher
 """
 milraa_parser = subparsers.add_parser(name="milraa",
-                                      description="MILRAA - Method of Identification by Long Read Alignment Anomalies",
-                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    description="MILRAA - Method of Identification by Long Read Alignment Anomalies",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 milraa_parser.add_argument("--sam",
-                           help="SAM file containing mapping, requires header")
+    help="SAM file containing mapping, requires header")
 milraa_parser.add_argument("--bam",
-                           help="BAM file containing mapping, must be sorted and indexed")
+    help="BAM file containing mapping, must be sorted and indexed")
 milraa_parser.add_argument("--ref",
-                           help="FASTA file containing genomic contigs used as reference for the mapping")
+    help="FASTA file containing genomic contigs used as reference for the mapping")
 milraa_parser.add_argument("--out",
-                           "-o",
-                           nargs='?',
-                           type=argparse.FileType("w"),
-                           default=sys.stdout,
-                           help="Path to write GFF3 file")
+    "-o",
+    nargs='?',
+    type=argparse.FileType("w"),
+    default=sys.stdout,
+    help="Path to write GFF3 file, defaults to STDOUT")
 milraa_parser.add_argument("--out_fasta",
-                            help="Path to write Fasta file of putative IES sequences")
+    help="Path to write Fasta file of putative IES sequences")
 milraa_parser.add_argument("--out_junction",
-                            help="Path to write table of flanking sequences at putative IES junctions")
+    help="Path to write table of flanking sequences at putative IES junctions")
 milraa_parser.add_argument("--junction_flank",
-                            type=int,
-                            default=5,
-                            help="Length of flanking sequence to report to --out_junction")
+    type=int,
+    default=5,
+    help="Length of flanking sequence to report to --out_junction")
 milraa_parser.add_argument("--min_ies_length", # This parameter is hard-coded in the original ParTIES MIRAA
-                            type=int,
-                            default=25,
-                            help="Minimum length of candidate IES")
+    type=int,
+    default=25,
+    help="Minimum length of candidate IES")
 milraa_parser.add_argument("--min_break_coverage", # For insertions
-                            type=int,
-                            default=10,
-                            help="Minimum number of partially aligned reads to define a putative IES insertion breakpoint")
+    type=int,
+    default=10,
+    help="Minimum number of partially aligned reads to define a putative IES insertion breakpoint")
 milraa_parser.add_argument("--min_del_coverage", # For deletions (sensu MILORD)
-                            type=int,
-                            default=10,
-                            help="Minimum number of partially aligned reads to define a deletion relative to reference")
+    type=int,
+    default=10,
+    help="Minimum number of partially aligned reads to define a deletion relative to reference")
 # milraa_parser.add_argument("--max_mismatch", # TODO: Not yet implemented
-#                     type=int,
-#                     default=10,
-#                     help="Maximum mismatch in the alignment for a read to be used")
+#    type=int,
+#    default=10,
+#    help="Maximum mismatch in the alignment for a read to be used")
 milraa_parser.add_argument("--dump",
-                            action="store_true",
-                            help="Dump contents of dict for troubleshooting")
+    action="store_true",
+    help="Dump contents of dict for troubleshooting")
 # Assign function to this subparser
 milraa_parser.set_defaults(func=main.milraa) 
 
@@ -89,27 +86,30 @@ reference is taken.
  * Otherwise the putative IES is "ok".
 """
 miser_parser = subparsers.add_parser(name="miser",
-                                      description="MISER - Method of IES Spurious or Erroneous Reporting",
-                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    description="MISER - Method of IES Spurious or Erroneous Reporting",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 miser_parser.add_argument("--sam",
-                           help="SAM file containing mapping, requires header")
+    help="SAM file containing mapping, requires header")
 miser_parser.add_argument("--bam",
-                           help="BAM file containing mapping, must be sorted and indexed")
+    help="BAM file containing mapping, must be sorted and indexed")
 miser_parser.add_argument("--ref",
-                           help="FASTA file containing genomic contigs used as reference for the mapping")
+    help="FASTA file containing genomic contigs used as reference for the mapping")
 miser_parser.add_argument("--gff",
-        help="GFF file containing coordinates for putative IESs")
+    help="GFF file containing coordinates for putative IESs")
 miser_parser.add_argument("--out",
-                          default="spurious_ies.tsv",
-                           help="Path to write report on possibly spurious IESs due to misassembly or mapped paralogs")
+    "-o",
+    nargs='?',
+    type=argparse.FileType("w"),
+    default=sys.stdout,
+    help="Path to write report on possibly spurious IESs due to misassembly or mapped paralogs, defaults to STDOUT")
 miser_parser.add_argument("--spurious_ies_test",
-                           type=str,
-                           default="mann-whitney",
-                           help="Test to use to evaluate spurious IESs by mismatch percentage comparisons")
+    type=str,
+    default="mann-whitney",
+    help="Test to use to evaluate spurious IESs by mismatch percentage comparisons")
 miser_parser.add_argument("--spurious_ies_pvalue",
-                           type=float,
-                           default=0.05,
-                           help="P-value cutoff (uncorrected) to use for spurious IES mismatch test")
+    type=float,
+    default=0.05,
+    help="P-value cutoff (uncorrected) to use for spurious IES mismatch test")
 # Assign function to this subparser
 miser_parser.set_defaults(func=main.miser) 
 
@@ -139,20 +139,20 @@ Points to note and address in the future:
 """
 
 milret_parser = subparsers.add_parser(name="milret",
-                                      description="""MILRET - Method of IES Long-read RETention""",
-                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    description="""MILRET - Method of IES Long-read RETention""",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 milret_parser.add_argument("--bam",
-                        help="BAM file containing mapping, must be sorted and indexed")
+    help="BAM file containing mapping, must be sorted and indexed")
 milret_parser.add_argument("--ref",
-                        help="FASTA file containing genomic contigs used as reference for the mapping")
+    help="FASTA file containing genomic contigs used as reference for the mapping")
 milret_parser.add_argument("--ies",
-                        help="GFF3 file containing coordinates of IES junctions in MAC genome")
+    help="GFF3 file containing coordinates of IES junctions in MAC genome")
 milret_parser.add_argument("--out",
-                           "-o",
-                           nargs='?',
-                           type=argparse.FileType("w"),
-                           default=sys.stdout,
-                           help="Path to write table of retention scores per IES")
+    "-o",
+    nargs='?',
+    type=argparse.FileType("w"),
+    default=sys.stdout,
+    help="Path to write table of retention scores per IES, defaults to STDOUT")
 # Assign function to this subparser
 milret_parser.set_defaults(func=main.milret)
 

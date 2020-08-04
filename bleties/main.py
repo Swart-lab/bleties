@@ -56,7 +56,9 @@ def read_sam_bam_ref(args):
     return(iesrecords,alnfile,refgenome)
 
 def milraa(args):
-    logging.info("Started MILRAA")
+    logging.info("Started BleTIES MILRAA")
+    logging.info("Command line:")
+    logging.info(" ".join(sys.argv))
     # Read input files
     iesrecords,alnfile,refgenome = read_sam_bam_ref(args)
     # Process alignment to find putative IESs 
@@ -92,7 +94,9 @@ def milraa(args):
     logging.info("Finished MILRAA")
 
 def miser(args):
-    logging.info("Started MISER")
+    logging.info("Started BleTIES MISER")
+    logging.info("Command line:")
+    logging.info(" ".join(sys.argv))
     # Read input files
     iesrecords,alnfile,refgenome = read_sam_bam_ref(args)
     # Read in IES GFF file produced by Milraa
@@ -185,7 +189,9 @@ def miser(args):
     alnfile.close()
 
 def milret(args):
-    logging.info("Started MILRET")
+    logging.info("Started BleTIES MILRET")
+    logging.info("Command line:")
+    logging.info(" ".join(sys.argv))
     # Read BAM file - SAM not supported because we need random access
     logging.info("Opening alignment file +"+args.bam)
     alnfile = pysam.AlignmentFile(args.bam, "rb") 
