@@ -101,15 +101,15 @@ miser_parser.add_argument("--out",
     nargs='?',
     type=argparse.FileType("w"),
     default=sys.stdout,
-    help="Path to write report on possibly spurious IESs due to misassembly or mapped paralogs, defaults to STDOUT")
+    help="Path to write report statistics on possibly spurious IESs due to misassembly or mapped paralogs, defaults to STDOUT")
 miser_parser.add_argument("--spurious_ies_test",
     type=str,
     default="mann-whitney",
-    help="Test to use to evaluate spurious IESs by mismatch percentage comparisons")
+    help="Test to use to evaluate spurious IESs by mismatch percentage comparisons, either \"mann-whitney\" (Mann-Whitney's U) or \"t\" (Ward's t-test)")
 miser_parser.add_argument("--spurious_ies_pvalue",
     type=float,
     default=0.05,
-    help="P-value cutoff (uncorrected) to use for spurious IES mismatch test")
+    help="P-value cutoff (uncorrected) to use for spurious IES mismatch test; the Bonferroni correction will be applied depending on the number of tests (number of putative IESs) performed")
 miser_parser.add_argument("--split_gff",
     action="store_true",
     help="Split input GFF entries into separate files for each category (ok, misassembly, paralog, ...), using input GFF filename as prefix")
