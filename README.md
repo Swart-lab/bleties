@@ -1,6 +1,12 @@
 # Blepharisma Toolbox for Interspersed DNA Elimination Studies (BleTIES)
 
-This is a reimplementation of ParTIES for long read alignments. 
+This is a reimplementation of [ParTIES](https://github.com/oarnaiz/ParTIES) for 
+long read alignments. 
+
+The required inputs are a ciliate MAC genome assembly, and a PacBio HiFi (high-
+fidelity CCS reads) read library mapping onto that assembly. The mapper should
+report valid CIGAR string and NM tag (for number of mismatches) per aligned
+read.
 
 ## Usage
 
@@ -12,6 +18,7 @@ names:
 ```
 ./bleties.py --help
 ./bleties.py milraa --help
+./bleties.py miser --help
 ./bleties.py milret --help
 ```
 
@@ -36,6 +43,24 @@ Differences of long read to Illumina alignments:
    parameter, expect reads to span entire IESs
  * Error rate of reads is expected to be higher -> Set higher `-max_mismatch`
    threshold
+
+## MISER - Method of IES Spurious or Erroneous Reporting
+
+MISER takes an existing set of IES predictions, produced by MILRAA, and 
+screens it for potential mispredictions caused by paralogy, misassembly, or 
+erroneous mappings. 
+
+For each putative IES (insertion or deletion), the set of reads mapping to that 
+site is found, and split into two subsets: those containing the indel and those
+without. For each subset, the mean percent mismatch of alignments vs. the 
+reference is taken. 
+
+ * If either subset has high (>5%) mismatch rate, "high error" is reported.
+ * If the subset with indel has a significantly higher mismatch than the subset
+   without, possible paralog is reported.
+ * If the subset without indel has a significantly higher mismatch, possible 
+   misassembly is reported.
+ * Otherwise the putative IES is "ok".
 
 ## MILRET - Method of IES Long-read Retention
 
