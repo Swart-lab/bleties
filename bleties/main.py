@@ -108,74 +108,73 @@ def miser(args):
     # for each putative IES
     logging.info("Reporting possibly spurious IESs due to misassembly or mapped paralogs")
     out_gff_split = defaultdict(list) # dict to hold split GFF file keyed by diagnosis
-    with open(args.out,"w") as fh_mm:
-        fh_mm.write("\t".join(['ID',
-            'mean_mismatch_pc_with_indel',
-            'mean_mismatch_pc_no_indel',
-            'stdev_with_indel',
-            'stdev_no_indel',
-            'statistic',
-            'p-value',
-            'num_reads_with_indel',
-            'num_reads_no_indel',
-            'diagnosis']))
-        fh_mm.write("\n")
-        for bpid in iesgff:
-            ins_mm, non_mm = iesrecords.reportIndelReadMismatchPc(
-                iesgff.getValue(bpid,'seqid'),
-                int(iesgff.getValue(bpid,'start')),
-                int(iesgff.getValue(bpid,'end')),
-                int(iesgff.getAttr(bpid,'IES_length'))
-            )
-            # Perform test of mismatch % if more than 2 reads with inserts 
-            # (otherwise stdev meaningless)
-            if len(ins_mm) > 2 and len(non_mm) > 2: 
-                if args.spurious_ies_test == 'mann-whitney':
-                    # Mann-Whitney U test for whether mismatch % with indel of interest
-                    # is greater than without
-                    mwstat, mwpval = mannwhitneyu(ins_mm, non_mm, alternative='greater')
-                else:
-                    # Ward's t-test (non-equal population variances)
-                    mwstat, mwpval = ttest_ind(ins_mm, non_mm, equal_var=False)
-                # Report
-                outarr = [bpid, 
-                    round(stats.mean(ins_mm),2),
-                    round(stats.mean(non_mm),2),
-                    round(stats.stdev(ins_mm),2),
-                    round(stats.stdev(non_mm),2),
-                    round(mwstat,2),
-                    '%.2E' % mwpval, # scientific notation
-                    len(ins_mm),
-                    len(non_mm)]
-                # Diagnosis
-                diagnosis = "ok" 
-                if stats.mean(ins_mm) > 5 or stats.mean(non_mm) > 5:
-                    diagnosis = "high_error"
-                if len(ins_mm) > len(non_mm):
-                    diagnosis = 'misassembly'
-                # PVAL_UNCORR = 0.05 # TODO magic number
-                pval_corr = args.spurious_ies_pvalue / len(iesgff) # Bonferroni correction
-                if mwpval < pval_corr and stats.mean(ins_mm) > stats.mean(non_mm):
-                    diagnosis = "paralog"
+    args.out.write("\t".join(['ID',
+        'mean_mismatch_pc_with_indel',
+        'mean_mismatch_pc_no_indel',
+        'stdev_with_indel',
+        'stdev_no_indel',
+        'statistic',
+        'p-value',
+        'num_reads_with_indel',
+        'num_reads_no_indel',
+        'diagnosis']))
+    args.out.write("\n")
+    for bpid in iesgff:
+        ins_mm, non_mm = iesrecords.reportIndelReadMismatchPc(
+            iesgff.getValue(bpid,'seqid'),
+            int(iesgff.getValue(bpid,'start')),
+            int(iesgff.getValue(bpid,'end')),
+            int(iesgff.getAttr(bpid,'IES_length'))
+        )
+        # Perform test of mismatch % if more than 2 reads with inserts 
+        # (otherwise stdev meaningless)
+        if len(ins_mm) > 2 and len(non_mm) > 2: 
+            if args.spurious_ies_test == 'mann-whitney':
+                # Mann-Whitney U test for whether mismatch % with indel of interest
+                # is greater than without
+                mwstat, mwpval = mannwhitneyu(ins_mm, non_mm, alternative='greater')
             else:
-                outarr = [bpid, 
-                    round(stats.mean(ins_mm),2),
-                    round(stats.mean(non_mm),2),
-                    "NA",
-                    "NA",
-                    "NA",
-                    "NA",
-                    len(ins_mm),
-                    len(non_mm)]
-                diagnosis = "low_coverage"
-            outarr.append(diagnosis)
-            # Split the input GFF entries into each diagnosis group
-            out_gff_split[diagnosis].append(iesgff.getEntry(bpid))
-            # Write output
-            fh_mm.write("\t".join([str(i) for i in outarr]))
-            fh_mm.write("\n")
-            # fh_mm.write(" ".join([str(i) for i in ins_mm]) + "\n")
-            # fh_mm.write(" ".join([str(i) for i in non_mm]) + "\n")
+                # Ward's t-test (non-equal population variances)
+                mwstat, mwpval = ttest_ind(ins_mm, non_mm, equal_var=False)
+            # Report
+            outarr = [bpid, 
+                round(stats.mean(ins_mm),2),
+                round(stats.mean(non_mm),2),
+                round(stats.stdev(ins_mm),2),
+                round(stats.stdev(non_mm),2),
+                round(mwstat,2),
+                '%.2E' % mwpval, # scientific notation
+                len(ins_mm),
+                len(non_mm)]
+            # Diagnosis
+            diagnosis = "ok" 
+            if stats.mean(ins_mm) > 5 or stats.mean(non_mm) > 5:
+                diagnosis = "high_error"
+            if len(ins_mm) > len(non_mm):
+                diagnosis = 'misassembly'
+            # PVAL_UNCORR = 0.05 # TODO magic number
+            pval_corr = args.spurious_ies_pvalue / len(iesgff) # Bonferroni correction
+            if mwpval < pval_corr and stats.mean(ins_mm) > stats.mean(non_mm):
+                diagnosis = "paralog"
+        else:
+            outarr = [bpid, 
+                round(stats.mean(ins_mm),2),
+                round(stats.mean(non_mm),2),
+                "NA",
+                "NA",
+                "NA",
+                "NA",
+                len(ins_mm),
+                len(non_mm)]
+            diagnosis = "low_coverage"
+        outarr.append(diagnosis)
+        # Split the input GFF entries into each diagnosis group
+        out_gff_split[diagnosis].append(iesgff.getEntry(bpid))
+        # Write output
+        args.out.write("\t".join([str(i) for i in outarr]))
+        args.out.write("\n")
+        # args.out.write(" ".join([str(i) for i in ins_mm]) + "\n")
+        # args.out.write(" ".join([str(i) for i in non_mm]) + "\n")
 
     # Output split GFF files
     if args.split_gff:
