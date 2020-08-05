@@ -66,9 +66,6 @@ def getIndels(cigar, pos, minlength, qseq):
                 # Get the start and end positions of the insert
                 ins_pos_start = pos + ref_consumed - 1 # 1-based, insert is to the right of position
                 # Get the sequence of the insert
-                # if qseq is None:
-                #     print(f"qseq {qseq} is none!")
-                # else:
                 ins_seq = qseq[que_consumed:que_consumed + ins_len] # 0-based, following pysam convention
                 outarr.append((ins_pos_start, ins_pos_start, ins_len, "I", ins_seq))
         # We also look for delete operations above a min length
@@ -305,16 +302,13 @@ class IesRecords(object):
         """
         # parse CIGAR string
         for line in self._alnfile:
-            if line.flag != 4: # Skip unmapped reads
-                pos = int(line.reference_start) + 1 # Convert from 0-based numbering in pysam to 1-based in GFF3 and SAM
-                rname = line.reference_name # Get reference name
-                # total_mismatch = line.get_tag("NM") # Get number of mismatches
-                # total_i = 0 
-                qseq = line.query_sequence # Get query sequence
-                # Skip if qseq is empty for some reason
-                if qseq is None:
-                    print (f"Query {line.query_name} is none!")
-                else:
+            if not line.flag & 4: # Skip unmapped reads
+                if not line.flag & 256: # Skip secondary mappings
+                    pos = int(line.reference_start) + 1 # Convert from 0-based numbering in pysam to 1-based in GFF3 and SAM
+                    rname = line.reference_name # Get reference name
+                    # total_mismatch = line.get_tag("NM") # Get number of mismatches
+                    # total_i = 0 
+                    qseq = line.query_sequence # Get query sequence
                     # Find left and right clips and record them
                     self._addClipsFromCigar(rname, line.cigarstring, pos)
                     # Find indels (putative IESs) over the minimum length and record them
