@@ -106,8 +106,8 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
         refunedited = ""
         # Check if this is insertion junction or deletion region
         # If insertion, add 1 to end, because GFF convention is to record zero-
-        # length features with start=end, and junction site is to right of 
-        # coordinate. 
+        # length features with start=end, and junction site is to right of
+        # coordinate.
         if start == end: # insertion junction
             # end += 1
             indel = "I"
@@ -121,8 +121,8 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
             if indel == "I": # For insert, feature starts on RIGHT of coordinate
                 flankleftseq = ref[ctg][start - flanklen: start].seq.lower()
             elif indel == "D": # For deletion, feature starts ON the coordinate
-                flankleftseq = ref[ctg][start-1-flanklen:start-1].seq.lower() 
-        else: # Pad the left side 
+                flankleftseq = ref[ctg][start-1-flanklen:start-1].seq.lower()
+        else: # Pad the left side
             flankleftseq = (flanklen - start) * "-" + ref[ctg][0:start].seq.lower()
         # Get the right flanking junction on reference
         # Check whether sequence with flanking will run off the end
@@ -145,9 +145,9 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
             # Start minus one because for deletion, start is ON the deleted region
             refunedited = ref[ctg][start-flanklen-1:end+flanklen].seq.lower()
         # Put everything together and return
-        outseqs.append([breakpointid, 
-                        str(flankleftseq), 
-                        str(flankrightseq), 
+        outseqs.append([breakpointid,
+                        str(flankleftseq),
+                        str(flankrightseq),
                         str(iesconsseq[breakpointid].seq),
                         str(refunedited)
                         ])
@@ -159,7 +159,7 @@ class IesRecords(object):
     def __init__(self, alnfile, alnformat, refgenome):
         """Constructor creates IesRecords, internally represented by:
         _insDict -- dict to store counts of detected inserts/deletions, keyed
-            by evidence type. Keys: contig (str) -> start pos (int) -> end 
+            by evidence type. Keys: contig (str) -> start pos (int) -> end
             pos (int) -> insert length (int) -> evidence type (str) -> count (int)
         _insSeqDict -- dict of sequences of detected inserts/deletions. Keys:
             contig (str) -> startpos (int) -> endpos (int) -> indel len (int) ->
@@ -185,7 +185,7 @@ class IesRecords(object):
                         )
                     )
                 )
-        # dict to store sequences of detected inserts/deletions 
+        # dict to store sequences of detected inserts/deletions
         self._insSeqDict = defaultdict(      # contig
                 lambda: defaultdict(         # startpos
                     lambda: defaultdict(     # endpos
@@ -215,10 +215,10 @@ class IesRecords(object):
                 + str(insseqdictlen)
                 + " and alignment of format "
                 + str(alnformat)
-                + " with " 
-                + str(nref) 
+                + " with "
+                + str(nref)
                 + " references and "
-                + str(mapped) 
+                + str(mapped)
                 + " mapped reads")
 
     def dump(self):
@@ -265,11 +265,11 @@ class IesRecords(object):
             for (indelstart, indelend, indellen, indeltype, indelseq) in indelarr:
                 self._insDict[rname][indelstart][indelend][indellen][indeltype] += 1
                 # If insertion, record the inserted sequence to dict
-                if indeltype == "I": 
+                if indeltype == "I":
                     self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
 
     def _getDeletedSequences(self):
-        """Record sequences of deletions. Sequences of insertions are recorded 
+        """Record sequences of deletions. Sequences of insertions are recorded
         when parsing each alignment, because they are extracted from the query.
         However deletions are extracted from the reference, so they can be done
         in a single pass.
@@ -282,7 +282,7 @@ class IesRecords(object):
             # For each start and stop position
             for indelstart in self._insDict[rname]:
                 for indelend in self._insDict[rname][indelstart]:
-                    # If there is a deletion 
+                    # If there is a deletion
                     if 0 in self._insDict[rname][indelstart][indelend]:
                         if "D" in self._insDict[rname][indelstart][indelend][0]:
                             # Record the sequence to the insSelfDict
@@ -295,7 +295,7 @@ class IesRecords(object):
 
     def findPutativeIes(self, minlength):
         """Search alignment for clips and indels to identify putative IESs.
-        Record them in the _insDict dict. 
+        Record them in the _insDict dict.
 
         Arguments:
         minlength -- Record only putative IESs of this length and above (int)
@@ -307,13 +307,13 @@ class IesRecords(object):
                     pos = int(line.reference_start) + 1 # Convert from 0-based numbering in pysam to 1-based in GFF3 and SAM
                     rname = line.reference_name # Get reference name
                     # total_mismatch = line.get_tag("NM") # Get number of mismatches
-                    # total_i = 0 
+                    # total_i = 0
                     qseq = line.query_sequence # Get query sequence
                     # Find left and right clips and record them
                     self._addClipsFromCigar(rname, line.cigarstring, pos)
                     # Find indels (putative IESs) over the minimum length and record them
                     self._addIndelsFromCigar(rname, line.cigarstring, pos, minlength, qseq)
-                    # # if int(total_mismatch) - int(total_i) < 0: 
+                    # # if int(total_mismatch) - int(total_i) < 0:
                     #     # Sanity check - mismatches include inserts, but cannot be fewer than inserts
                     #     # print ("Uh-oh!")
 
@@ -432,7 +432,7 @@ class IesRecords(object):
         ctg -- name of contig (str)
         indelstart -- start position, 1-based (int)
         indelend -- end position, 1-based (int)
-        indellen -- length of indel (int) 
+        indellen -- length of indel (int)
         """
 
         # From list of sequences as str, make a list of SeqRecord objects
@@ -447,9 +447,9 @@ class IesRecords(object):
         return(alnconsrec)
 
     def reportIndelReadMismatchPc(self, ctg, indelstart, indelend, indellen):
-        """Report sequence mismatch % of query reads containing indel at a 
+        """Report sequence mismatch % of query reads containing indel at a
         specific position vs. reads without indel.
-        This is to flag indels that may originate from paralogs and hence are 
+        This is to flag indels that may originate from paralogs and hence are
         probably not true IESs.
 
         Arguments:
@@ -459,7 +459,7 @@ class IesRecords(object):
         indellen -- length of indel (int)
 
         Returns:
-        ins_mm -- list of floats, mismatch % of query reads containing indel at 
+        ins_mm -- list of floats, mismatch % of query reads containing indel at
                   target position
         non_mm -- list of floats, mismatch % of query reads without indel at pos
         """
@@ -467,7 +467,7 @@ class IesRecords(object):
         # GFF allows start==end, but pysam does not recognise
         dummyend = indelend
         if indelend == indelstart:
-            dummyend += 1 
+            dummyend += 1
         # Get segments that overlap indel of interest
         itrr = self._alnfile.fetch(ctg, indelstart - 1, dummyend - 1) # minus 1 for pysam uses 0-based coords
         segs = [seg for seg in itrr] # Segments aligning to position of interest
