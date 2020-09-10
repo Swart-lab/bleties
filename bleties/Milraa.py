@@ -15,6 +15,7 @@ from Bio.Align import AlignInfo
 from bleties.SharedValues import SharedValues
 from bleties.SharedFunctions import Gff
 
+
 def getClips(cigar, pos):
     """Parse cigar string and alignment position and report left- and right-
     clipping.
@@ -43,6 +44,7 @@ def getClips(cigar, pos):
         rightclip_refconsumed = sum([int(refconsumematch) for refconsumematch in refconsumematches])
         outarr.append((pos + rightclip_refconsumed, pos+rightclip_refconsumed, "MHS"))
     return(outarr)
+
 
 def getIndels(cigar, pos, minlength, qseq):
     """Parse cigar string and alignment position and report insertions or
@@ -113,7 +115,8 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
     Parameters
     ----------
     iesgff : Gff
-        Gff object listing insertions and deletions (output from reportPutativeIes)
+        Gff object listing insertions and deletions (output from 
+        reportPutativeIes). Coordinates in Gff are 1-based inclusive.
     iesconsseq : dict
         dict of SeqRecords for indels (output from reportPutativeIes)
     refgenome : dict
@@ -136,11 +139,9 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
         indel = ""
         refunedited = ""
         # Check if this is insertion junction or deletion region
-        # If insertion, add 1 to end, because GFF convention is to record zero-
-        # length features with start=end, and junction site is to right of
-        # coordinate.
+        # GFF convention is to record zero-length features with start=end, and
+        # junction site is to right of coordinate.
         if start == end: # insertion junction
-            # end += 1
             indel = "I"
         elif start < end:
             indel = "D"
@@ -158,7 +159,7 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
         # Get the right flanking junction on reference
         # Check whether sequence with flanking will run off the end
         if (end + flanklen) <= len(ref[ctg]):
-            flankrightseq = ref[ctg][end: end + flanklen].seq.lower() # TODO check if gff end inclusive
+            flankrightseq = ref[ctg][end: end + flanklen].seq.lower()
         else:
             flankrightseq = ref[ctg][end:].seq.lower()
         # Add the IES sequence fragment
@@ -248,8 +249,10 @@ def getPointers(seq, start, end, iesseq):
         logging.warn(f"Unexpected result in pointer search for breakpoint {breakpointid}")
     return(out)
 
+
 class IesRecords(object):
     """Records of putative IESs from mappings"""
+
 
     def __init__(self, alnfile, alnformat, refgenome):
         """Constructor for IesRecords
@@ -302,6 +305,7 @@ class IesRecords(object):
         # Genome sequence used as reference for the mapping
         self._refgenome = refgenome
 
+
     def __str__(self):
         """Report summary stats of IesRecords object"""
         insdictlen = len(self._insDict)
@@ -322,11 +326,13 @@ class IesRecords(object):
                 + str(mapped)
                 + " mapped reads")
 
+
     def dump(self):
         """Data dump of IesRecords._insDict in JSON format"""
         outstr = json.dumps(self._insDict, sort_keys = True, indent = 2)
         outstr_seq = json.dumps(self._insSeqDict, sort_keys=True, indent=2)
         return(outstr + "\n" + outstr_seq)
+
 
     def _addClipsFromCigar(self, rname, cigar, pos):
         """Check if alignment is clipped at the ends, and record the
@@ -348,6 +354,7 @@ class IesRecords(object):
         if len(cliparr) > 0:
             for (clipstart, clipend, cliptype) in cliparr:
                 self._insDict[rname][clipstart][clipend][0][cliptype] += 1
+
 
     def _addIndelsFromCigar(self, rname, cigar, pos, minlength, qseq):
         """Check if alignment contains indels above minimum length, and record
@@ -379,6 +386,7 @@ class IesRecords(object):
                 if indeltype == "I":
                     self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
 
+
     def _getDeletedSequences(self):
         """Record sequences of deletions. Sequences of insertions are recorded
         when parsing each alignment, because they are extracted from the query.
@@ -403,6 +411,7 @@ class IesRecords(object):
                             # Get sequence of indel sequence, note that end is also inclusive
                             indelseq = str(refctgseq[int(indelstart)-1:int(indelend)]) # TODO: Check for off-by-one errors
                             self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
+
 
     def findPutativeIes(self, minlength):
         """Search alignment for clips and indels to identify putative IESs.
@@ -432,6 +441,7 @@ class IesRecords(object):
 
         # Go through insDict and extract sequences of deleted regions, too
         self._getDeletedSequences()
+
 
     def reportPutativeIes(self, mininsbreaks, mindelbreaks):
         """After clips and indels have been recorded, report putative IESs above
@@ -542,6 +552,7 @@ class IesRecords(object):
                                     gff.addEntry(outarr, None)
         return(gff, outseq)
 
+
     def reportIndelConsensusSeq(self, ctg, indelstart, indelend, indellen):
         """Report consensus of indel sequence
 
@@ -572,6 +583,7 @@ class IesRecords(object):
         # alnconsrec = SeqRecord(alncons, id=consname)
         alnconsrec = SeqRecord(alncons)
         return(alnconsrec)
+
 
     def reportIndelReadMismatchPc(self, ctg, indelstart, indelend, indellen):
         """Report sequence mismatch % of query reads containing indel at a
