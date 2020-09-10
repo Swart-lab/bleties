@@ -153,6 +153,69 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
                         ])
     return(outseqs)
 
+
+# TODO check flanks for potential pointers
+def getPointers(iesgff,iesconsseq,ref):
+    """Find potential pointer sequences at putative IES junctions
+
+    Parameters
+    ----------
+    iesgff : Gff
+        Gff object listing insertions and deletions, output from reportPutativeIes
+    iesconsseq : dict
+        dict of SeqRecords for indels (output from reportPutativeIes)
+    ref : dict
+        dict of SeqRecords, reference genome
+    """
+    pointdict = {}
+    for breakpointid in iesgff:
+        ctg = iesgff.getValue(breakpointid,'seqid')
+        start = int(iesgff.getValue(breakpointid,'start'))
+        end = int(iesgff.getValue(breakpointid,'end'))
+        if start == end:
+            indel = "I"
+            iesseq = iesconsseq[breakpointid]
+        elif start < end:
+            indel = "D"
+            iesseq = ref[ctg][start-1 : end]
+        else:
+            raise Exception(f"Start cannot be less than end, feature {breakpointid}")
+        pointdict[breakpointid] = ""
+        leftcheck = ""
+        rightcheck = ""
+        # check left of IES
+        i = 0
+        while iesseq[i] == ref[ctg][end+i]:
+            leftcheck += iesseq[i]
+            i += 1
+            # break out of loop if the next position runs off edge
+            if i >= len(iesseq) or end+i >= len(ref[ctg]):
+                break
+        # check right of IES
+        i = -1
+        if indel == "I":
+            refstart = start
+        elif indel == "D":
+            refstart = start - 1
+        while iesseq[i] == ref[ctg][refstart+i]:
+            rightcheck = iesseq[i] + rightcheck
+            i -= 1
+            # break out of loop if next position runs off edge
+            if -i > len(iesseq) or refstart+i < 0:
+                break
+        # take the longer putative pointer
+        if len(leftcheck) < 2 and len(rightcheck) < 2:
+            pointdict[breakpointid] = "none"
+        elif len(leftcheck) > len(rightcheck) and len(leftcheck) >= 2:
+            pointdict[breakpointid] = leftcheck
+        elif len(rightcheck) > len(leftcheck) and len(rightcheck) >=2:
+            pointdict[breakpointid] = rightcheck
+        elif len(rightcheck) == len(leftcheck):
+            pointdict[breakpointid] = "tie"
+        else:
+            logging.warn(f"Unexpected result in pointer search for breakpoint {breakpointid}")
+    return(pointdict)
+
 class IesRecords(object):
     """Records of putative IESs from mappings"""
 

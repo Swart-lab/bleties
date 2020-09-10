@@ -89,6 +89,10 @@ def milraa(args):
             fhjunc.write("\t".join(['id','leftflank','rightflank','indel','ref'])+"\n") # header
             for junc in junctionseqs:
                 fhjunc.write("\t".join(junc) + "\n")
+    # Test pointer finder
+    pointerdict = Milraa.getPointers(iesgff, iesseq, refgenome)
+    with open("test.pointers.json","w") as fh:
+        json.dump(pointerdict, fh, indent=4)
     # Close AlignmentFile
     alnfile.close()
     logging.info("Finished MILRAA")
