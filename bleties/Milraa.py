@@ -175,76 +175,78 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
         elif indel =="D":
             # Start minus one because for deletion, start is ON the deleted region
             refunedited = ref[ctg][start-flanklen-1:end+flanklen].seq.lower()
+        # Find pointers if present
+        pointer = getPointers(ref[ctg], start, end, iesconsseq[breakpointid])
         # Put everything together and return
         outseqs.append([breakpointid,
                         str(flankleftseq),
                         str(flankrightseq),
+                        str(pointer),
                         str(iesconsseq[breakpointid].seq),
                         str(refunedited)
                         ])
     return(outseqs)
 
 
-def getPointers(iesgff,iesconsseq,ref):
+def getPointers(seq, start, end, iesseq):
     """Find potential pointer sequences at putative IES junctions
 
     Parameters
     ----------
-    iesgff : Gff
-        Gff object listing insertions and deletions, output from reportPutativeIes
-    iesconsseq : dict
-        dict of SeqRecords for indels (output from reportPutativeIes)
-    ref : dict
-        dict of SeqRecords, reference genome
+    seq : str
+        Sequence of contig with putative IES junction/region
+    start : int
+        Start position of putative IES junction/region, 1-based (from GFF)
+    end : int
+        End position of putative IES junction/region, 1-based (from GFF). If 
+        start == end , the IES is not present on the reference sequence and the
+        junction is to the RIGHT of position, per GFF convention.
+        If start < end, the IES is retained in the reference sequence. 
+    iesseq : str
+        In case where start == end, IES sequence must be supplied separately
     """
-    pointdict = {}
-    for breakpointid in iesgff:
-        ctg = iesgff.getValue(breakpointid,'seqid')
-        start = int(iesgff.getValue(breakpointid,'start'))
-        end = int(iesgff.getValue(breakpointid,'end'))
-        if start == end:
-            indel = "I"
-            iesseq = iesconsseq[breakpointid]
-        elif start < end:
-            indel = "D"
-            iesseq = ref[ctg][start-1 : end]
-        else:
-            raise Exception(f"Start cannot be less than end, feature {breakpointid}")
-        pointdict[breakpointid] = ""
-        leftcheck = ""
-        rightcheck = ""
-        # check left of IES
-        i = 0
-        while iesseq[i] == ref[ctg][end+i]:
-            leftcheck += iesseq[i]
-            i += 1
-            # break out of loop if the next position runs off edge
-            if i >= len(iesseq) or end+i >= len(ref[ctg]):
-                break
-        # check right of IES
-        i = -1
-        if indel == "I":
-            refstart = start
-        elif indel == "D":
-            refstart = start - 1
-        while iesseq[i] == ref[ctg][refstart+i]:
-            rightcheck = iesseq[i] + rightcheck
-            i -= 1
-            # break out of loop if next position runs off edge
-            if -i > len(iesseq) or refstart+i < 0:
-                break
-        # take the longer putative pointer
-        if len(leftcheck) < 2 and len(rightcheck) < 2:
-            pointdict[breakpointid] = "none"
-        elif len(leftcheck) > len(rightcheck) and len(leftcheck) >= 2:
-            pointdict[breakpointid] = leftcheck
-        elif len(rightcheck) > len(leftcheck) and len(rightcheck) >=2:
-            pointdict[breakpointid] = rightcheck
-        elif len(rightcheck) == len(leftcheck):
-            pointdict[breakpointid] = "tie"
-        else:
-            logging.warn(f"Unexpected result in pointer search for breakpoint {breakpointid}")
-    return(pointdict)
+    if start == end:
+        indel = "I"
+    elif start < end:
+        indel = "D"
+        iesseq = seq[start-1 : end]
+    else:
+        raise Exception(f"Start cannot be less than end, feature {breakpointid}")
+    out = ""
+    leftcheck = ""
+    rightcheck = ""
+    # check left of IES
+    i = 0
+    while iesseq[i] == seq[end+i]:
+        leftcheck += iesseq[i]
+        i += 1
+        # break out of loop if the next position runs off edge
+        if i >= len(iesseq) or end+i >= len(seq):
+            break
+    # check right of IES
+    i = -1
+    if indel == "I":
+        refstart = start
+    elif indel == "D":
+        refstart = start - 1
+    while iesseq[i] == seq[refstart+i]:
+        rightcheck = iesseq[i] + rightcheck
+        i -= 1
+        # break out of loop if next position runs off edge
+        if -i > len(iesseq) or refstart+i < 0:
+            break
+    # take the longer putative pointer
+    if len(leftcheck) < 2 and len(rightcheck) < 2:
+        out = "none"
+    elif len(leftcheck) > len(rightcheck) and len(leftcheck) >= 2:
+        out = leftcheck
+    elif len(rightcheck) > len(leftcheck) and len(rightcheck) >=2:
+        out = rightcheck
+    elif len(rightcheck) == len(leftcheck):
+        out = "tie"
+    else:
+        logging.warn(f"Unexpected result in pointer search for breakpoint {breakpointid}")
+    return(out)
 
 class IesRecords(object):
     """Records of putative IESs from mappings"""

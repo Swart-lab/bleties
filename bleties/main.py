@@ -86,13 +86,9 @@ def milraa(args):
         junctionseqs = Milraa.getIndelJunctionSeqs(iesgff, iesseq, refgenome, args.junction_flank)
         logging.info(f"Reporting flanking sequences of putative IESs to file {args.out_junction}")
         with open(args.out_junction, "w") as fhjunc:
-            fhjunc.write("\t".join(['id','leftflank','rightflank','indel','ref'])+"\n") # header
+            fhjunc.write("\t".join(['id','leftflank','rightflank',"pointer",'indel','ref'])+"\n") # header
             for junc in junctionseqs:
                 fhjunc.write("\t".join(junc) + "\n")
-    # Test pointer finder
-    pointerdict = Milraa.getPointers(iesgff, iesseq, refgenome)
-    with open("test.pointers.json","w") as fh:
-        json.dump(pointerdict, fh, indent=4)
     # Close AlignmentFile
     alnfile.close()
     logging.info("Finished MILRAA")
