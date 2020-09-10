@@ -9,15 +9,25 @@ from bleties.SharedFunctions import Gff
 def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatchlength):
     """Identify whether a given reference position is covered by a reference-
     consuming operation.
-    Returns the operation that covers that position. If no operation covers
-    that position, nothing is returned
 
-    Arguments:
-    reftargetpos -- Target position on the reference sequence, 1-based (int)
-    refstartpos -- Start position of the alignment on reference, 1-based (int)
-    cigar -- CIGAR string of the alignment (str)
-    mininslength -- Minimum length of insert to report (int)
-    minmatchlength - Minimum length of match to report (int)
+    Parameters
+    ----------
+    reftargetpos : int
+        Target position on the reference sequence, 1-based
+    refstartpos : int
+        Start position of the alignment on reference, 1-based
+    cigar : str
+        CIGAR string of the alignment
+    mininslength : int
+        Minimum length of insert to report
+    minmatchlength : int
+        Minimum length of match to report
+
+    Returns
+    -------
+    str
+        Returns the operation that covers that position. If no operation covers
+        that position, nothing is returned
     """
 
     curr_int_start = refstartpos
@@ -54,9 +64,12 @@ class IesRetentionsMacOnly(object):
         Using only mapping to MAC genome assembly. Unlike ParTIES MIRET which
         uses both mapping to somatic and germline genomes
 
-        Arguments:
-        gfffile - Path to GFF3 file of IES annotations (str)
-        alnfile - pysam.AlignmentFile object containing mapping of interest
+        Parameters
+        ----------
+        gfffile : str
+            Path to GFF3 file of IES annotations (str)
+        alnfile : pysam.AlignmentFile
+            Alignment file containing mapping of interest
         """
         self._gfffile = gfffile
         self._alnfile = alnfile
@@ -73,8 +86,10 @@ class IesRetentionsMacOnly(object):
 
     def findMappingOps(self):
         """Find mapping operations at the IES junctions, and count how many of
-        each type. Match operations (M) that span the IES junction are treated
-        as representing IES- form, because the mapping reference is somatic
+        each type. 
+        
+        Match operations (M) that span the IES junction are treated as
+        representing IES- form, because the mapping reference is somatic
         genome. Insert operations (I) that are exactly at the IES junction are
         treated as representing IES+ form.
         """
@@ -107,6 +122,7 @@ class IesRetentionsMacOnly(object):
     def calculateRetentionScores(self):
         """Calculate retention scores from counts of I and M operations per site
         after findMappingOps() has been applied.
+
         Equation: R = IES+ / (IES+ + IES-)
         """
 
@@ -127,8 +143,10 @@ class IesRetentionsMacOnly(object):
         """Report retention scores after running calculateRetentionScores().
         Writes to filehandle.
 
-        Arguments:
-        fh - Filehandle to write results
+        Parameters
+        ----------
+        fh 
+            Filehandle to write results
         """
         # Create header line
         headerarr = ['ID', 'score']
