@@ -17,11 +17,20 @@ from bleties.SharedFunctions import Gff
 
 def getClips(cigar, pos):
     """Parse cigar string and alignment position and report left- and right-
-    clipping. Return list of tuples (start pos, end pos, and clip type)
+    clipping.
 
-    Arguments:
-    cigar -- Cigar string of alignment to process (str)
-    pos -- Alignment start position on reference, 1-based numbering (int)
+    Parameters
+    ----------
+    cigar : str
+        CIGAR string of alignment to process
+    pos : int
+        Alignment start position on reference, 1-based numbering
+
+    Returns
+    -------
+    list
+        list of tuples (int, int, str) representing (start position, end
+        position, clipping type)
     """
     # Look for inserts that are on left or right ends of read (i.e. H or S clipping operations)
     outarr = []
@@ -37,15 +46,28 @@ def getClips(cigar, pos):
 
 def getIndels(cigar, pos, minlength, qseq):
     """Parse cigar string and alignment position and report insertions or
-    deletions. Return list of tuples (start pos, end pos, insert length,
+    deletions. 
+    
+    Return list of tuples (start pos, end pos, insert length,
     insertion or deletion, insert sequence). If it is a deletion then there is
     no insert sequence reported because that can be parsed from the reference.
 
-    Arguments:
-    cigar -- Cigar string of alignment to process (str)
-    pos -- Alignment start position on reference, 1-based numbering (int)
-    minlength -- Minimum length of indel to report (int)
-    qseq -- Query sequence (str)
+    Parameters
+    ----------
+    cigar : str
+        CIGAR string of alignment to process
+    pos : int
+        Alignment start position on reference, 1-based numbering
+    minlength : int
+        Minimum length of indel to report
+    qseq : str
+        Query sequence
+
+    Returns
+    -------
+    list
+        list of tuples (int, int, int, str, str) representing (start pos, end
+        pos, insert length, insertion/deletion, insert sequence)
     """
     outarr = [] # Array to store tuples of results
     # Initialize counters for how much query or reference seq is consumed
@@ -87,13 +109,22 @@ def getIndels(cigar, pos, minlength, qseq):
 
 def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
     """Get sequence at indel junctions.
-    Returns list of list (breakpoint, left junction seq, right junction seq)
 
-    Arguments:
-    iesgff -- Gff object listing insertions and deletions (output from reportPutativeIes)
-    iesconsseq -- Dict of SeqRecords for indels (output from reportPutativeIes)
-    refgenome -- Reference genome (dict of SeqRecord objects)
-    flanklen -- Length of flanking sequence at junctions to report
+    Parameters
+    ----------
+    iesgff : Gff
+        Gff object listing insertions and deletions (output from reportPutativeIes)
+    iesconsseq : dict
+        dict of SeqRecords for indels (output from reportPutativeIes)
+    refgenome : dict
+        Reference genome (dict of SeqRecord objects)
+    flanklen : int
+        Length of flanking sequence at junctions to report
+
+    Returns
+    -------
+    list
+        list of list (breakpoint, left junction seq, right junction seq)
     """
     outseqs = []
     for breakpointid in iesgff:
@@ -154,7 +185,6 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
     return(outseqs)
 
 
-# TODO check flanks for potential pointers
 def getPointers(iesgff,iesconsseq,ref):
     """Find potential pointer sequences at putative IES junctions
 
@@ -220,7 +250,9 @@ class IesRecords(object):
     """Records of putative IESs from mappings"""
 
     def __init__(self, alnfile, alnformat, refgenome):
-        """Constructor creates IesRecords, internally represented by:
+        """Constructor for IesRecords
+        
+        Internally represented by:
         _insDict -- dict to store counts of detected inserts/deletions, keyed
             by evidence type. Keys: contig (str) -> start pos (int) -> end
             pos (int) -> insert length (int) -> evidence type (str) -> count (int)
@@ -231,10 +263,14 @@ class IesRecords(object):
         _alnformat -- as below
         _refgenome -- as below
 
-        Arguments:
-        alnfile -- Alignment to parse (pysam.AlignmentFile)
-        alnformat -- Format of the alignment, either "bam" or "sam"
-        refgenome -- Reference genome sequences (Bio.SeqIO.SeqRecord)
+        Parameters
+        ----------
+        alnfile : pysam.AlignmentFile
+            Alignment to parse
+        alnformat : str
+            Format of the alignment, either "bam" or "sam"
+        refgenome : Bio.SeqIO.SeqRecord
+            Reference genome sequences
         """
         # dict to store counts of detected inserts keyed by evidence type
         # keys: contig -> startpos -> endpos -> insert length -> evidence type -> count
@@ -296,10 +332,14 @@ class IesRecords(object):
         position -> end position -> insert length -> evidence type, where
         evidence type is either "HSM" (left clip) or "MHS" (right clip).
 
-        Arguments:
-        rname -- Name of reference contig (str)
-        cigar -- Cigar string of the current alignment record (str)
-        pos -- Reference position of the current alignment record (int)
+        Parameters
+        ----------
+        rname : str
+            Name of reference contig
+        cigar : str
+            CIGAR string of the current alignment record
+        pos : int
+            Reference position of the current alignment record
         """
         # Look for inserts that are on left or right read ends (i.e. H or S clipping operations)
         cliparr = getClips(cigar, pos)
@@ -315,12 +355,18 @@ class IesRecords(object):
         contig -> start pos -> end pos -> insert length -> evidence type, where
         evidence type is either "I" (insertion) or "D" (deletion).
 
-        Arguments:
-        rname -- Name of reference contig (str)
-        cigar -- Cigar string of the current alignment record (str)
-        pos -- Reference position of the current alignment record (int)
-        minlength -- Minimum length of indel for it to be recorded (int)
-        qseq -- Query sequence of the read (str)
+        Parameters
+        ----------
+        rname : str
+            Name of reference contig
+        cigar : str
+            Cigar string of the current alignment record
+        pos : int
+            Reference position of the current alignment record
+        minlength : int
+            Minimum length of indel for it to be recorded
+        qseq : str
+            Query sequence of the read
         """
         # Look for inserts that are completely spanned by the read (i.e. I operations)
         indelarr = getIndels(cigar, pos, minlength, qseq)
@@ -360,8 +406,10 @@ class IesRecords(object):
         """Search alignment for clips and indels to identify putative IESs.
         Record them in the _insDict dict.
 
-        Arguments:
-        minlength -- Record only putative IESs of this length and above (int)
+        Parameters
+        ----------
+        minlength : int
+            Record only putative IESs of this length and above
         """
         # parse CIGAR string
         for line in self._alnfile:
@@ -391,14 +439,19 @@ class IesRecords(object):
         to be lower because we are mapping to somatic genome in the typical use
         case, and reads with alternative excisions are thought to be rare.
 
-        Return:
-        SharedFunctions.Gff object
-        Dict of consensus sequences for putative IESs
+        Parameters
+        ----------
+        mininsbreaks : int
+            Minimum breakpoint coverage to report potential insertion
+        mindelbreaks : int
+            Minimum breakpoint coverage to report potential deletion
 
-        Arguments:
-        mininsbreaks -- Minimum breakpoint coverage to report potential insertion (int)
-        mindelbreaks -- Minimum breakpoint coverage to report potential deletion (int)
-        gff -- SharedFunctions.Gff object
+        Returns
+        -------
+        SharedFunctions.Gff
+            Putative IES report parsable as GFF format
+        dict
+            dict of consensus sequences for putative IESs
         """
         # Create lists to hold SeqRecord objects and GFF output
         gff = Gff()
@@ -489,13 +542,22 @@ class IesRecords(object):
 
     def reportIndelConsensusSeq(self, ctg, indelstart, indelend, indellen):
         """Report consensus of indel sequence
-        Returns: Bio.SeqRecord object
 
-        Arguments:
-        ctg -- name of contig (str)
-        indelstart -- start position, 1-based (int)
-        indelend -- end position, 1-based (int)
-        indellen -- length of indel (int)
+        Parameters
+        ----------
+        ctg : str
+            Name of contig
+        indelstart : int
+            Start position, 1-based
+        indelend : int
+            End position, 1-based
+        indellen : int
+            Length of indel
+        
+        Returns
+        -------
+        Bio.SeqRecord
+            Consensus sequence of given indel
         """
 
         # From list of sequences as str, make a list of SeqRecord objects
@@ -515,16 +577,24 @@ class IesRecords(object):
         This is to flag indels that may originate from paralogs and hence are
         probably not true IESs.
 
-        Arguments:
-        ctg -- name of contig (str)
-        indelstart -- start position of indel, 1-based (int)
-        indelend -- end position, 1 based (int)
-        indellen -- length of indel (int)
+        Parameters
+        ----------
+        ctg : str
+            Name of contig
+        indelstart : int
+            Start position of indel, 1-based
+        indelend : int
+            End position, 1 based
+        indellen : int
+            Length of indel
 
-        Returns:
-        ins_mm -- list of floats, mismatch % of query reads containing indel at
-                  target position
-        non_mm -- list of floats, mismatch % of query reads without indel at pos
+        Returns
+        -------
+        list, list
+            Two lists:
+            ins_mm -- list of floats, mismatch % of query reads containing indel
+                    at target position
+            non_mm -- list of floats, mismatch % of query reads without indel at pos
         """
         MIN_IES_LEN = 10                                                        # TODO: replace magic number
         # GFF allows start==end, but pysam does not recognise
