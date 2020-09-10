@@ -39,12 +39,12 @@ def read_sam_bam_ref(args):
             aln_filename=args.bam
             aln_format = "bam"
             aln_mode = "rb"
-    # Open SAM or BAM file 
+    # Open SAM or BAM file
     logging.info(f"Opening alignment file {aln_filename}")
     alnfile = pysam.AlignmentFile(aln_filename, aln_mode)
-    logging.info("Alignment file contains " 
-                 + str(alnfile.mapped) 
-                 + " reads mapped to " 
+    logging.info("Alignment file contains "
+                 + str(alnfile.mapped)
+                 + " reads mapped to "
                  + str(alnfile.nreferences)
                  + " reference sequences")
     # Read reference Fasta file into memory
@@ -61,7 +61,7 @@ def milraa(args):
     logging.info(" ".join(sys.argv))
     # Read input files
     iesrecords,alnfile,refgenome = read_sam_bam_ref(args)
-    # Process alignment to find putative IESs 
+    # Process alignment to find putative IESs
     logging.info("Processing alignment to find putative IESs")
     iesrecords.findPutativeIes(args.min_ies_length)
     if args.dump:
@@ -108,7 +108,7 @@ def miser(args):
     iesgff = SharedFunctions.Gff()
     iesgff.file2gff(args.gff)
 
-    # Compare mean mismatch percentage of reads with and without putative IES 
+    # Compare mean mismatch percentage of reads with and without putative IES
     # for each putative IES
     logging.info("Reporting possibly spurious IESs due to misassembly or mapped paralogs")
     out_gff_split = defaultdict(list) # dict to hold split GFF file keyed by diagnosis
@@ -130,9 +130,9 @@ def miser(args):
             int(iesgff.getValue(bpid,'end')),
             int(iesgff.getAttr(bpid,'IES_length'))
         )
-        # Perform test of mismatch % if more than 2 reads with inserts 
+        # Perform test of mismatch % if more than 2 reads with inserts
         # (otherwise stdev meaningless)
-        if len(ins_mm) > 2 and len(non_mm) > 2: 
+        if len(ins_mm) > 2 and len(non_mm) > 2:
             if args.spurious_ies_test == 'mann-whitney':
                 # Mann-Whitney U test for whether mismatch % with indel of interest
                 # is greater than without
@@ -141,7 +141,7 @@ def miser(args):
                 # Ward's t-test (non-equal population variances)
                 mwstat, mwpval = ttest_ind(ins_mm, non_mm, equal_var=False)
             # Report
-            outarr = [bpid, 
+            outarr = [bpid,
                 round(stats.mean(ins_mm),2),
                 round(stats.mean(non_mm),2),
                 round(stats.stdev(ins_mm),2),
@@ -151,7 +151,7 @@ def miser(args):
                 len(ins_mm),
                 len(non_mm)]
             # Diagnosis
-            diagnosis = "ok" 
+            diagnosis = "ok"
             if stats.mean(ins_mm) > 5 or stats.mean(non_mm) > 5:
                 diagnosis = "high_error"
             if len(ins_mm) > len(non_mm):
@@ -161,7 +161,7 @@ def miser(args):
             if mwpval < pval_corr and stats.mean(ins_mm) > stats.mean(non_mm):
                 diagnosis = "paralog"
         elif len(non_mm) < 1:
-            outarr = [bpid, 
+            outarr = [bpid,
                 round(stats.mean(ins_mm),2),
                 "NA",
                 "NA",
@@ -172,7 +172,7 @@ def miser(args):
                 len(non_mm)]
             diagnosis = "misassembly" # or scrambling
         else:
-            outarr = [bpid, 
+            outarr = [bpid,
                 round(stats.mean(ins_mm),2),
                 round(stats.mean(non_mm),2),
                 "NA",
@@ -215,7 +215,7 @@ def milret(args):
     logging.info(" ".join(sys.argv))
     # Read BAM file - SAM not supported because we need random access
     logging.info(f"Opening alignment file {args.bam}")
-    alnfile = pysam.AlignmentFile(args.bam, "rb") 
+    alnfile = pysam.AlignmentFile(args.bam, "rb")
     # Initialize IesRetentionsMacOnly object
     iesretentions = Milret.IesRetentionsMacOnly(args.ies, alnfile)
     # Count mapping operations per site

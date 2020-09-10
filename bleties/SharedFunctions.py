@@ -17,10 +17,10 @@ class Gff(object):
         Gff object is a dict keyed by ID field of each GFF entry.
         Each dict is keyed by the GFF column name, e.g. 'strand', 'start'.
         There is an additional key 'attrdict', which is a dict of key-value pairs
-        in the 'attributes' field of the GFF column. This assumes that the 
+        in the 'attributes' field of the GFF column. This assumes that the
         attributes keys are unique.
         """
-        # Create dict 
+        # Create dict
         self._gffDict = defaultdict(dict)
 
     def __iter__(self):
@@ -102,7 +102,7 @@ class Gff(object):
 
     def list2gff(self, gfflist):
         """Add entries to Gff object from a list of GFF3 lines.
-        
+
         Arguments:
         gfflist -- List of GFF3 records (list of str)
         """

@@ -8,7 +8,7 @@ from bleties.SharedFunctions import Gff
 
 def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatchlength):
     """Identify whether a given reference position is covered by a reference-
-    consuming operation. 
+    consuming operation.
     Returns the operation that covers that position. If no operation covers
     that position, nothing is returned
 
@@ -19,7 +19,7 @@ def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatc
     mininslength -- Minimum length of insert to report (int)
     minmatchlength - Minimum length of match to report (int)
     """
-    
+
     curr_int_start = refstartpos
     curr_int_end = refstartpos
     # Split cigar string into individual operations
@@ -69,7 +69,7 @@ class IesRetentionsMacOnly(object):
                     int)                # Count of op at junction
                 )
         # Initialize dict to hold retention scores calculated from counts
-        self._scoresDict = defaultdict(float) 
+        self._scoresDict = defaultdict(float)
 
     def findMappingOps(self):
         """Find mapping operations at the IES junctions, and count how many of
@@ -102,8 +102,8 @@ class IesRetentionsMacOnly(object):
                                            1)
                 if res: # If there is no operation, will return None
                     # Record the count
-                    self._countsDict[gffid][res] +=1 
-    
+                    self._countsDict[gffid][res] +=1
+
     def calculateRetentionScores(self):
         """Calculate retention scores from counts of I and M operations per site
         after findMappingOps() has been applied.
