@@ -66,29 +66,40 @@ def milraa(args):
     iesrecords.findPutativeIes(args.min_ies_length)
     if args.dump:
         logging.info("Dumping data in JSON format to STDOUT")
-        # sys.stderr.write(str(iesrecords) + "\n") # Print summary of IesRecords object
-        print(iesrecords.dump()) # Dump data to check
+        with open(f"{args.out}.dump", "w") as fh:
+            # sys.stderr.write(str(iesrecords) + "\n") # Print summary of IesRecords object
+            fh.write(iesrecords.dump()) # Dump data to check
     # Report putative IESs as list of GFF records and dict of SeqRecord objects
     logging.info("Reporting putative IESs in GFF format")
     (iesgff, iesseq) = iesrecords.reportPutativeIes(args.min_break_coverage, args.min_del_coverage)
 
     # Write gff version header and command line as comment
-    args.out.write("##gff-version 3\n")
-    args.out.write("# " + " ".join(sys.argv) + "\n")
-    # Write each GFF entry as a tab-separated line
-    iesgff.gff2fh(args.out)
+    with open(f"{args.out}.milraa_ies.gff3","w") as fh:
+        fh.write("##gff-version 3\n")
+        fh.write("# " + " ".join(sys.argv) + "\n")
+        # Write each GFF entry as a tab-separated line
+        iesgff.gff2fh(fh)
+
     # Write Fasta file of putative IES sequences
-    if args.out_fasta:
-        logging.info(f"Reporting consensus sequences of putative IESs to Fasta file {args.out_fasta}")
-        SeqIO.write(iesseq.values(), args.out_fasta, "fasta")
+    logging.info(f"""
+    Reporting consensus sequences of putative IESs to Fasta file 
+    {args.out}.milraa_ies.fasta
+    """)
+    SeqIO.write(iesseq.values(), f"{args.out}.milraa_ies.fasta", "fasta")
+
     # Report junction sequences
-    if args.out_junction and args.junction_flank:
-        junctionseqs = Milraa.getIndelJunctionSeqs(iesgff, iesseq, refgenome, args.junction_flank)
-        logging.info(f"Reporting flanking sequences of putative IESs to file {args.out_junction}")
-        with open(args.out_junction, "w") as fhjunc:
-            fhjunc.write("\t".join(['id','leftflank','rightflank',"pointer",'indel','ref'])+"\n") # header
+    if args.junction_flank:
+        junctionseqs = Milraa.getIndelJunctionSeqs(iesgff, iesseq, 
+                refgenome, args.junction_flank)
+        logging.info(f"""
+        Reporting flanking sequences of putative IESs to file 
+        {args.out}.junction.out
+        """)
+        with open(f"{args.out}.junction.out", "w") as fh:
+            fh.write("\t".join(["id", "leftflank", "rightflank", "pointer",
+                "indel", "ref"]) + "\n") # header
             for junc in junctionseqs:
-                fhjunc.write("\t".join(junc) + "\n")
+                fh.write("\t".join(junc) + "\n")
     # Close AlignmentFile
     alnfile.close()
     logging.info("Finished MILRAA")

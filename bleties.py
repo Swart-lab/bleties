@@ -39,14 +39,8 @@ milraa_parser.add_argument("--ref",
     """)
 milraa_parser.add_argument("--out",
     "-o",
-    nargs='?',
-    type=argparse.FileType("w"),
-    default=sys.stdout,
-    help="Path to write GFF3 file, defaults to STDOUT")
-milraa_parser.add_argument("--out_fasta",
-    help="Path to write Fasta file of putative IES sequences")
-milraa_parser.add_argument("--out_junction",
-    help="Path to write table of flanking sequences at putative IES junctions")
+    default="milraa.test",
+    help="Output filename prefix")
 milraa_parser.add_argument("--junction_flank",
     type=int,
     default=5,
