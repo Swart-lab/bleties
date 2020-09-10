@@ -156,6 +156,17 @@ def miser(args):
             pval_corr = args.spurious_ies_pvalue / len(iesgff) # Bonferroni correction
             if mwpval < pval_corr and stats.mean(ins_mm) > stats.mean(non_mm):
                 diagnosis = "paralog"
+        elif len(non_mm) < 1:
+            outarr = [bpid, 
+                round(stats.mean(ins_mm),2),
+                "NA",
+                "NA",
+                "NA",
+                "NA",
+                "NA",
+                len(ins_mm),
+                len(non_mm)]
+            diagnosis = "misassembly" # or scrambling
         else:
             outarr = [bpid, 
                 round(stats.mean(ins_mm),2),
