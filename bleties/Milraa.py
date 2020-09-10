@@ -13,7 +13,7 @@ from Bio.Align import MultipleSeqAlignment
 from Bio.Align import AlignInfo
 
 from bleties.SharedValues import SharedValues
-from bleties.SharedFunctions import Gff
+from bleties.SharedFunctions import Gff, nested_dict_to_list
 
 
 def getClips(cigar, pos):
@@ -468,88 +468,86 @@ class IesRecords(object):
         # Create lists to hold SeqRecord objects and GFF output
         gff = Gff()
         outseq = {}
+
         # Parse the dict and report putative IESs above min coverage
         # We only check breakpoints which are completely spanned by a read ("I" or "D" operations)
         # however we also report supporting counts from HSM and MSH type mappings
         # TODO Reduce code duplication here, incorporate Gff module
-        for ctg in sorted(self._insDict):
-            for ins_start in sorted(self._insDict[ctg]):
-                for ins_end in sorted(self._insDict[ctg][ins_start]):
-                    for ins_len in sorted(self._insDict[ctg][ins_start][ins_end]):
-                        for evidencetype in self._insDict[ctg][ins_start][ins_end][ins_len]:
-                            countvalue = self._insDict[ctg][ins_start][ins_end][ins_len][evidencetype]
-                            # If the breakpoint is an insert type
-                            if evidencetype == "I":
-                                if countvalue >= mininsbreaks:
-                                    breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(ins_len)])
-                                    # Prepare attributes list of key-value pairs
-                                    attr = ["ID="+breakpointid,
-                                            "IES_length="+str(ins_len)
-                                           ]
-                                    attr.append("cigar=I "+str(countvalue))
-                                    # Extend the cigar evidence counts with clipped reads that are also at this junction
-                                    # Clippings are recorded with nominal insert length of zero
-                                    attr.extend(["cigar="+cigartype+" "+str(self._insDict[ctg][ins_start][ins_end][0][cigartype])
-                                                 for cigartype in sorted(self._insDict[ctg][ins_start][ins_end][0])
-                                                ])
-                                    # Get read coverage from BAM file; SAM does not allow random access
-                                    if self._alnformat == "bam":
-                                        readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end)) # TODO: Check for off-by-one errors
-                                        attr.append("average_coverage="+str(readcov))
-                                    # Get indel consensus
-                                    consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, ins_len)
-                                    consseq.id = breakpointid
-                                    consseq.description = ";".join(attr)+";"
-                                    outseq[consseq.id] = consseq
-                                    # Build GFF entry
-                                    outarr = [str(ctg),            # 1 seqid
-                                              "MILRAA",            # 2 source
-                                              "junction",          # 3 type
-                                              str(ins_start),      # 4 start
-                                              str(ins_end),        # 5 end
-                                              str(countvalue),     # 6 score - in this case, breakpoint counts for insert operation only
-                                              ".",                 # 7 strand
-                                              ".",                 # 8 phase
-                                              ";".join(attr)+";"   # 9 attributes
-                                              ]
-                                    gff.addEntry(outarr, None)
-                            # If the breakpoint is a deletion type
-                            elif evidencetype == "D":
-                                if countvalue >= mindelbreaks:
-                                    # Add 1 because both start and end are inclusive
-                                    del_len = int(ins_end) - int(ins_start) + 1 # TODO: Check for off-by-one errors
-                                    breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
-                                    # Build attributes field
-                                    attr = ["ID="+breakpointid,
-                                            "IES_length="+str(del_len)
-                                           ]
-                                    attr.append("cigar=D "+str(countvalue))
-                                    # Look for left- and rightclips that fall on the deletion boundaries
-                                    if self._insDict[ctg][ins_start][ins_start][ins_len].get("MHS") and int(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]) > 0:
-                                        attr.append("cigar=MHS "+str(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]))
-                                    if self._insDict[ctg][ins_end][ins_end][ins_len].get("HSM") and int(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]) > 0:
-                                        attr.append("cigar=HSM "+str(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]))
-                                    # Add coverage value
-                                    if self._alnformat == "bam":
-                                        readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end))
-                                        attr.append("average_coverage="+str(readcov))
-                                    # Get indel consensus
-                                    consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, del_len)
-                                    consseq.id = breakpointid
-                                    consseq.description = ";".join(attr)+";"
-                                    outseq[consseq.id] = consseq
-                                    # Build GFF entry
-                                    outarr = [str(ctg),            # 1 seqid
-                                              "MILRAA",            # 2 source
-                                              "region",            # 3 type
-                                              str(ins_start),      # 4 start
-                                              str(ins_end),        # 5 end
-                                              str(countvalue),     # 6 score - in this case, breakpoint counts for delete operation only
-                                              ".",                 # 7 strand
-                                              ".",                 # 8 phase
-                                              ";".join(attr)+";"   # 9 attributes
-                                              ]
-                                    gff.addEntry(outarr, None)
+        for rec in nested_dict_to_list(self._insDict):
+            [ctg, ins_start, ins_end, ins_len, evidencetype, countvalue] = rec
+
+            # If the breakpoint is an insert type
+            if evidencetype == "I" and countvalue >= mininsbreaks:
+                breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(ins_len)])
+                # Prepare attributes list of key-value pairs
+                attr = ["ID="+breakpointid,
+                        "IES_length="+str(ins_len)
+                       ]
+                attr.append("cigar=I "+str(countvalue))
+                # Extend the cigar evidence counts with clipped reads that are also at this junction
+                # Clippings are recorded with nominal insert length of zero
+                attr.extend(["cigar="+cigartype+" "+str(self._insDict[ctg][ins_start][ins_end][0][cigartype])
+                             for cigartype in sorted(self._insDict[ctg][ins_start][ins_end][0])
+                            ])
+                # Get read coverage from BAM file; SAM does not allow random access
+                if self._alnformat == "bam":
+                    readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end)) # TODO: Check for off-by-one errors
+                    attr.append("average_coverage="+str(readcov))
+                # Get indel consensus
+                consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, ins_len)
+                consseq.id = breakpointid
+                consseq.description = ";".join(attr)+";"
+                outseq[consseq.id] = consseq
+                # Build GFF entry
+                outarr = [str(ctg),            # 1 seqid
+                          "MILRAA",            # 2 source
+                          "junction",          # 3 type
+                          str(ins_start),      # 4 start
+                          str(ins_end),        # 5 end
+                          str(countvalue),     # 6 score - in this case, breakpoint counts for insert operation only
+                          ".",                 # 7 strand
+                          ".",                 # 8 phase
+                          ";".join(attr)+";"   # 9 attributes
+                          ]
+                gff.addEntry(outarr, None)
+
+            # If the breakpoint is a deletion type
+            elif evidencetype == "D" and countvalue >= mindelbreaks:
+                # Add 1 because both start and end are inclusive
+                del_len = int(ins_end) - int(ins_start) + 1 # TODO: Check for off-by-one errors
+                breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
+                # Build attributes field
+                attr = ["ID="+breakpointid,
+                        "IES_length="+str(del_len)
+                       ]
+                attr.append("cigar=D "+str(countvalue))
+                # Look for left- and rightclips that fall on the deletion boundaries
+                if self._insDict[ctg][ins_start][ins_start][ins_len].get("MHS") and int(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]) > 0:
+                    attr.append("cigar=MHS "+str(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]))
+                if self._insDict[ctg][ins_end][ins_end][ins_len].get("HSM") and int(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]) > 0:
+                    attr.append("cigar=HSM "+str(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]))
+                # Add coverage value
+                if self._alnformat == "bam":
+                    readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end))
+                    attr.append("average_coverage="+str(readcov))
+                # Get indel consensus
+                consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, del_len)
+                consseq.id = breakpointid
+                consseq.description = ";".join(attr)+";"
+                outseq[consseq.id] = consseq
+                # Build GFF entry
+                outarr = [str(ctg),            # 1 seqid
+                          "MILRAA",            # 2 source
+                          "region",            # 3 type
+                          str(ins_start),      # 4 start
+                          str(ins_end),        # 5 end
+                          str(countvalue),     # 6 score - in this case, breakpoint counts for delete operation only
+                          ".",                 # 7 strand
+                          ".",                 # 8 phase
+                          ";".join(attr)+";"   # 9 attributes
+                          ]
+                gff.addEntry(outarr, None)
+
         return(gff, outseq)
 
 

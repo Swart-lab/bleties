@@ -11,6 +11,34 @@ class SharedFunctions():
     def returntrue():
         return (True)
 
+
+def nested_dict_to_list(d):
+    """Flatten a nested dict of dicts to lists of key-key-value sets
+
+    Parameters
+    ----------
+    d : dict
+        dict of dicts (of dicts ... ) with a nested structure, e.g. 
+        key1 -> key2 -> ... -> val
+
+    Returns
+    -------
+    list
+        list where each element is a list of the key value sets, e.g.
+        [key1, key2, ..., val]
+    """
+    out = []
+    def recc(dd, p=[]):
+        if not (type(dd) is dict or type(dd) is defaultdict):
+            out.append(p + [dd])
+            return(p + [dd])
+        else:
+            for k in dd:
+                recc(dd[k], p + [k])
+    recc(d)
+    return(out)
+
+
 class Gff(object):
     def __init__(self):
         """Construct Gff object
