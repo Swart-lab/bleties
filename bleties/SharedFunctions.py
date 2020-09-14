@@ -39,6 +39,78 @@ def nested_dict_to_list(d):
     return(out)
 
 
+def get_clusters(in_list, cluster_type : str, width : int):
+    """Cluster a list of integers into groups not more than _width_ apart
+
+    Note that this will also report clusters of length 1
+
+    Parameters
+    ----------
+    in_list : list
+        List of integers
+    width : int
+        Maximum distance (exclusive) between _adjacent_ members of a cluster
+
+    Returns:
+    list
+        list of lists, each sub-list containing the values of each cluster
+    """
+    # convert to ints just in case
+    in_list = [int(x) for x in in_list]
+    in_list = sorted(in_list)
+    merged = []
+    hold = []
+    prev = None
+    for i in in_list:
+        if prev:
+            # if distance from previous value less than condition
+            # append to the list
+            condition = False
+            if cluster_type == "bp":
+                condition = (i - prev < width)
+            elif cluster_type == "pc":
+                condition = within_percent(i, prev, width)
+            if condition:
+                hold.append(prev)
+            else:
+                # else make cluster and start new cluster
+                hold.append(prev)
+                merged.append(hold)
+                hold = []
+        prev = i
+    if prev: #sweet up last entry
+        hold.append(prev)
+        merged.append(hold)
+    return(merged)
+
+
+def within_percent(num1, num2, percent: int):
+    """Compare two numeric values by percentage difference
+
+    Return True if they are mutually within x-percent of each other
+
+    Parameters
+    ----------
+    num1 : int or float
+    num2 : int or float
+    percent : int
+        Percentage difference between the two. Mutual difference!
+
+    Returns
+    -------
+    bool
+        True if num1 and num2 are within percent of each other
+    """
+    # Sort numerically, convert to float just in case
+    compsorted = sorted([float(num1), float(num2)])
+    lower = 1 - (float(percent)/100)
+    upper = 1 + (float(percent)/100)
+    if compsorted[0] * upper > compsorted[1] * lower:
+        return(True)
+    else:
+        return(False)
+
+
 class Gff(object):
     def __init__(self):
         """Construct Gff object
