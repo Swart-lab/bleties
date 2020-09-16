@@ -29,6 +29,8 @@ milraa_parser = subparsers.add_parser(name="milraa",
     MILRAA - Method of Identification by Long Read Alignment Anomalies
     """,
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+# Input arguments
 milraa_parser.add_argument("--sam",
     help="SAM file containing mapping, requires header")
 milraa_parser.add_argument("--bam",
@@ -37,10 +39,14 @@ milraa_parser.add_argument("--ref",
     help="""
     FASTA file containing genomic contigs used as reference for the mapping
     """)
+
+# Output arguments
 milraa_parser.add_argument("--out",
     "-o",
     default="milraa.test",
     help="Output filename prefix")
+
+# Params for reporting candidate IESs
 milraa_parser.add_argument("--junction_flank",
     type=int,
     default=5,
@@ -67,9 +73,37 @@ milraa_parser.add_argument("--min_del_coverage", # For deletions (sensu MILORD)
 #    type=int,
 #    default=10,
 #    help="Maximum mismatch in the alignment for a read to be used")
+
+# Params for fuzzy length reporting candidate IESs
+milraa_parser.add_argument("--fuzzy_ies",
+    action="store_true",
+    help="""
+    Allow lengths of inserts to differ slightly when defining putative IES,
+    otherwise insert lengths must be exactly the same.
+    """)
+milraa_parser.add_argument("--cluster_type",
+    default="bp",
+    type=str,
+    help="""
+    Method to use for clustering insert lengths when defining putative IESs.
+    'bp' - maximum length difference in basepairs (exclusive). 'pc' - maximum
+    length difference in percentage difference (mutual percentage difference).
+    """)
+milraa_parser.add_argument("--cluster_width",
+    default=10,
+    type=int,
+    help="""
+    Limit for clustering putative IESs together. Recommended settings for
+    PacBio HiFi reads: '--cluster_type bp --cluster_width 10'. Recommended
+    settings for CLR reads: '--cluster_type pc --cluster_width 20' (not yet
+    tested extensively).
+    """)
+
+# Others
 milraa_parser.add_argument("--dump",
     action="store_true",
     help="Dump contents of dict for troubleshooting")
+
 # Assign function to this subparser
 milraa_parser.set_defaults(func=main.milraa)
 
@@ -93,6 +127,8 @@ reference is taken.
 miser_parser = subparsers.add_parser(name="miser",
     description="MISER - Method of IES Spurious or Erroneous Reporting",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+# Input arguments
 miser_parser.add_argument("--sam",
     help="SAM file containing mapping, requires header")
 miser_parser.add_argument("--bam",
@@ -102,6 +138,8 @@ miser_parser.add_argument("--ref",
     FASTA file containing genomic contigs used as reference for the mapping""")
 miser_parser.add_argument("--gff",
     help="GFF file containing coordinates for putative IESs")
+
+# Output arguments
 miser_parser.add_argument("--out",
     "-o",
     nargs='?',
@@ -111,6 +149,14 @@ miser_parser.add_argument("--out",
     Path to write report statistics on possibly spurious IESs due to misassembly
     or mapped paralogs, defaults to STDOUT
     """)
+miser_parser.add_argument("--split_gff",
+    action="store_true",
+    help="""
+    Split input GFF entries into separate files for each category (ok,
+    misassembly, paralog, ...), using input GFF filename as prefix
+    """)
+
+# Test parameters
 miser_parser.add_argument("--spurious_ies_test",
     type=str,
     default="mann-whitney",
@@ -126,12 +172,7 @@ miser_parser.add_argument("--spurious_ies_pvalue",
     Bonferroni correction will be applied depending on the number of tests
     (number of putative IESs) performed
     """)
-miser_parser.add_argument("--split_gff",
-    action="store_true",
-    help="""
-    Split input GFF entries into separate files for each category (ok,
-    misassembly, paralog, ...), using input GFF filename as prefix
-    """)
+
 # Assign function to this subparser
 miser_parser.set_defaults(func=main.miser)
 
@@ -165,6 +206,8 @@ milret_parser = subparsers.add_parser(name="milret",
     MILRET - Method of IES Long-read RETention
     """,
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+# Input arguments
 milret_parser.add_argument("--bam",
     help="BAM file containing mapping, must be sorted and indexed")
 milret_parser.add_argument("--ref",
@@ -173,12 +216,15 @@ milret_parser.add_argument("--ref",
     """)
 milret_parser.add_argument("--ies",
     help="GFF3 file containing coordinates of IES junctions in MAC genome")
+
+# Output arguments
 milret_parser.add_argument("--out",
     "-o",
     nargs='?',
     type=argparse.FileType("w"),
     default=sys.stdout,
     help="Path to write table of retention scores per IES, defaults to STDOUT")
+
 # Assign function to this subparser
 milret_parser.set_defaults(func=main.milret)
 

@@ -474,9 +474,6 @@ class IesRecords(object):
                         if len(ins_lens) > 0:
                             # Get clusters of insert lengths
                             ins_lens_cl = get_clusters(ins_lens, cluster_type, width)
-                            print(f"{ins_start} : {ins_end}")
-                            print(ins_lens)
-                            print(ins_lens_cl)
                             # For each cluster
                             for i in range(len(ins_lens_cl)):
                                 # get counts for each length in feature
