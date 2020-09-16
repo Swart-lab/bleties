@@ -90,11 +90,11 @@ milraa_parser.add_argument("--cluster_type",
     length difference in percentage difference (mutual percentage difference).
     """)
 milraa_parser.add_argument("--cluster_width",
-    default=10,
+    default=6,
     type=int,
     help="""
     Limit for clustering putative IESs together. Recommended settings for
-    PacBio HiFi reads: '--cluster_type bp --cluster_width 10'. Recommended
+    PacBio HiFi reads: '--cluster_type bp --cluster_width 6'. Recommended
     settings for CLR reads: '--cluster_type pc --cluster_width 20' (not yet
     tested extensively).
     """)
