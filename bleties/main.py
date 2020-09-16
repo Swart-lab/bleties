@@ -73,8 +73,10 @@ def milraa(args):
             fh.write(iesrecords.dump()) # Dump data to check
 
     # Report putative IESs as list of GFF records and dict of SeqRecord objects
-    logging.info("Reporting putative IESs in GFF format")
-    (iesgff, iesseq) = iesrecords.reportPutativeIes(args.min_break_coverage, args.min_del_coverage)
+    logging.info(f"""Reporting putative IESs in GFF format to file
+    {args.out}.milraa_ies.gff3""")
+    (iesgff, iesseq) = iesrecords.reportPutativeIes(args.min_break_coverage, 
+            args.min_del_coverage)
 
     # Write gff version header and command line as comment
     with open(f"{args.out}.milraa_ies.gff3","w") as fh:
@@ -84,20 +86,16 @@ def milraa(args):
         iesgff.gff2fh(fh)
 
     # Write Fasta file of putative IES sequences
-    logging.info(f"""
-    Reporting consensus sequences of putative IESs to Fasta file
-    {args.out}.milraa_ies.fasta
-    """)
+    logging.info(f"""Reporting consensus sequences of putative IESs to Fasta
+    file {args.out}.milraa_ies.fasta""")
     SeqIO.write(iesseq.values(), f"{args.out}.milraa_ies.fasta", "fasta")
 
     # Report junction sequences
     if args.junction_flank:
         junctionseqs = Milraa.getIndelJunctionSeqs(iesgff, iesseq,
                 refgenome, args.junction_flank)
-        logging.info(f"""
-        Reporting flanking sequences of putative IESs to file
-        {args.out}.junction.out
-        """)
+        logging.info(f"""Reporting flanking sequences of putative IESs to file
+        {args.out}.junction.out""")
         with open(f"{args.out}.junction.out", "w") as fh:
             fh.write("\t".join(["id", "leftflank", "rightflank", "pointer",
                 "indel", "ref"]) + "\n") # header
@@ -105,7 +103,9 @@ def milraa(args):
                 fh.write("\t".join(junc) + "\n")
 
     if args.fuzzy_ies:
-        logging.info("Reporting putative IESs with allowance for unequal insert lengths")
+        logging.info(f"""Reporting putative IESs with allowance for unequal 
+        insert lengths in GFF format to file {args.out}.milraa_ies_fuzzy.gff3
+        """)
         (fuzzygff, fuzzyiesseq) = iesrecords.reportPutativeIesInsertFuzzy(
                 args.min_break_coverage,
                 args.min_del_coverage,
@@ -119,11 +119,11 @@ def milraa(args):
             fuzzygff.gff2fh(fh)
 
         # Write Fasta file of putative IES sequences fuzzy clusters
-        logging.info(f"""
-        Reporting consensus sequences of putative fuzzy IESs to Fasta file
-        {args.out}.milraa_ies_fuzzy.fasta
-        """)
-        SeqIO.write(fuzzyiesseq.values(), f"{args.out}.milraa_ies_fuzzy.fasta", "fasta")
+        logging.info(f"""Reporting consensus sequences of putative fuzzy IESs to
+        Fasta file {args.out}.milraa_ies_fuzzy.fasta""")
+        SeqIO.write(fuzzyiesseq.values(), 
+                f"{args.out}.milraa_ies_fuzzy.fasta", 
+                "fasta")
 
     # Close AlignmentFile
     alnfile.close()
@@ -143,7 +143,9 @@ def miser(args):
 
     # Compare mean mismatch percentage of reads with and without putative IES
     # for each putative IES
-    logging.info("Reporting possibly spurious IESs due to misassembly or mapped paralogs")
+    logging.info("""
+    Reporting possibly spurious IESs due to misassembly or mapped paralogs
+    """)
     out_gff_split = defaultdict(list) # dict to hold split GFF file keyed by diagnosis
     args.out.write("\t".join(['ID',
         'mean_mismatch_pc_with_indel',
