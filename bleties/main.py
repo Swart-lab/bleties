@@ -69,6 +69,7 @@ def milraa(args):
         with open(f"{args.out}.dump", "w") as fh:
             # sys.stderr.write(str(iesrecords) + "\n") # Print summary of IesRecords object
             fh.write(iesrecords.dump()) # Dump data to check
+
     # Report putative IESs as list of GFF records and dict of SeqRecord objects
     logging.info("Reporting putative IESs in GFF format")
     (iesgff, iesseq) = iesrecords.reportPutativeIes(args.min_break_coverage, args.min_del_coverage)
@@ -79,6 +80,14 @@ def milraa(args):
         fh.write("# " + " ".join(sys.argv) + "\n")
         # Write each GFF entry as a tab-separated line
         iesgff.gff2fh(fh)
+
+    logging.info("Reporting putative IESs with allowance for unequal insert lengths")
+    fuzzygff = iesrecords.reportPutativeIesInsertFuzzy(args.min_break_coverage, args.min_del_coverage, "bp", 10)
+    # Write fuzzy IES gff file
+    with open(f"{args.out}.milraa_ies_fuzzy.gff3", "w") as fh:
+        fh.write("##gff-version 3\n")
+        fh.write("# " + " ".join(sys.argv) + "\n")
+        fuzzygff.gff2fh(fh)
 
     # Write Fasta file of putative IES sequences
     logging.info(f"""

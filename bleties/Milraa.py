@@ -13,7 +13,7 @@ from Bio.Align import MultipleSeqAlignment
 from Bio.Align import AlignInfo
 
 from bleties.SharedValues import SharedValues
-from bleties.SharedFunctions import Gff, nested_dict_to_list
+from bleties.SharedFunctions import Gff, nested_dict_to_list, get_clusters
 
 
 def getClips(cigar, pos):
@@ -443,6 +443,81 @@ class IesRecords(object):
         self._getDeletedSequences()
 
 
+    def reportPutativeIesInsertFuzzy(self, mininsbreaks, mindelbreaks, cluster_type="bp", width=6):
+        """Report putative IESs where insert lengths do not match exactly
+
+        Parameters
+        ----------
+        mininsbreaks
+        mindelbreaks
+            Same as reportPutativeIes()
+        cluster_type : str
+            Type of clustering to use. Either "bp" (sequence distance in bp) or
+            "pc" (length ratio in percent)
+        width : int
+            Threshold for defining clusters. If type == "bp", this is distance
+            in bp (exclusive). If type == "pc", this is mutual percentage
+        """
+        # Initialize output
+        gff = Gff()
+
+        # Cluster inserts (junctions)
+        for ctg in self._insDict:
+            for ins_start in self._insDict[ctg]:
+                for ins_end in self._insDict[ctg][ins_start]:
+                    if ins_end == ins_start:
+                        ins_lens = []
+                        for i in self._insDict[ctg][ins_start][ins_end].keys():
+                            # Look for insert features; ignore MHS for now
+                            if "I" in self._insDict[ctg][ins_start][ins_end][i].keys():
+                                ins_lens.append(i)
+                        if len(ins_lens) > 0:
+                            # Get clusters of insert lengths
+                            ins_lens_cl = get_clusters(ins_lens, cluster_type, width)
+                            print(f"{ins_start} : {ins_end}")
+                            print(ins_lens)
+                            print(ins_lens_cl)
+                            # For each cluster
+                            for i in range(len(ins_lens_cl)):
+                                # get counts for each length in feature
+                                counts = [self._insDict[ctg][ins_start][ins_end][j]["I"] for j in ins_lens_cl[i]]
+                                totalcount = sum(counts)
+                                if totalcount >= mininsbreaks:
+                                    # Put together ID for this breakpoint
+                                    if len(ins_lens_cl[i]) == 1: # cluster of one
+                                        prefix = f"BREAK_POINTS_{i}"
+                                    elif len(ins_lens_cl[i]) > 1:
+                                        prefix = f"BREAK_POINTS_{i}_FUZZY"
+                                    breakpointid = "_".join([prefix, str(ctg), str(ins_start), str(ins_end)] + [str(l) for l in ins_lens_cl[i]])
+                                    # Attributes list of key-value pairs
+                                    attr = ["ID=" + breakpointid,
+                                            "IES_lengths="+"_".join([str(l) for l in ins_lens_cl[i]])]
+                                    attr.append("cigar=I" + str(totalcount))
+                                    # Get average coverage of region of interest
+                                    if self._alnformat == "bam":
+                                        readcov = self._alnfile.count(str(ctg), 
+                                                start=int(ins_start) - 1,
+                                                stop=int(ins_end))
+                                        attr.append("average_coverage="+str(readcov))
+                                    outarr = [str(ctg),
+                                            "MILRAA",
+                                            "junction",
+                                            str(ins_start),
+                                            str(ins_end),
+                                            str(totalcount),
+                                            ".",
+                                            ".",
+                                            ";".join(attr)+";"]
+                                    gff.addEntry(outarr, None)
+
+        return(gff)
+        # TODO Fuzzy cluster both the indel positions on ref and the ins lengths
+        # Inserts: fuzzy cluster start/end pos (start == end), then cluster 
+        # ins_lengths. 
+        # Deletions: fuzzy cluster start and end positions separately.
+        # This is somewhat trickier, because of the way the data are structured
+
+
     def reportPutativeIes(self, mininsbreaks, mindelbreaks):
         """After clips and indels have been recorded, report putative IESs above
         the minimum coverage, and if the input alignment is a BAM file, then
@@ -581,6 +656,24 @@ class IesRecords(object):
         # alnconsrec = SeqRecord(alncons, id=consname)
         alnconsrec = SeqRecord(alncons)
         return(alnconsrec)
+
+
+    def reportInsConsensusSeqFuzzy(self, ctg, indelstart, indelend, indellens):
+        # TODO
+        """Report consensus alignment of insert sequence when length of insert
+        is fuzzy matched
+
+        Parameters
+        ----------
+        ctg : str
+            Name of contig
+        indelstart : int
+            Start position, 1-based
+        indelend : int
+            End position, 1-based
+        indellens : list
+            list of ints corresponding to length of indel
+        """
 
 
     def reportIndelReadMismatchPc(self, ctg, indelstart, indelend, indellen):
