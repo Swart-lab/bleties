@@ -11,6 +11,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
 from Bio.Align import AlignInfo
+from Bio import AlignIO
 
 from bleties.SharedValues import SharedValues
 from bleties.SharedFunctions import Gff, nested_dict_to_list, get_clusters
@@ -250,6 +251,32 @@ def getPointers(seq, start, end, iesseq):
     return(out)
 
 
+def alignSeqsMuscle(seqlist, muscle_path="muscle"):
+    """Align list of sequences with Muscle and return alignment
+    
+    Parameters
+    ----------
+    seqlist : list
+        List of SeqRecord objects
+    muscle_path : str
+        Path to Muscle binary
+
+    Returns
+    -------
+    MultipleSeqAlignment
+        Alignment of the input sequences
+    """
+    from Bio.Align.Applications import MuscleCommandline
+    from io import StringIO
+    hh = StringIO()
+    SeqIO.write(seqlist, hh, "fasta")
+    data = hh.getvalue()
+    muscle_cl = MuscleCommandline(muscle_path, clwstrict=True)
+    aln_stdout, aln_stderr = muscle_cl(stdin=data)
+    aln = AlignIO.read(StringIO(aln_stdout), "clustal")
+    return(aln)
+
+
 class IesRecords(object):
     """Records of putative IESs from mappings"""
 
@@ -460,6 +487,7 @@ class IesRecords(object):
         """
         # Initialize output
         gff = Gff()
+        outseq = {}
 
         # Cluster inserts (junctions)
         for ctg in self._insDict:
@@ -506,8 +534,19 @@ class IesRecords(object):
                                             ".",
                                             ";".join(attr)+";"]
                                     gff.addEntry(outarr, None)
+                                    # Get indel consensus
+                                    if len(ins_lens_cl[i]) == 1:
+                                        # If cluster comprises only a single length, take dumb consensus
+                                        # and don't run Muscle
+                                        consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, ins_lens_cl[i][0])
+                                    else:
+                                        # Otherwise use Muscle to align the different lengths
+                                        consseq = self.reportIndelConsensusSeqFuzzy(ctg, ins_start, ins_end, ins_lens_cl[i])
+                                    consseq.id = breakpointid
+                                    consseq.description = ";".join(attr)+";"
+                                    outseq[consseq.id] = consseq
 
-        return(gff)
+        return(gff, outseq)
         # TODO Fuzzy cluster both the indel positions on ref and the ins lengths
         # Inserts: fuzzy cluster start/end pos (start == end), then cluster 
         # ins_lengths. 
@@ -655,8 +694,7 @@ class IesRecords(object):
         return(alnconsrec)
 
 
-    def reportInsConsensusSeqFuzzy(self, ctg, indelstart, indelend, indellens):
-        # TODO
+    def reportIndelConsensusSeqFuzzy(self, ctg, indelstart, indelend, indellens):
         """Report consensus alignment of insert sequence when length of insert
         is fuzzy matched
 
@@ -671,6 +709,24 @@ class IesRecords(object):
         indellens : list
             list of ints corresponding to length of indel
         """
+
+        # Gather all the sequences for all the lengths
+        seqrecs = []
+        for indellen in indellens:
+            seqrecs.extend(
+                    [SeqRecord(Seq(i, generic_dna)) 
+                        for i in self._insSeqDict[ctg][indelstart][indelend][indellen]])
+        # Use Muscle to align these sequences
+        aln = alignSeqsMuscle(seqrecs)
+        # Summarize alignment, and get dumb consensus sequence
+        alninf = AlignInfo.SummaryInfo(aln)
+        # Take "dumb" consensus, but allowing gaps. Default is 70% majority consensus
+        # We allow gaps because the dumb_consensus() function will take majority
+        # base at a column as the consensus, even if most sequences at that 
+        # position have a gap
+        alncons = alninf.gap_consensus()
+        alnconsrec = SeqRecord(alncons)
+        return(alnconsrec)
 
 
     def reportIndelReadMismatchPc(self, ctg, indelstart, indelend, indellen):
@@ -721,3 +777,6 @@ class IesRecords(object):
             else:
                 non_mm.append(mismatch_pc)
         return(ins_mm, non_mm)
+
+
+

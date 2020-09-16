@@ -81,19 +81,6 @@ def milraa(args):
         # Write each GFF entry as a tab-separated line
         iesgff.gff2fh(fh)
 
-    if args.fuzzy_ies:
-        logging.info("Reporting putative IESs with allowance for unequal insert lengths")
-        fuzzygff = iesrecords.reportPutativeIesInsertFuzzy(
-                args.min_break_coverage,
-                args.min_del_coverage,
-                args.cluster_type,
-                args.cluster_width)
-        # Write fuzzy IES gff file
-        with open(f"{args.out}.milraa_ies_fuzzy.gff3", "w") as fh:
-            fh.write("##gff-version 3\n")
-            fh.write("# " + " ".join(sys.argv) + "\n")
-            fuzzygff.gff2fh(fh)
-
     # Write Fasta file of putative IES sequences
     logging.info(f"""
     Reporting consensus sequences of putative IESs to Fasta file 
@@ -114,6 +101,28 @@ def milraa(args):
                 "indel", "ref"]) + "\n") # header
             for junc in junctionseqs:
                 fh.write("\t".join(junc) + "\n")
+
+    if args.fuzzy_ies:
+        logging.info("Reporting putative IESs with allowance for unequal insert lengths")
+        (fuzzygff, fuzzyiesseq) = iesrecords.reportPutativeIesInsertFuzzy(
+                args.min_break_coverage,
+                args.min_del_coverage,
+                args.cluster_type,
+                args.cluster_width)
+
+        # Write fuzzy IES gff file
+        with open(f"{args.out}.milraa_ies_fuzzy.gff3", "w") as fh:
+            fh.write("##gff-version 3\n")
+            fh.write("# " + " ".join(sys.argv) + "\n")
+            fuzzygff.gff2fh(fh)
+
+        # Write Fasta file of putative IES sequences fuzzy clusters
+        logging.info(f"""
+        Reporting consensus sequences of putative fuzzy IESs to Fasta file
+        {args.out}.milraa_ies_fuzzy.fasta
+        """)
+        SeqIO.write(fuzzyiesseq.values(), f"{args.out}.milraa_ies_fuzzy.fasta", "fasta")
+
     # Close AlignmentFile
     alnfile.close()
     logging.info("Finished MILRAA")
