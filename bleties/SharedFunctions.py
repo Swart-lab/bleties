@@ -123,11 +123,13 @@ class Gff(object):
         # Create dict
         self._gffDict = defaultdict(dict)
 
+
     def __iter__(self):
         """Return iterator object for GFF.
         Iterate over keys of the _gffDict object
         """
         return(iter(self._gffDict.keys()))
+
 
     def __len__(self):
         """Length of a Gff object.
@@ -135,12 +137,16 @@ class Gff(object):
         """
         return(len(self._gffDict))
 
+
     def addEntry(self, linearr, gffid):
         """ Add single GFF entry to Gff object
 
-        Arguments:
-        linearr -- List of GFF3 fields, length 9 (list)
-        gffid -- ID attribute of the entry
+        Parameters
+        ----------
+        linearr : list
+            List of GFF3 fields, length 9
+        gffid : str
+            ID attribute of the entry
         """
         # Check that GFF line has only nine fields
         if len(linearr) != 9:
@@ -162,14 +168,18 @@ class Gff(object):
         attrdict = dict(zip(attrkeys, attrvals))
         self._gffDict[idval]['attrdict'] = attrdict
 
+
     def getValue(self, gffid, column):
         """Get value of column for a given GFF entry.
         GFF entry is specified by the ID.
         Returns the value.
 
-        Arguments:
-        gffid -- ID of the GFF entry
-        column -- Name of the column to retrieve
+        Parameters
+        ----------
+        gffid : str
+            ID of the GFF entry
+        column : str
+            Name of the column to retrieve
         """
         if column in SharedValues.GFF3COLUMNS:
             if gffid in self._gffDict:
@@ -179,12 +189,16 @@ class Gff(object):
         else:
             raise Exception("Unknown GFF3 column name " + column)
 
+
     def getAttr(self, gffid, attribute):
         """Get value from attributes field of a GFF entry.
 
-        Arguments:
-        gffid -- ID of the GFF entry
-        attribute -- Key of the attribute requested
+        Parameters
+        ----------
+        gffid : str
+            ID of the GFF entry
+        attribute : str
+            Key of the attribute requested
         """
         if gffid in self._gffDict:
             if attribute in self._gffDict[gffid]['attrdict']:
@@ -194,17 +208,44 @@ class Gff(object):
         else:
             raise Exception("Unknown GFF3 ID " + gffid)
 
+
     def getEntry(self, gffid):
         """Get entry from Gff object with ID key, returns a list
+
+        Parameters
+        ----------
+        gffid : str
+            ID of the GFF entry
         """
         linearr = [self._gffDict[gffid][colname] for colname in SharedValues.GFF3COLUMNS]
         return(linearr)
 
+
+    def combineGff(self, gff):
+        """Combine another Gff object into the current one by appending entries
+
+        Checks for conflicting keys, raises exception if ID attribute in the 
+        second Gff object is already present in the current one.
+
+        Parameters
+        ----------
+        gff : Gff
+            Another GFF object to merge into the present one
+        """
+        for gffid in gff:
+            if gffid not in self._gffDict:
+                self.addEntry(gffid, gff.getEntry(gffid))
+            else:
+                raise Exception(f"Attempting to merge two Gff objects with same ID {gffid} present in both")
+
+
     def list2gff(self, gfflist):
         """Add entries to Gff object from a list of GFF3 lines.
 
-        Arguments:
-        gfflist -- List of GFF3 records (list of str)
+        Parameters
+        ----------
+        gfflist : list
+            List of GFF3 records (list of str)
         """
         # Iterate through list, split each line into columns
         for line in gfflist:
@@ -212,6 +253,7 @@ class Gff(object):
                 line = line.rstrip() # Strip trailing whitespace
                 linearr = line.split("\t")
                 self.addEntry(linearr, None)
+
 
     def gff2list(self):
         """Write Gff3 object to list of strings, for printing.
@@ -233,15 +275,27 @@ class Gff(object):
         outarr = ["\t".join(linearr) for linearr in outarr]
         return(outarr)
 
+
     def file2gff(self, filename):
         """Read in GFF3 file directly to Gff object
+
+        Parameters
+        ----------
+        filename : str
+            Path to file to open
         """
         with open(filename, "r") as fh:
             slurp = [line.rstrip() for line in fh]
             self.list2gff(slurp)
 
+
     def gff2file(self, filename):
         """Write Gff object directly to GFF3 file
+
+        Parameters
+        ----------
+        filename : str
+            Path to file to write
         """
         fh = open(filename,"w")
         outarr = self.gff2list()
@@ -249,8 +303,14 @@ class Gff(object):
             fh.write(line+"\n")
         fh.close()
 
+
     def gff2fh(self, fh):
         """Write Gff object to open filehandle
+
+        Parameters
+        ----------
+        fh : _io.TextIOWrapper
+            File handle
         """
         outarr = self.gff2list()
         for line in outarr:
