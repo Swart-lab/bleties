@@ -49,8 +49,8 @@ def getClips(cigar, pos):
 
 def getIndels(cigar, pos, minlength, qseq):
     """Parse cigar string and alignment position and report insertions or
-    deletions. 
-    
+    deletions.
+
     Return list of tuples (start pos, end pos, insert length,
     insertion or deletion, insert sequence). If it is a deletion then there is
     no insert sequence reported because that can be parsed from the reference.
@@ -116,7 +116,7 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
     Parameters
     ----------
     iesgff : Gff
-        Gff object listing insertions and deletions (output from 
+        Gff object listing insertions and deletions (output from
         reportPutativeIes). Coordinates in Gff are 1-based inclusive.
     iesconsseq : dict
         dict of SeqRecords for indels (output from reportPutativeIes)
@@ -200,10 +200,10 @@ def getPointers(seq, start, end, iesseq):
     start : int
         Start position of putative IES junction/region, 1-based (from GFF)
     end : int
-        End position of putative IES junction/region, 1-based (from GFF). If 
+        End position of putative IES junction/region, 1-based (from GFF). If
         start == end , the IES is not present on the reference sequence and the
         junction is to the RIGHT of position, per GFF convention.
-        If start < end, the IES is retained in the reference sequence. 
+        If start < end, the IES is retained in the reference sequence.
     iesseq : str
         In case where start == end, IES sequence must be supplied separately
     """
@@ -253,7 +253,7 @@ def getPointers(seq, start, end, iesseq):
 
 def alignSeqsMuscle(seqlist, muscle_path="muscle"):
     """Align list of sequences with Muscle and return alignment
-    
+
     Parameters
     ----------
     seqlist : list
@@ -283,7 +283,7 @@ class IesRecords(object):
 
     def __init__(self, alnfile, alnformat, refgenome):
         """Constructor for IesRecords
-        
+
         Internally represented by:
         _insDict -- dict to store counts of detected inserts/deletions, keyed
             by evidence type. Keys: contig (str) -> start pos (int) -> end
@@ -520,7 +520,7 @@ class IesRecords(object):
                                     attr.append("cigar=I" + str(totalcount))
                                     # Get average coverage of region of interest
                                     if self._alnformat == "bam":
-                                        readcov = self._alnfile.count(str(ctg), 
+                                        readcov = self._alnfile.count(str(ctg),
                                                 start=int(ins_start) - 1,
                                                 stop=int(ins_end))
                                         attr.append("average_coverage="+str(readcov))
@@ -548,8 +548,8 @@ class IesRecords(object):
 
         return(gff, outseq)
         # TODO Fuzzy cluster both the indel positions on ref and the ins lengths
-        # Inserts: fuzzy cluster start/end pos (start == end), then cluster 
-        # ins_lengths. 
+        # Inserts: fuzzy cluster start/end pos (start == end), then cluster
+        # ins_lengths.
         # Deletions: fuzzy cluster start and end positions separately.
         # This is somewhat trickier, because of the way the data are structured
 
@@ -675,7 +675,7 @@ class IesRecords(object):
             End position, 1-based
         indellen : int
             Length of indel
-        
+
         Returns
         -------
         Bio.SeqRecord
@@ -714,7 +714,7 @@ class IesRecords(object):
         seqrecs = []
         for indellen in indellens:
             seqrecs.extend(
-                    [SeqRecord(Seq(i, generic_dna)) 
+                    [SeqRecord(Seq(i, generic_dna))
                         for i in self._insSeqDict[ctg][indelstart][indelend][indellen]])
         # Use Muscle to align these sequences
         aln = alignSeqsMuscle(seqrecs)
@@ -722,7 +722,7 @@ class IesRecords(object):
         alninf = AlignInfo.SummaryInfo(aln)
         # Take "dumb" consensus, but allowing gaps. Default is 70% majority consensus
         # We allow gaps because the dumb_consensus() function will take majority
-        # base at a column as the consensus, even if most sequences at that 
+        # base at a column as the consensus, even if most sequences at that
         # position have a gap
         alncons = alninf.gap_consensus()
         alnconsrec = SeqRecord(alncons)

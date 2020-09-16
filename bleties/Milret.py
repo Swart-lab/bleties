@@ -86,8 +86,8 @@ class IesRetentionsMacOnly(object):
 
     def findMappingOps(self):
         """Find mapping operations at the IES junctions, and count how many of
-        each type. 
-        
+        each type.
+
         Match operations (M) that span the IES junction are treated as
         representing IES- form, because the mapping reference is somatic
         genome. Insert operations (I) that are exactly at the IES junction are
@@ -145,7 +145,7 @@ class IesRetentionsMacOnly(object):
 
         Parameters
         ----------
-        fh 
+        fh
             Filehandle to write results
         """
         # Create header line

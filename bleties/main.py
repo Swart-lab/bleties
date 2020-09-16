@@ -15,6 +15,7 @@ from Bio.SeqRecord import SeqRecord
 from bleties import *
 from bleties import SharedFunctions
 
+
 def read_sam_bam_ref(args):
     """Read input SAM or BAM alignment and reference Fasta file.
     Returns Milraa.IesRecords object (alignment), pysam.AlignmentFile object
@@ -55,6 +56,7 @@ def read_sam_bam_ref(args):
     # Return alignment and reference objects
     return(iesrecords,alnfile,refgenome)
 
+
 def milraa(args):
     logging.info("Started BleTIES MILRAA")
     logging.info("Command line:")
@@ -83,17 +85,17 @@ def milraa(args):
 
     # Write Fasta file of putative IES sequences
     logging.info(f"""
-    Reporting consensus sequences of putative IESs to Fasta file 
+    Reporting consensus sequences of putative IESs to Fasta file
     {args.out}.milraa_ies.fasta
     """)
     SeqIO.write(iesseq.values(), f"{args.out}.milraa_ies.fasta", "fasta")
 
     # Report junction sequences
     if args.junction_flank:
-        junctionseqs = Milraa.getIndelJunctionSeqs(iesgff, iesseq, 
+        junctionseqs = Milraa.getIndelJunctionSeqs(iesgff, iesseq,
                 refgenome, args.junction_flank)
         logging.info(f"""
-        Reporting flanking sequences of putative IESs to file 
+        Reporting flanking sequences of putative IESs to file
         {args.out}.junction.out
         """)
         with open(f"{args.out}.junction.out", "w") as fh:
@@ -126,6 +128,7 @@ def milraa(args):
     # Close AlignmentFile
     alnfile.close()
     logging.info("Finished MILRAA")
+
 
 def miser(args):
     logging.info("Started BleTIES MISER")
@@ -239,18 +242,23 @@ def miser(args):
     alnfile.close()
     logging.info("Finished MISER")
 
+
 def milret(args):
     logging.info("Started BleTIES MILRET")
     logging.info("Command line:")
     logging.info(" ".join(sys.argv))
+
     # Read BAM file - SAM not supported because we need random access
     logging.info(f"Opening alignment file {args.bam}")
     alnfile = pysam.AlignmentFile(args.bam, "rb")
+
     # Initialize IesRetentionsMacOnly object
     iesretentions = Milret.IesRetentionsMacOnly(args.ies, alnfile)
+
     # Count mapping operations per site
     logging.info(f"Counting IES+ and IES- forms at each junction in file {args.ies}")
     iesretentions.findMappingOps()
+
     # Report retention scores to file
     logging.info("Calculating retention scores per junction")
     iesretentions.calculateRetentionScores()

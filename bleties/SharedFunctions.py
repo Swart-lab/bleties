@@ -18,7 +18,7 @@ def nested_dict_to_list(d):
     Parameters
     ----------
     d : dict
-        dict of dicts (of dicts ... ) with a nested structure, e.g. 
+        dict of dicts (of dicts ... ) with a nested structure, e.g.
         key1 -> key2 -> ... -> val
 
     Returns
@@ -224,7 +224,7 @@ class Gff(object):
     def combineGff(self, gff):
         """Combine another Gff object into the current one by appending entries
 
-        Checks for conflicting keys, raises exception if ID attribute in the 
+        Checks for conflicting keys, raises exception if ID attribute in the
         second Gff object is already present in the current one.
 
         Parameters

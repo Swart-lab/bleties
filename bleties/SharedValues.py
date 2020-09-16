@@ -7,5 +7,5 @@ class SharedValues():
     REFCONSUMING = ["M", "D", "N", "=", "X"]
     QUERYCONSUMING = ["M", "I", "S", "=", "X"]
     ALLCIGAROPS = ["M", "I", "D", "N", "S", "H", "P", "=", "X"]
-    GFF3COLUMNS = ["seqid", "source", "type", "start", "end", "score", 
+    GFF3COLUMNS = ["seqid", "source", "type", "start", "end", "score",
                 "strand", "phase", "attributes"]
