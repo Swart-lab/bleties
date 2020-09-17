@@ -97,7 +97,11 @@ def milraa(args):
         logging.info(f"""Reporting flanking sequences of putative IESs to file
         {args.out}.junction.out""")
         with open(f"{args.out}.junction.out", "w") as fh:
-            fh.write("\t".join(["id", "leftflank", "rightflank", "pointer",
+            fh.write("\t".join(["id", 
+                "contig", "start", "end",
+                "leftflank", "rightflank", "pointer",
+                "tastart", "taend", "tapointer",
+                "ppstart", "ppend", "pppointer",
                 "indel", "ref"]) + "\n") # header
             for junc in junctionseqs:
                 fh.write("\t".join(junc) + "\n")

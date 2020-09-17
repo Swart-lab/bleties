@@ -183,6 +183,13 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
             print(f"Position of pointer {breakpointid} has been adjusted")
             start = pointerstart
             end = pointerend
+        # Convert pointers to TA junctions if possible
+        (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
+        # Maximize pointer lengths
+        if tastart:
+            (ppstart, ppend, pppointer) = adjustPointerMaxlength(ref[ctg], tastart, taend, tapointer, iesconsseq[breakpointid])
+        else:
+            (ppstart, ppend, pppointer) = adjustPointerMaxlength(ref[ctg], start, end, pointer, iesconsseq[breakpointid])
         # Put everything together and return
         outseqs.append([breakpointid,
                         str(ctg),
@@ -191,6 +198,12 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
                         str(flankleftseq),
                         str(flankrightseq),
                         str(pointer),
+                        str(tastart),
+                        str(taend),
+                        str(tapointer),
+                        str(ppstart),
+                        str(ppend),
+                        str(pppointer),
                         str(iesconsseq[breakpointid].seq),
                         str(refunedited)
                         ])
@@ -199,6 +212,8 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
 
 def getPointers(seq, start, end, iesseq):
     """Find potential pointer sequences at putative IES junctions
+
+    Report the pointer sequences as-is from the mapper/GFF file
 
     Parameters
     ----------
@@ -243,7 +258,7 @@ def getPointers(seq, start, end, iesseq):
             break
     # check right of IES
     i = -1
-    if indel == "I":
+    if indel == "I": # beacuse GFF puts zero-length features to right of coordinate
         refstart = start
     elif indel == "D":
         refstart = start - 1
@@ -255,7 +270,7 @@ def getPointers(seq, start, end, iesseq):
             break
     # take the longer putative pointer
     if len(leftcheck) < 2 and len(rightcheck) < 2:
-        pointer = "none"
+        pointer = None
     elif len(leftcheck) > len(rightcheck) and len(leftcheck) >= 2:
         pointer = leftcheck
     elif len(rightcheck) > len(leftcheck) and len(rightcheck) >=2:
@@ -266,10 +281,98 @@ def getPointers(seq, start, end, iesseq):
         pointerstart = pointerstart - len(pointer)
         pointerend = pointerend - len(pointer)
     elif len(rightcheck) == len(leftcheck):
-        pointer = "tie"
+        logging.info(f"Breakpoint {breakpointid} has potential pointers on both sides")
+        pointer = "tie" # if both sides could potentially have a pointer
     else:
         logging.warn(f"Unexpected result in pointer search for breakpoint {breakpointid}")
     return(pointer, pointerstart, pointerend)
+
+
+def adjustPointerTA(start, end, pointer):
+    """Adjust putative pointer to TA junction
+
+    If a putative pointer sequence contains TA, it could be a TA junction.
+    Adjust junction coordinates to make it a TA junction if possbile.
+    If there is more than one TA in the pointer, take the first occurrence.
+
+    Parameters
+    ----------
+    start : int
+    end : int
+        Same as getPointers()
+    pointer : seq
+        Pointer sequence, reported from getPointers()
+
+    Returns
+    -------
+    int, int
+        Adjusted start and end coordinates, such that TAs lie to the right of
+        the junction coordinates. If no TA is present, None is returned
+    str
+        Adjusted pointer sequence beginning with TA. If no TA is present, None
+        is returned.
+    """
+    tastart, taend = None, None
+    pointernew = None
+    if pointer:
+        mm = re.search(r"TA", pointer)
+        if mm:
+            displace = mm.start()
+            pointernew = pointer[displace:]
+            tastart = start + displace
+            taend = end + displace
+    return(tastart, taend, pointernew)
+
+
+def adjustPointerMaxlength(seq, start, end, pointer, iesseq):
+    """Maximize pointer length by checking upstream to try and extend the
+    repeat sequence
+
+    The read mapper may already be reporting indel junction coordinates that
+    have been optimized in this way, but we do this check because different
+    mappers may behave differently. The pointer sequence should lie to the
+    right of the junction coordinate on the MDS.
+
+    Parameters
+    ----------
+    seq : str
+        Contig reference sequence
+    start : int
+    end : int
+    pointer : str
+        Same as for adjustPointerTA()
+    iesseq : str
+        IES sequence, necesary if start == end
+
+    Returns
+    -------
+    int, int
+        Adjust start and end coordinates of junction
+    str
+        Adjusted pointer sequence
+    """
+    # Get IES sequence for a deletion feature 
+    if start < end:
+        indel = "D"
+        iesseq = seq[start - 1 : end]
+    elif start == end:
+        indel = "I"
+        if not iesseq:
+            raise Exception ("IES sequence is missing")
+    # Look upstream of the pointer to try and extend match
+    i = -1
+    if indel == "I": # beacuse GFF puts zero-length features to right of coordinate
+        refstart = start
+    elif indel == "D":
+        refstart = start - 1
+    while iesseq[i] == seq[refstart+i]:
+        pointer = iesseq[i] + pointer
+        i -= 1
+        # break out of loop if next position runs off edge
+        if -i > len(iesseq) or refstart+i < 0:
+            break
+    # Return adjusted coordinates
+    return(start + 1 + i, end + 1 + i, pointer)
 
 
 def alignSeqsMuscle(seqlist, muscle_path="muscle"):
@@ -798,6 +901,5 @@ class IesRecords(object):
             else:
                 non_mm.append(mismatch_pc)
         return(ins_mm, non_mm)
-
 
 

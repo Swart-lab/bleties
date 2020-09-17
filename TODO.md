@@ -12,7 +12,7 @@ To do list for MILRAA
      potential alternative excisions
  - [ ] Cluster putative IESs so that they do not have to exactly overlap / have
      exactly the same length
-   - [ ] Naive length based clustering
+   - [x] Naive length based clustering
    - [ ] Cluster IES inserts by sequence distance
  - [ ] Adjust putative IES junctions ...
    - [ ] Adjust coordinates so that the junctions are TA junctions, if possible
