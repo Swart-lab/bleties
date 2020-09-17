@@ -178,9 +178,16 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
             # Start minus one because for deletion, start is ON the deleted region
             refunedited = ref[ctg][start-flanklen-1:end+flanklen].seq.lower()
         # Find pointers if present
-        pointer = getPointers(ref[ctg], start, end, iesconsseq[breakpointid])
+        (pointer, pointerstart, pointerend)  = getPointers(ref[ctg], start, end, iesconsseq[breakpointid])
+        if pointerstart != start:
+            print(f"Position of pointer {breakpointid} has been adjusted")
+            start = pointerstart
+            end = pointerend
         # Put everything together and return
         outseqs.append([breakpointid,
+                        str(ctg),
+                        str(start),
+                        str(end),
                         str(flankleftseq),
                         str(flankrightseq),
                         str(pointer),
@@ -206,6 +213,14 @@ def getPointers(seq, start, end, iesseq):
         If start < end, the IES is retained in the reference sequence.
     iesseq : str
         In case where start == end, IES sequence must be supplied separately
+
+    Returns
+    -------
+    str
+        Putative pointer sequence
+    int, int
+        Adjusted IES start and IES end positions, such that the pointer sequence
+        in the MDS is to the _right_ of the insert.
     """
     if start == end:
         indel = "I"
@@ -214,7 +229,8 @@ def getPointers(seq, start, end, iesseq):
         iesseq = seq[start-1 : end]
     else:
         raise Exception(f"Start cannot be less than end, feature {breakpointid}")
-    out = ""
+    pointer = ""
+    pointerstart, pointerend = start, end
     leftcheck = ""
     rightcheck = ""
     # check left of IES
@@ -239,16 +255,21 @@ def getPointers(seq, start, end, iesseq):
             break
     # take the longer putative pointer
     if len(leftcheck) < 2 and len(rightcheck) < 2:
-        out = "none"
+        pointer = "none"
     elif len(leftcheck) > len(rightcheck) and len(leftcheck) >= 2:
-        out = leftcheck
+        pointer = leftcheck
     elif len(rightcheck) > len(leftcheck) and len(rightcheck) >=2:
-        out = rightcheck
+        pointer = rightcheck
+        # If the insert position is to the right of the putative pointer seq,
+        # report adjusted pointer position such that the insert position always
+        # lies to the left of the putative pointer seq on the MDS.
+        pointerstart = pointerstart - len(pointer)
+        pointerend = pointerend - len(pointer)
     elif len(rightcheck) == len(leftcheck):
-        out = "tie"
+        pointer = "tie"
     else:
         logging.warn(f"Unexpected result in pointer search for breakpoint {breakpointid}")
-    return(out)
+    return(pointer, pointerstart, pointerend)
 
 
 def alignSeqsMuscle(seqlist, muscle_path="muscle"):
