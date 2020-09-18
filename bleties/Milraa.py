@@ -121,7 +121,7 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
         reportPutativeIes). Coordinates in Gff are 1-based inclusive.
     iesconsseq : dict
         dict of SeqRecords for indels (output from reportPutativeIes)
-    refgenome : dict
+    ref : dict
         Reference genome (dict of SeqRecord objects)
     flanklen : int
         Length of flanking sequence at junctions to report
@@ -750,6 +750,7 @@ class IesRecords(object):
                 if self._insDict[ctg][ins_end][ins_end][ins_len].get("HSM") and int(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]) > 0:
                     attr.append("cigar=HSM "+str(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]))
 
+            # If the breakpoint has been defined, report it to the GFF file
             if breakpointid and attr:
                 # Get read coverage from BAM file; SAM does not allow random access
                 if self._alnformat == "bam":
@@ -760,6 +761,23 @@ class IesRecords(object):
                 consseq.id = breakpointid
                 consseq.description = ";".join(attr)+";"
                 outseq[consseq.id] = consseq
+                # Find pointers if present
+                (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq)
+                if pointerstart != ins_start:
+                    print(f"Position of pointer {breakpointid} has been adjusted")
+                    ins_start = pointerstart
+                    ins_end = pointerend
+                if pointer: # Add pointer seq to attributes field if present
+                    attr.append("pointer_seq=" + str(pointer))
+                # Convert pointers to TA junctions if possible
+                (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
+                # Add TA pointer sequence to attributes field if present
+                if tapointer:
+                    attr.extend(["ta_pointer_seq=" + str(tapointer),
+                        "ta_pointer_start=" + str(tastart),
+                        "ta_pointer_end=" + str(taend)])
+                # Maximize pointer lengths
+                (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
                 # Build GFF entry
                 outarr = [str(ctg),            # 1 seqid
                           "MILRAA",            # 2 source
@@ -772,20 +790,6 @@ class IesRecords(object):
                           ";".join(attr)+";"   # 9 attributes
                           ]
                 gff.addEntry(outarr, None)
-
-#         # Find pointers if present
-#         (pointer, pointerstart, pointerend)  = getPointers(ref[ctg], start, end, iesconsseq[breakpointid])
-#         if pointerstart != start:
-#             print(f"Position of pointer {breakpointid} has been adjusted")
-#             start = pointerstart
-#             end = pointerend
-#         # Convert pointers to TA junctions if possible
-#         (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
-#         # Maximize pointer lengths
-#         # if tastart:
-#         #     (ppstart, ppend, pppointer) = adjustPointerMaxlength(ref[ctg], tastart, taend, tapointer, iesconsseq[breakpointid])
-#         # else:
-#         (ppstart, ppend, pppointer) = adjustPointerMaxlength(ref[ctg], start, end, pointer, iesconsseq[breakpointid])
 
         return(gff, outseq)
 
