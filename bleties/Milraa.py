@@ -111,6 +111,7 @@ def getIndels(cigar, pos, minlength, qseq):
 
 
 def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
+    # TODO Incorporate pointer finding into IesRecords class
     """Get sequence at indel junctions.
 
     Parameters
@@ -186,10 +187,10 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
         # Convert pointers to TA junctions if possible
         (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
         # Maximize pointer lengths
-        if tastart:
-            (ppstart, ppend, pppointer) = adjustPointerMaxlength(ref[ctg], tastart, taend, tapointer, iesconsseq[breakpointid])
-        else:
-            (ppstart, ppend, pppointer) = adjustPointerMaxlength(ref[ctg], start, end, pointer, iesconsseq[breakpointid])
+        # if tastart:
+        #     (ppstart, ppend, pppointer) = adjustPointerMaxlength(ref[ctg], tastart, taend, tapointer, iesconsseq[breakpointid])
+        # else:
+        (ppstart, ppend, pppointer) = adjustPointerMaxlength(ref[ctg], start, end, pointer, iesconsseq[breakpointid])
         # Put everything together and return
         outseqs.append([breakpointid,
                         str(ctg),
@@ -711,9 +712,15 @@ class IesRecords(object):
         for rec in nested_dict_to_list(self._insDict):
             [ctg, ins_start, ins_end, ins_len, evidencetype, countvalue] = rec
 
+            breakpointid = None
+            attr = []
+            indel_len = 0
+
             # If the breakpoint is an insert type
             if evidencetype == "I" and countvalue >= mininsbreaks:
                 breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(ins_len)])
+                indel_len = ins_len
+                gfftype = "junction"
                 # Prepare attributes list of key-value pairs
                 attr = ["ID="+breakpointid,
                         "IES_length="+str(ins_len)
@@ -724,33 +731,14 @@ class IesRecords(object):
                 attr.extend(["cigar="+cigartype+" "+str(self._insDict[ctg][ins_start][ins_end][0][cigartype])
                              for cigartype in sorted(self._insDict[ctg][ins_start][ins_end][0])
                             ])
-                # Get read coverage from BAM file; SAM does not allow random access
-                if self._alnformat == "bam":
-                    readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end)) # TODO: Check for off-by-one errors
-                    attr.append("average_coverage="+str(readcov))
-                # Get indel consensus
-                consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, ins_len)
-                consseq.id = breakpointid
-                consseq.description = ";".join(attr)+";"
-                outseq[consseq.id] = consseq
-                # Build GFF entry
-                outarr = [str(ctg),            # 1 seqid
-                          "MILRAA",            # 2 source
-                          "junction",          # 3 type
-                          str(ins_start),      # 4 start
-                          str(ins_end),        # 5 end
-                          str(countvalue),     # 6 score - in this case, breakpoint counts for insert operation only
-                          ".",                 # 7 strand
-                          ".",                 # 8 phase
-                          ";".join(attr)+";"   # 9 attributes
-                          ]
-                gff.addEntry(outarr, None)
 
             # If the breakpoint is a deletion type
             elif evidencetype == "D" and countvalue >= mindelbreaks:
                 # Add 1 because both start and end are inclusive
                 del_len = int(ins_end) - int(ins_start) + 1 # TODO: Check for off-by-one errors
+                indel_len = del_len
                 breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
+                gfftype = "region"
                 # Build attributes field
                 attr = ["ID="+breakpointid,
                         "IES_length="+str(del_len)
@@ -761,27 +749,43 @@ class IesRecords(object):
                     attr.append("cigar=MHS "+str(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]))
                 if self._insDict[ctg][ins_end][ins_end][ins_len].get("HSM") and int(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]) > 0:
                     attr.append("cigar=HSM "+str(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]))
-                # Add coverage value
+
+            if breakpointid and attr:
+                # Get read coverage from BAM file; SAM does not allow random access
                 if self._alnformat == "bam":
-                    readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end))
+                    readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end)) # TODO: Check for off-by-one errors
                     attr.append("average_coverage="+str(readcov))
                 # Get indel consensus
-                consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, del_len)
+                consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, indel_len)
                 consseq.id = breakpointid
                 consseq.description = ";".join(attr)+";"
                 outseq[consseq.id] = consseq
                 # Build GFF entry
                 outarr = [str(ctg),            # 1 seqid
                           "MILRAA",            # 2 source
-                          "region",            # 3 type
+                          gfftype,             # 3 type
                           str(ins_start),      # 4 start
                           str(ins_end),        # 5 end
-                          str(countvalue),     # 6 score - in this case, breakpoint counts for delete operation only
+                          str(countvalue),     # 6 score - in this case, breakpoint counts
                           ".",                 # 7 strand
                           ".",                 # 8 phase
                           ";".join(attr)+";"   # 9 attributes
                           ]
                 gff.addEntry(outarr, None)
+
+#         # Find pointers if present
+#         (pointer, pointerstart, pointerend)  = getPointers(ref[ctg], start, end, iesconsseq[breakpointid])
+#         if pointerstart != start:
+#             print(f"Position of pointer {breakpointid} has been adjusted")
+#             start = pointerstart
+#             end = pointerend
+#         # Convert pointers to TA junctions if possible
+#         (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
+#         # Maximize pointer lengths
+#         # if tastart:
+#         #     (ppstart, ppend, pppointer) = adjustPointerMaxlength(ref[ctg], tastart, taend, tapointer, iesconsseq[breakpointid])
+#         # else:
+#         (ppstart, ppend, pppointer) = adjustPointerMaxlength(ref[ctg], start, end, pointer, iesconsseq[breakpointid])
 
         return(gff, outseq)
 
