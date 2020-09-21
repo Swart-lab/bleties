@@ -227,7 +227,7 @@ def getPointers(seq, start, end, iesseq):
         start == end , the IES is not present on the reference sequence and the
         junction is to the RIGHT of position, per GFF convention.
         If start < end, the IES is retained in the reference sequence.
-    iesseq : str
+    iesseq : str or SeqRecord
         In case where start == end, IES sequence must be supplied separately
 
     Returns
@@ -245,6 +245,15 @@ def getPointers(seq, start, end, iesseq):
         iesseq = seq[start-1 : end]
     else:
         raise Exception(f"Start cannot be less than end, feature {breakpointid}")
+
+    # Remove gap characters from ies sequence
+    if isinstance(iesseq, str):
+        iesseq = iesseq.replace("-","")
+    elif isinstance(iesseq, SeqRecord):
+        iesseq = iesseq.seq.ungap("-")
+    else:
+        raise Exception(f"iesseq must be of type str or SeqRecord but is {type(iesseq)}")
+
     pointer = ""
     pointerstart, pointerend = start, end
     leftcheck = ""
@@ -617,6 +626,7 @@ class IesRecords(object):
         # Cluster inserts (junctions)
         for rec in nested_dict_to_list_fixed_depth(self._insDict, 3):
             [ctg, ins_start, ins_end, dd] = rec
+
             if ins_end == ins_start:
                 ins_lens = []
                 for i in dd.keys():
@@ -633,6 +643,8 @@ class IesRecords(object):
                         totalcount = sum(counts.values())
                         # Report which length has the highest counts
                         maxcounts = [l for l in counts if counts[l] == max(counts.values())]
+
+                        # Report only if above minimum
                         if totalcount >= mininsbreaks:
                             # Put together ID for this breakpoint
                             if len(ins_lens_cl[i]) == 1: # cluster of one
@@ -652,6 +664,35 @@ class IesRecords(object):
                                         start=int(ins_start) - 1,
                                         stop=int(ins_end))
                                 attr.append("average_coverage="+str(readcov))
+                                                        # Get indel consensus
+                            if len(ins_lens_cl[i]) == 1:
+                                # If cluster comprises only a single length, take dumb consensus
+                                # and don't run Muscle
+                                consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, ins_lens_cl[i][0])
+                            else:
+                                # Otherwise use Muscle to align the different lengths
+                                consseq = self.reportIndelConsensusSeqFuzzy(ctg, ins_start, ins_end, ins_lens_cl[i])
+                            consseq.id = breakpointid
+                            consseq.description = ";".join(attr)+";"
+                            # Find pointers if present
+                            (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq)
+                            if pointerstart != ins_start:
+                                print(f"Position of pointer {breakpointid} has been adjusted")
+                                ins_start = pointerstart
+                                ins_end = pointerend
+                            if pointer: # Add pointer seq to attributes field if present
+                                attr.append("pointer_seq=" + str(pointer))
+                            # Convert pointers to TA junctions if possible
+                            (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
+                            # Add TA pointer sequence to attributes field if present
+                            if tapointer:
+                                attr.extend(["ta_pointer_seq=" + str(tapointer),
+                                    "ta_pointer_start=" + str(tastart),
+                                    "ta_pointer_end=" + str(taend)])
+                            # Maximize pointer lengths
+                            # (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
+                            outseq[consseq.id] = consseq
+
                             outarr = [str(ctg),
                                     "MILRAA",
                                     "junction",
@@ -662,17 +703,6 @@ class IesRecords(object):
                                     ".",
                                     ";".join(attr)+";"]
                             gff.addEntry(outarr, None)
-                            # Get indel consensus
-                            if len(ins_lens_cl[i]) == 1:
-                                # If cluster comprises only a single length, take dumb consensus
-                                # and don't run Muscle
-                                consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, ins_lens_cl[i][0])
-                            else:
-                                # Otherwise use Muscle to align the different lengths
-                                consseq = self.reportIndelConsensusSeqFuzzy(ctg, ins_start, ins_end, ins_lens_cl[i])
-                            consseq.id = breakpointid
-                            consseq.description = ";".join(attr)+";"
-                            outseq[consseq.id] = consseq
 
         return(gff, outseq)
         # TODO Fuzzy cluster both the indel positions on ref and the ins lengths
