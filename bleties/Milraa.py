@@ -14,7 +14,7 @@ from Bio.Align import AlignInfo
 from Bio import AlignIO
 
 from bleties.SharedValues import SharedValues
-from bleties.SharedFunctions import Gff, nested_dict_to_list, get_clusters
+from bleties.SharedFunctions import Gff, nested_dict_to_list, get_clusters, nested_dict_to_list_fixed_depth
 
 
 def getClips(cigar, pos):
@@ -615,61 +615,60 @@ class IesRecords(object):
         outseq = {}
 
         # Cluster inserts (junctions)
-        for ctg in self._insDict:
-            for ins_start in self._insDict[ctg]:
-                for ins_end in self._insDict[ctg][ins_start]:
-                    if ins_end == ins_start:
-                        ins_lens = []
-                        for i in self._insDict[ctg][ins_start][ins_end].keys():
-                            # Look for insert features; ignore MHS for now
-                            if "I" in self._insDict[ctg][ins_start][ins_end][i].keys():
-                                ins_lens.append(i)
-                        if len(ins_lens) > 0:
-                            # Get clusters of insert lengths
-                            ins_lens_cl = get_clusters(ins_lens, cluster_type, width)
-                            # For each cluster
-                            for i in range(len(ins_lens_cl)):
-                                # get counts for each length in feature
-                                counts = [self._insDict[ctg][ins_start][ins_end][j]["I"] for j in ins_lens_cl[i]]
-                                totalcount = sum(counts)
-                                if totalcount >= mininsbreaks:
-                                    # Put together ID for this breakpoint
-                                    if len(ins_lens_cl[i]) == 1: # cluster of one
-                                        prefix = f"BREAK_POINTS_{i}"
-                                    elif len(ins_lens_cl[i]) > 1:
-                                        prefix = f"BREAK_POINTS_{i}_FUZZY"
-                                    breakpointid = "_".join([prefix, str(ctg), str(ins_start), str(ins_end)] + [str(l) for l in ins_lens_cl[i]])
-                                    # Attributes list of key-value pairs
-                                    attr = ["ID=" + breakpointid,
-                                            "IES_lengths="+"_".join([str(l) for l in ins_lens_cl[i]])]
-                                    attr.append("cigar=I" + str(totalcount))
-                                    # Get average coverage of region of interest
-                                    if self._alnformat == "bam":
-                                        readcov = self._alnfile.count(str(ctg),
-                                                start=int(ins_start) - 1,
-                                                stop=int(ins_end))
-                                        attr.append("average_coverage="+str(readcov))
-                                    outarr = [str(ctg),
-                                            "MILRAA",
-                                            "junction",
-                                            str(ins_start),
-                                            str(ins_end),
-                                            str(totalcount),
-                                            ".",
-                                            ".",
-                                            ";".join(attr)+";"]
-                                    gff.addEntry(outarr, None)
-                                    # Get indel consensus
-                                    if len(ins_lens_cl[i]) == 1:
-                                        # If cluster comprises only a single length, take dumb consensus
-                                        # and don't run Muscle
-                                        consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, ins_lens_cl[i][0])
-                                    else:
-                                        # Otherwise use Muscle to align the different lengths
-                                        consseq = self.reportIndelConsensusSeqFuzzy(ctg, ins_start, ins_end, ins_lens_cl[i])
-                                    consseq.id = breakpointid
-                                    consseq.description = ";".join(attr)+";"
-                                    outseq[consseq.id] = consseq
+        for rec in nested_dict_to_list_fixed_depth(self._insDict, 3):
+            [ctg, ins_start, ins_end, dd] = rec
+            if ins_end == ins_start:
+                ins_lens = []
+                for i in dd.keys():
+                    # Look for insert features; ignore MHS for now
+                    if "I" in dd[i].keys():
+                        ins_lens.append(i)
+                if len(ins_lens) > 0:
+                    # Get clusters of insert lengths
+                    ins_lens_cl = get_clusters(ins_lens, cluster_type, width)
+                    # For each cluster
+                    for i in range(len(ins_lens_cl)):
+                        # get counts for each length in feature
+                        counts = [dd[j]["I"] for j in ins_lens_cl[i]]
+                        totalcount = sum(counts)
+                        if totalcount >= mininsbreaks:
+                            # Put together ID for this breakpoint
+                            if len(ins_lens_cl[i]) == 1: # cluster of one
+                                prefix = f"BREAK_POINTS_{i}"
+                            elif len(ins_lens_cl[i]) > 1:
+                                prefix = f"BREAK_POINTS_{i}_FUZZY"
+                            breakpointid = "_".join([prefix, str(ctg), str(ins_start), str(ins_end)] + [str(l) for l in ins_lens_cl[i]])
+                            # Attributes list of key-value pairs
+                            attr = ["ID=" + breakpointid,
+                                    "IES_lengths="+"_".join([str(l) for l in ins_lens_cl[i]])]
+                            attr.append("cigar=I" + str(totalcount))
+                            # Get average coverage of region of interest
+                            if self._alnformat == "bam":
+                                readcov = self._alnfile.count(str(ctg),
+                                        start=int(ins_start) - 1,
+                                        stop=int(ins_end))
+                                attr.append("average_coverage="+str(readcov))
+                            outarr = [str(ctg),
+                                    "MILRAA",
+                                    "junction",
+                                    str(ins_start),
+                                    str(ins_end),
+                                    str(totalcount),
+                                    ".",
+                                    ".",
+                                    ";".join(attr)+";"]
+                            gff.addEntry(outarr, None)
+                            # Get indel consensus
+                            if len(ins_lens_cl[i]) == 1:
+                                # If cluster comprises only a single length, take dumb consensus
+                                # and don't run Muscle
+                                consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, ins_lens_cl[i][0])
+                            else:
+                                # Otherwise use Muscle to align the different lengths
+                                consseq = self.reportIndelConsensusSeqFuzzy(ctg, ins_start, ins_end, ins_lens_cl[i])
+                            consseq.id = breakpointid
+                            consseq.description = ";".join(attr)+";"
+                            outseq[consseq.id] = consseq
 
         return(gff, outseq)
         # TODO Fuzzy cluster both the indel positions on ref and the ins lengths

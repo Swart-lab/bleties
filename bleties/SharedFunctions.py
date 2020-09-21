@@ -39,6 +39,36 @@ def nested_dict_to_list(d):
     return(out)
 
 
+def nested_dict_to_list_fixed_depth(d, depth):
+    """Flatten a nested dict of dicts to lists of key-key-value sets
+
+    Parameters
+    ----------
+    d : dict
+        dict of dicts (of dicts ... ) with a nested structure, e.g.
+        key1 -> key2 -> ... -> val
+    depth : int
+        Depth to which to flatten the nested dict
+
+    Returns
+    -------
+    list
+        list where each element is a list of the key value sets, e.g.
+        [key1, key2, ..., dict], but only to the depth specified. E.g. depth = 1
+        would yield [key1, dict]
+    """
+    out = []
+    def recc(dd, p=[]):
+        if len(p) == depth or not (type(dd) is dict or type(dd) is defaultdict):
+            out.append(p + [dd])
+            return(p + [dd])
+        else:
+            for k in dd:
+                recc(dd[k], p + [k])
+    recc(d)
+    return(out)
+
+
 def get_clusters(in_list, cluster_type : str, width : int):
     """Cluster a list of integers into groups not more than _width_ apart
 
