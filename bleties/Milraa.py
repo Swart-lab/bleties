@@ -629,19 +629,23 @@ class IesRecords(object):
                     # For each cluster
                     for i in range(len(ins_lens_cl)):
                         # get counts for each length in feature
-                        counts = [dd[j]["I"] for j in ins_lens_cl[i]]
-                        totalcount = sum(counts)
+                        counts = {l : dd[l]["I"] for l in ins_lens_cl[i]}
+                        totalcount = sum(counts.values())
+                        # Report which length has the highest counts
+                        maxcounts = [l for l in counts if counts[l] == max(counts.values())]
                         if totalcount >= mininsbreaks:
                             # Put together ID for this breakpoint
                             if len(ins_lens_cl[i]) == 1: # cluster of one
-                                prefix = f"BREAK_POINTS_{i}"
+                                prefix = f"BREAK_POINTS"
                             elif len(ins_lens_cl[i]) > 1:
-                                prefix = f"BREAK_POINTS_{i}_FUZZY"
+                                prefix = f"BREAK_POINTS_FUZZY"
                             breakpointid = "_".join([prefix, str(ctg), str(ins_start), str(ins_end)] + [str(l) for l in ins_lens_cl[i]])
                             # Attributes list of key-value pairs
+                            # report modal IES length
                             attr = ["ID=" + breakpointid,
-                                    "IES_lengths="+"_".join([str(l) for l in ins_lens_cl[i]])]
-                            attr.append("cigar=I" + str(totalcount))
+                                    "IES_length="+"_".join([str(l) for l in maxcounts])]
+                            # Report number of counts per insert length
+                            attr.append("cigar=" + " ".join([str(l) + "I*" + str(counts[l]) for l in counts]))
                             # Get average coverage of region of interest
                             if self._alnformat == "bam":
                                 readcov = self._alnfile.count(str(ctg),
@@ -722,12 +726,11 @@ class IesRecords(object):
                 gfftype = "junction"
                 # Prepare attributes list of key-value pairs
                 attr = ["ID="+breakpointid,
-                        "IES_length="+str(ins_len)
-                       ]
-                attr.append("cigar=I "+str(countvalue))
+                        "IES_length="+str(ins_len)]
+                attr.append("cigar=" + str(ins_len) + "I*" + str(countvalue))
                 # Extend the cigar evidence counts with clipped reads that are also at this junction
                 # Clippings are recorded with nominal insert length of zero
-                attr.extend(["cigar="+cigartype+" "+str(self._insDict[ctg][ins_start][ins_end][0][cigartype])
+                attr.extend(["cigar=" + cigartype + "*"+str(self._insDict[ctg][ins_start][ins_end][0][cigartype])
                              for cigartype in sorted(self._insDict[ctg][ins_start][ins_end][0])
                             ])
 
@@ -740,14 +743,13 @@ class IesRecords(object):
                 gfftype = "region"
                 # Build attributes field
                 attr = ["ID="+breakpointid,
-                        "IES_length="+str(del_len)
-                       ]
-                attr.append("cigar=D "+str(countvalue))
+                        "IES_length="+str(del_len)]
+                attr.append("cigar=" + str(del_len) + "D*" + str(countvalue))
                 # Look for left- and rightclips that fall on the deletion boundaries
                 if self._insDict[ctg][ins_start][ins_start][ins_len].get("MHS") and int(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]) > 0:
-                    attr.append("cigar=MHS "+str(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]))
+                    attr.append("cigar=MHS*" + str(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]))
                 if self._insDict[ctg][ins_end][ins_end][ins_len].get("HSM") and int(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]) > 0:
-                    attr.append("cigar=HSM "+str(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]))
+                    attr.append("cigar=HSM*" + str(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]))
 
             # If the breakpoint has been defined, report it to the GFF file
             if breakpointid and attr:
