@@ -14,9 +14,9 @@ To do list for MILRAA
      exactly the same length
    - [x] Naive length based clustering
    - [ ] Cluster IES inserts by sequence distance
- - [ ] Adjust putative IES junctions ...
-   - [ ] Adjust coordinates so that the junctions are TA junctions, if possible
-   - [ ] Adjust coordinates to maximize length of pointer, if possible
+ - [x] Adjust putative IES junctions ...
+   - [x] Adjust coordinates so that the junctions are TA junctions, if possible
+   - [x] Adjust coordinates to maximize length of pointer, if possible
  - [ ] Implement Assembly module 
     - Will have to chop up the reads because PacBio reads are long, also want to
        include some of the context. 

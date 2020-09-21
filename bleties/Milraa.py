@@ -111,7 +111,6 @@ def getIndels(cigar, pos, minlength, qseq):
 
 
 def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
-    # TODO Incorporate pointer finding into IesRecords class
     """Get sequence at indel junctions.
 
     Parameters
