@@ -5,6 +5,7 @@ import sys
 import logging
 from bleties import main
 
+# TODO add module name to logger messages, save log to file
 logging.basicConfig(format='[%(asctime)s] %(message)s', level=logging.INFO)
 # Argument parser
 parser = argparse.ArgumentParser(
@@ -81,22 +82,13 @@ milraa_parser.add_argument("--fuzzy_ies",
     Allow lengths of inserts to differ slightly when defining putative IES,
     otherwise insert lengths must be exactly the same.
     """)
-milraa_parser.add_argument("--cluster_type",
-    default="bp",
-    type=str,
+milraa_parser.add_argument("--cluster_dist",
+    default=0.05,
+    type=float,
     help="""
-    Method to use for clustering insert lengths when defining putative IESs.
-    'bp' - maximum length difference in basepairs (exclusive). 'pc' - maximum
-    length difference in percentage difference (mutual percentage difference).
-    """)
-milraa_parser.add_argument("--cluster_width",
-    default=6,
-    type=int,
-    help="""
-    Limit for clustering putative IESs together. Recommended settings for
-    PacBio HiFi reads: '--cluster_type bp --cluster_width 6'. Recommended
-    settings for CLR reads: '--cluster_type pc --cluster_width 20' (not yet
-    tested extensively).
+    Sequence identity distance limit for clustering putative IESs together. 
+    Recommended settings: 0.05 for PacBio HiFi reads, ??? for PacBio CLR reads.
+    Not yet tested extensively.
     """)
 
 # Others

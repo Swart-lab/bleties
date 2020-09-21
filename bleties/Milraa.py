@@ -4,6 +4,7 @@ import re
 import json
 from collections import defaultdict
 import pysam
+import logging
 
 from Bio import SeqIO
 from Bio.Alphabet import generic_dna
@@ -14,7 +15,7 @@ from Bio.Align import AlignInfo
 from Bio import AlignIO
 
 from bleties.SharedValues import SharedValues
-from bleties.SharedFunctions import Gff, nested_dict_to_list, get_clusters, nested_dict_to_list_fixed_depth
+from bleties.SharedFunctions import Gff, nested_dict_to_list, get_clusters, nested_dict_to_list_fixed_depth, get_clusters_from_seqlist
 
 
 def getClips(cigar, pos):
@@ -410,6 +411,51 @@ def alignSeqsMuscle(seqlist, muscle_path="muscle"):
     return(aln)
 
 
+def alnFromSeqs(seqlist):
+    """Align list of sequences with Muscle and report consensus
+
+    Parameters
+    ----------
+    seqlist : list
+        list of str representing sequences, may be different lengths
+
+    Returns
+    -------
+    SeqRecord
+        Consensus sequence, including gaps
+    """
+    seqrecs = [SeqRecord(Seq(i, generic_dna)) for i in seqlist]
+    aln = alignSeqsMuscle(seqrecs)
+    alninf = AlignInfo.SummaryInfo(aln)
+    alncons = alninf.gap_consensus()
+    # TODO Set consensus threshold. Default now is 0.7, X if no consensus
+    alnconsrec = SeqRecord(alncons)
+    return(alnconsrec)
+
+
+def alnDumbFromSeqs(seqlist):
+    """Report consensus of a list of sequences that are all the same length
+
+    Parameters
+    ----------
+    seqlist : list
+        list of str, representing sequences all of the same length
+
+    Returns
+    -------
+    SeqRecord
+        "Dumb" consensus sequence
+    """
+    seqrecs = [SeqRecord(Seq(i, generic_dna)) for i in seqlist]
+    aln = MultipleSeqAlignment(seqrecs)
+    alninf = AlignInfo.SummaryInfo(aln)
+    alncons = alninf.dumb_consensus()
+    # TODO Set consensus threshold. Default now is 0.7
+    alnconsrec = SeqRecord(alncons)
+    return(alnconsrec)
+    
+
+
 class IesRecords(object):
     """Records of putative IESs from mappings"""
 
@@ -602,7 +648,7 @@ class IesRecords(object):
         self._getDeletedSequences()
 
 
-    def reportPutativeIesInsertFuzzy(self, mininsbreaks, mindelbreaks, cluster_type="bp", width=6):
+    def reportPutativeIesInsertFuzzy(self, mininsbreaks, mindelbreaks, dist_threshold=0.05):
         """Report putative IESs where insert lengths do not match exactly
 
         Parameters
@@ -610,97 +656,93 @@ class IesRecords(object):
         mininsbreaks
         mindelbreaks
             Same as reportPutativeIes()
-        cluster_type : str
-            Type of clustering to use. Either "bp" (sequence distance in bp) or
-            "pc" (length ratio in percent)
-        width : int
-            Threshold for defining clusters. If type == "bp", this is distance
-            in bp (exclusive). If type == "pc", this is mutual percentage
+        dist_threshold : float
+            Distance threshold for clustering, in range (0,1)
         """
         # Initialize output
         gff = Gff()
         outseq = {}
 
         # Cluster inserts (junctions)
-        for rec in nested_dict_to_list_fixed_depth(self._insDict, 3):
+        for rec in nested_dict_to_list_fixed_depth(self._insSeqDict, 3):
             [ctg, ins_start, ins_end, dd] = rec
 
             if ins_end == ins_start:
-                ins_lens = []
-                for i in dd.keys():
-                    # Look for insert features; ignore MHS for now
-                    if "I" in dd[i].keys():
-                        ins_lens.append(i)
-                if len(ins_lens) > 0:
-                    # Get clusters of insert lengths
-                    ins_lens_cl = get_clusters(ins_lens, cluster_type, width)
-                    # For each cluster
-                    for i in range(len(ins_lens_cl)):
-                        # get counts for each length in feature
-                        counts = {l : dd[l]["I"] for l in ins_lens_cl[i]}
-                        totalcount = sum(counts.values())
-                        # Report which length has the highest counts
-                        maxcounts = [l for l in counts if counts[l] == max(counts.values())]
+                ins_seqs = []
+                for i in dd:
+                    # Gather all sequences to be clustered
+                    ins_seqs.extend(dd[i])
+                clust_seqs, clust_ids = get_clusters_from_seqlist(ins_seqs, dist_threshold)
+                # For each cluster, report a putative IES
+                for clust in clust_seqs:
+                    counts = defaultdict(int)
+                    for i in clust:
+                        counts[len(i)] += 1
+                    totalcount = sum(counts.values())
+                    maxcounts = [l for l in counts if counts[l] == max(counts.values())]
 
-                        # Report only if above minimum
-                        if totalcount >= mininsbreaks:
-                            # Put together ID for this breakpoint
-                            if len(ins_lens_cl[i]) == 1: # cluster of one
-                                prefix = f"BREAK_POINTS"
-                            elif len(ins_lens_cl[i]) > 1:
-                                prefix = f"BREAK_POINTS_FUZZY"
-                            breakpointid = "_".join([prefix, str(ctg), str(ins_start), str(ins_end)] + [str(l) for l in ins_lens_cl[i]])
-                            # Attributes list of key-value pairs
-                            # report modal IES length
-                            attr = ["ID=" + breakpointid,
-                                    "IES_length="+"_".join([str(l) for l in maxcounts])]
-                            # Report number of counts per insert length
-                            attr.append("cigar=" + " ".join([str(l) + "I*" + str(counts[l]) for l in counts]))
-                            # Get average coverage of region of interest
-                            if self._alnformat == "bam":
-                                readcov = self._alnfile.count(str(ctg),
-                                        start=int(ins_start) - 1,
-                                        stop=int(ins_end))
-                                attr.append("average_coverage="+str(readcov))
-                                                        # Get indel consensus
-                            if len(ins_lens_cl[i]) == 1:
-                                # If cluster comprises only a single length, take dumb consensus
-                                # and don't run Muscle
-                                consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, ins_lens_cl[i][0])
-                            else:
-                                # Otherwise use Muscle to align the different lengths
-                                consseq = self.reportIndelConsensusSeqFuzzy(ctg, ins_start, ins_end, ins_lens_cl[i])
-                            consseq.id = breakpointid
-                            consseq.description = ";".join(attr)+";"
-                            # Find pointers if present
-                            (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq)
-                            if pointerstart != ins_start:
-                                logging.info(f"Position of pointer {breakpointid} has been adjusted")
-                                ins_start = pointerstart
-                                ins_end = pointerend
-                            if pointer: # Add pointer seq to attributes field if present
-                                attr.append("pointer_seq=" + str(pointer))
-                            # Convert pointers to TA junctions if possible
-                            (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
-                            # Add TA pointer sequence to attributes field if present
-                            if tapointer:
-                                attr.extend(["ta_pointer_seq=" + str(tapointer),
-                                    "ta_pointer_start=" + str(tastart),
-                                    "ta_pointer_end=" + str(taend)])
-                            # Maximize pointer lengths
-                            # (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
-                            outseq[consseq.id] = consseq
+                    # Report only if above minimum
+                    if totalcount >= mininsbreaks:
+                        # Put together ID for this breakpoint
+                        if len(counts.keys()) == 1: # cluster of one length
+                            prefix = f"BREAK_POINTS"
+                        elif len(counts.keys()) > 1:
+                            prefix = f"BREAK_POINTS_FUZZY"
+                        breakpointid = "_".join([prefix, str(ctg), str(ins_start), str(ins_end)] + [str(l) for l in counts.keys()])
 
-                            outarr = [str(ctg),
-                                    "MILRAA",
-                                    "junction",
-                                    str(ins_start),
-                                    str(ins_end),
-                                    str(totalcount),
-                                    ".",
-                                    ".",
-                                    ";".join(attr)+";"]
-                            gff.addEntry(outarr, None)
+                        # Attributes list of key-value pairs
+                        # report modal IES length
+                        attr = ["ID=" + breakpointid,
+                                "IES_length="+"_".join([str(l) for l in maxcounts])]
+                        # Report number of counts per insert length
+                        attr.append("cigar=" + " ".join([str(l) + "I*" + str(counts[l]) for l in counts]))
+
+                        # Get average coverage of region of interest
+                        if self._alnformat == "bam":
+                            readcov = self._alnfile.count(str(ctg),
+                                    start=int(ins_start) - 1,
+                                    stop=int(ins_end))
+                            attr.append("average_coverage="+str(readcov))
+
+                        # Get indel consensus
+                        if len(counts.keys()) == 1: # cluster of one length
+                            # take dumb consensus since all seqs are same length
+                            consseq = alnDumbFromSeqs(clust)
+                        else:
+                            # Otherwise use Muscle (potentially slower) to align
+                            consseq = alnFromSeqs(clust)
+                        consseq.id = breakpointid
+                        consseq.description = ";".join(attr)+";"
+
+                        # Find pointers if present
+                        (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq)
+                        if pointerstart != ins_start:
+                            logging.info(f"Position of pointer {breakpointid} has been adjusted")
+                            ins_start = pointerstart
+                            ins_end = pointerend
+                        if pointer: # Add pointer seq to attributes field if present
+                            attr.append("pointer_seq=" + str(pointer))
+                        # Convert pointers to TA junctions if possible
+                        (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
+                        # Add TA pointer sequence to attributes field if present
+                        if tapointer:
+                            attr.extend(["ta_pointer_seq=" + str(tapointer),
+                                "ta_pointer_start=" + str(tastart),
+                                "ta_pointer_end=" + str(taend)])
+                        # Maximize pointer lengths
+                        # (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
+                        outseq[consseq.id] = consseq
+
+                        outarr = [str(ctg),
+                                "MILRAA",
+                                "junction",
+                                str(ins_start),
+                                str(ins_end),
+                                str(totalcount),
+                                ".",
+                                ".",
+                                ";".join(attr)+";"]
+                        gff.addEntry(outarr, None)
 
         return(gff, outseq)
         # TODO Fuzzy cluster both the indel positions on ref and the ins lengths
@@ -888,6 +930,7 @@ class IesRecords(object):
         alncons = alninf.gap_consensus()
         alnconsrec = SeqRecord(alncons)
         return(alnconsrec)
+
 
 
     def reportIndelReadMismatchPc(self, ctg, indelstart, indelend, indellen):

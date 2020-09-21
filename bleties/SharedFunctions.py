@@ -6,6 +6,9 @@ import re
 from collections import defaultdict
 from operator import itemgetter
 from bleties.SharedValues import SharedValues
+from Bio.Align import PairwiseAligner
+from Bio.Cluster import treecluster
+from numpy import array
 
 class SharedFunctions():
     def returntrue():
@@ -139,6 +142,57 @@ def within_percent(num1, num2, percent: int):
         return(True)
     else:
         return(False)
+
+
+def get_clusters_from_seqlist(seqlist, dist_threshold=0.05):
+    """Cluster a list of sequences by a distance identity threshold
+
+    Parameters
+    ----------
+    seqlist : list
+        list of sequences as str
+    dist_threshold : float
+        Max distance value to retain, branches above this length in the 
+        hierarchical clustering tree will be cut.
+
+    Returns
+    -------
+    list
+        list of lists - input sequences now grouped by cluster
+    list
+        list of int - cluster memberships of the originally input list
+    """
+    if len(seqlist) == 1:
+        # Skip alignment if there is only one sequence
+        return([seqlist], [0])
+    else:
+        aligner = PairwiseAligner()
+        aligner.mode = "local"
+
+        # Convert sequence list to distance matrix
+        distmatrix = []
+        for seq1 in seqlist:
+            row = []
+            for seq2 in seqlist:
+                maxlen = max([len(seq1), len(seq2)])
+                # Take percentage identity of pairwise alignment score (match base
+                # +1, all other operations +0) over the longer sequence in pair
+                idval = aligner.align(seq1, seq2).score / maxlen
+                distval = 1 - idval # convert to distance fraction
+                row.append(distval)
+            distmatrix.append(row)
+        # Hierarchical clustering from the distance matrix
+        htree = treecluster(data=None, distancematrix=array(distmatrix))
+        # Find number of branches with length longer than threshold, and add 1 
+        # to get number of cuts
+        cuts = 1 + len([htree[i].distance for i in range(len(htree)) if htree[i].distance > dist_threshold])
+        clust_ids = list(htree.cut(cuts))
+        clust_seqs_dict = defaultdict(list)
+        for i in range(len(seqlist)):
+            clust_seqs_dict[clust_ids[i]] += [seqlist[i]]
+        # Convert dict of lists to list of lists
+        clust_seqs = [clust_seqs_dict[i] for i in clust_seqs_dict]
+        return(clust_seqs, clust_ids)
 
 
 class Gff(object):

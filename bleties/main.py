@@ -108,13 +108,11 @@ def milraa(args):
 
     if args.fuzzy_ies:
         logging.info(f"""Reporting putative IESs with allowance for unequal 
-        insert lengths in GFF format to file {args.out}.milraa_ies_fuzzy.gff3
-        """)
+        insert lengths in GFF format to file {args.out}.milraa_ies_fuzzy.gff3""")
         (fuzzygff, fuzzyiesseq) = iesrecords.reportPutativeIesInsertFuzzy(
                 args.min_break_coverage,
                 args.min_del_coverage,
-                args.cluster_type,
-                args.cluster_width)
+                args.cluster_dist)
 
         # Write fuzzy IES gff file
         with open(f"{args.out}.milraa_ies_fuzzy.gff3", "w") as fh:
