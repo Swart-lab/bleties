@@ -489,9 +489,8 @@ class IesRecords(object):
 
     def dump(self):
         """Data dump of IesRecords._insDict in JSON format"""
-        outstr = json.dumps(self._insDict, sort_keys = True, indent = 2)
-        outstr_seq = json.dumps(self._insSeqDict, sort_keys=True, indent=2)
-        return(outstr + "\n" + outstr_seq)
+        outstr = json.dumps({"_insDict" : self._insDict, "_insSeqDict" : self._insSeqDict}, sort_keys = True, indent = 2)
+        return(outstr)
 
 
     def _addClipsFromCigar(self, rname, cigar, pos):
@@ -575,7 +574,7 @@ class IesRecords(object):
 
     def findPutativeIes(self, minlength):
         """Search alignment for clips and indels to identify putative IESs.
-        Record them in the _insDict dict.
+        Record them in the _insDict dict and sequences in _insSeqDict
 
         Parameters
         ----------
@@ -676,7 +675,7 @@ class IesRecords(object):
                             # Find pointers if present
                             (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq)
                             if pointerstart != ins_start:
-                                print(f"Position of pointer {breakpointid} has been adjusted")
+                                logging.info(f"Position of pointer {breakpointid} has been adjusted")
                                 ins_start = pointerstart
                                 ins_end = pointerend
                             if pointer: # Add pointer seq to attributes field if present
