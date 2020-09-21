@@ -12,8 +12,7 @@ To do list for MILRAA
      potential alternative excisions
  - [ ] Cluster putative IESs so that they do not have to exactly overlap / have
      exactly the same length
-   - [x] Naive length based clustering
-   - [ ] Cluster IES inserts by sequence distance
+   - [x] Cluster IES inserts by sequence distance
  - [x] Adjust putative IES junctions ...
    - [x] Adjust coordinates so that the junctions are TA junctions, if possible
    - [x] Adjust coordinates to maximize length of pointer, if possible
@@ -51,3 +50,4 @@ To do list for MILRAA
      variable insert lengths? Will be more of a problem with subreads vs. CCS
      reads. Maybe give user option to specify "error profile" of input reads
  - [ ] Unit tests
+ - [ ] Implement internal telomere finder as separate module in BleTIES
