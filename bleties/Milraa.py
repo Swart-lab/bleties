@@ -411,46 +411,63 @@ def alignSeqsMuscle(seqlist, muscle_path="muscle"):
     return(aln)
 
 
-def alnFromSeqs(seqlist):
+def alnFromSeqs(seqlist, threshold=0.7):
     """Align list of sequences with Muscle and report consensus
 
     Parameters
     ----------
     seqlist : list
         list of str representing sequences, may be different lengths
+    threshold : float
+        Threshold for consensus, passed to gap_consensus()
 
     Returns
     -------
     SeqRecord
         Consensus sequence, including gaps
     """
-    seqrecs = [SeqRecord(Seq(i, generic_dna)) for i in seqlist]
+    if isinstance(seqlist[0], str):
+        seqrecs = [SeqRecord(Seq(i, generic_dna)) for i in seqlist]
+    elif isinstance(seqlist[0], Bio.Seq.Seq):
+        seqrecs = [SeqRecord(i) for i in seqlist]
+    elif isinstance(seqlist[0], Bio.SeqRecord.SeqRecord):
+        seqrecs = seqlist
+    else:
+        raise Exception("sequence list must comprise str, Seq, or SeqRecord objects")
     aln = alignSeqsMuscle(seqrecs)
     alninf = AlignInfo.SummaryInfo(aln)
-    alncons = alninf.gap_consensus()
-    # TODO Set consensus threshold. Default now is 0.7, X if no consensus
+    alncons = alninf.gap_consensus(threshold=threshold)
     alnconsrec = SeqRecord(alncons)
     return(alnconsrec)
 
 
-def alnDumbFromSeqs(seqlist):
+def alnDumbFromSeqs(seqlist, threshold=0.7):
     """Report consensus of a list of sequences that are all the same length
 
     Parameters
     ----------
     seqlist : list
         list of str, representing sequences all of the same length
+    threshold : float
+        Threshold for consensus, passed to dumb_consensus()
 
     Returns
     -------
     SeqRecord
         "Dumb" consensus sequence
     """
-    seqrecs = [SeqRecord(Seq(i, generic_dna)) for i in seqlist]
+    if isinstance(seqlist[0], str):
+        # If not a SecRecord object, transform to SeqRecords
+        seqrecs = [SeqRecord(Seq(i, generic_dna)) for i in seqlist]
+    elif isinstance(seqlist[0], Bio.Seq.Seq):
+        seqrecs = [SeqRecord(i) for i in seqlist]
+    elif isinstance(seqlist[0], Bio.SeqRecord.SeqRecord):
+        seqrecs = seqlist
+    else:
+        raise Exception("sequence list must comprise str, Seq, or SeqRecord objects")
     aln = MultipleSeqAlignment(seqrecs)
     alninf = AlignInfo.SummaryInfo(aln)
-    alncons = alninf.dumb_consensus()
-    # TODO Set consensus threshold. Default now is 0.7
+    alncons = alninf.dumb_consensus(threshold=threshold)
     alnconsrec = SeqRecord(alncons)
     return(alnconsrec)
     
