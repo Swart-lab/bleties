@@ -52,6 +52,13 @@ def read_sam_bam_ref(args):
     # Read reference Fasta file into memory
     logger.info(f"Reading mapping sequence file to memory {args.ref}")
     refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
+    # Sanity check: lengths and names of contigs in refgenome should match BAM
+    for ctg in refgenome:
+        if ctg in alnfile.references:
+            if len(refgenome[ctg]) != alnfile.get_reference_length(ctg):
+                raise Exception(f"Contig {ctg} length does not match BAM header")
+        else:
+            logger.warn(f"Contig {ctg} in reference Fasta but not in BAM header")
     # Initialize new IesRecords object to store putative IESs
     iesrecords = Milraa.IesRecords(alnfile, aln_format, refgenome)
     # Return alignment and reference objects
