@@ -9,6 +9,12 @@ from bleties.SharedValues import SharedValues
 from Bio.Align import PairwiseAligner
 from Bio.Cluster import treecluster
 from numpy import array
+import logging
+
+
+# TODO define logger
+logger = logging.getLogger("SharedFunctions")
+
 
 class SharedFunctions():
     def returntrue():
@@ -288,7 +294,9 @@ class Gff(object):
             if attribute in self._gffDict[gffid]['attrdict']:
                 return(self._gffDict[gffid]['attrdict'][attribute])
             else:
-                raise Exception("Unknown attribute " + attribute + "for GFF3 ID " + gffid)
+                # raise Exception("Unknown attribute " + attribute + "for GFF3 ID " + gffid)
+                logger.warn(f"Unknown attribute {attribute} for GFF ID {gffid}")
+                return(None)
         else:
             raise Exception("Unknown GFF3 ID " + gffid)
 
