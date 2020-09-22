@@ -829,7 +829,7 @@ class IesRecords(object):
         # Parse the dict and report putative IESs above min coverage
         # We only check breakpoints which are completely spanned by a read ("I" or "D" operations)
         # however we also report supporting counts from HSM and MSH type mappings
-        # TODO Reduce code duplication here, incorporate Gff module
+        # TODO Reduce code duplication here
         for rec in nested_dict_to_list(self._insDict):
             [ctg, ins_start, ins_end, ins_len, evidencetype, countvalue] = rec
 

@@ -10,7 +10,7 @@ To do list for MILRAA
        retention events
  - [x] Group putative IESs that are overlapping into clusters, to identify
      potential alternative excisions
- - [ ] Cluster putative IESs so that they do not have to exactly overlap / have
+ - [x] Cluster putative IESs so that they do not have to exactly overlap / have
      exactly the same length
    - [x] Cluster IES inserts by sequence distance
  - [x] Adjust putative IES junctions ...
