@@ -5,14 +5,11 @@ import sys
 import logging
 from bleties import main
 
-# TODO add module name to logger messages, save log to file
-logging.basicConfig(format='[%(asctime)s] %(message)s', level=logging.INFO)
 # Argument parser
 parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument("--log",
-                    help="Log file",
-                    default=sys.stderr)
+parser.add_argument("--log", default="bleties.log",
+    help="Path to write log file")
 subparsers = parser.add_subparsers()
 
 # MILRAA -----------------------------------------------------------------------
@@ -222,5 +219,17 @@ milret_parser.set_defaults(func=main.milret)
 
 # Parse arguments --------------------------------------------------------------
 args = parser.parse_args()
+
+# Logging
+logging.basicConfig(format='[%(asctime)s] %(name)-12s %(levelname)-8s %(message)s',
+        level=logging.DEBUG,
+        filename=args.log,
+        filemode="a")
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+formatter = logging.Formatter("%(name)-24s %(levelname)-8s %(message)s")
+console.setFormatter(formatter)
+logging.getLogger('').addHandler(console)
+
 # Execute respective functions for each subparser
 args.func(args)

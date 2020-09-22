@@ -22,6 +22,7 @@ def read_sam_bam_ref(args):
     (alignment), and SeqIO object (reference).
     This function is used by both milraa() and miser().
     """
+    logger = logging.getLogger("main.read_sam_bam_ref")
     # Check that only either SAM or BAM specified
     aln_filename = "-"
     aln_format = "sam"
@@ -41,15 +42,15 @@ def read_sam_bam_ref(args):
             aln_format = "bam"
             aln_mode = "rb"
     # Open SAM or BAM file
-    logging.info(f"Opening alignment file {aln_filename}")
+    logger.info(f"Opening alignment file {aln_filename}")
     alnfile = pysam.AlignmentFile(aln_filename, aln_mode)
-    logging.info("Alignment file contains "
+    logger.info("Alignment file contains "
                  + str(alnfile.mapped)
                  + " reads mapped to "
                  + str(alnfile.nreferences)
                  + " reference sequences")
     # Read reference Fasta file into memory
-    logging.info(f"Reading mapping sequence file to memory {args.ref}")
+    logger.info(f"Reading mapping sequence file to memory {args.ref}")
     refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
     # Initialize new IesRecords object to store putative IESs
     iesrecords = Milraa.IesRecords(alnfile, aln_format, refgenome)
@@ -58,22 +59,23 @@ def read_sam_bam_ref(args):
 
 
 def milraa(args):
-    logging.info("Started BleTIES MILRAA")
-    logging.info("Command line:")
-    logging.info(" ".join(sys.argv))
+    logger = logging.getLogger("main.milraa")
+    logger.info("Started BleTIES MILRAA")
+    logger.info("Command line:")
+    logger.info(" ".join(sys.argv))
     # Read input files
     iesrecords,alnfile,refgenome = read_sam_bam_ref(args)
     # Process alignment to find putative IESs
-    logging.info("Processing alignment to find putative IESs")
+    logger.info("Processing alignment to find putative IESs")
     iesrecords.findPutativeIes(args.min_ies_length)
     if args.dump:
-        logging.info("Dumping data in JSON format to STDOUT")
+        logger.info("Dumping data in JSON format to STDOUT")
         with open(f"{args.out}.dump", "w") as fh:
             # sys.stderr.write(str(iesrecords) + "\n") # Print summary of IesRecords object
             fh.write(iesrecords.dump()) # Dump data to check
 
     # Report putative IESs as list of GFF records and dict of SeqRecord objects
-    logging.info(f"""Reporting putative IESs in GFF format to file
+    logger.info(f"""Reporting putative IESs in GFF format to file
     {args.out}.milraa_ies.gff3""")
     (iesgff, iesseq) = iesrecords.reportPutativeIes(args.min_break_coverage, 
             args.min_del_coverage)
@@ -86,7 +88,7 @@ def milraa(args):
         iesgff.gff2fh(fh)
 
     # Write Fasta file of putative IES sequences
-    logging.info(f"""Reporting consensus sequences of putative IESs to Fasta
+    logger.info(f"""Reporting consensus sequences of putative IESs to Fasta
     file {args.out}.milraa_ies.fasta""")
     SeqIO.write(iesseq.values(), f"{args.out}.milraa_ies.fasta", "fasta")
 
@@ -94,7 +96,7 @@ def milraa(args):
     if args.junction_flank:
         junctionseqs = Milraa.getIndelJunctionSeqs(iesgff, iesseq,
                 refgenome, args.junction_flank)
-        logging.info(f"""Reporting flanking sequences of putative IESs to file
+        logger.info(f"""Reporting flanking sequences of putative IESs to file
         {args.out}.junction.out""")
         with open(f"{args.out}.junction.out", "w") as fh:
             fh.write("\t".join(["id", 
@@ -107,7 +109,7 @@ def milraa(args):
                 fh.write("\t".join(junc) + "\n")
 
     if args.fuzzy_ies:
-        logging.info(f"""Reporting putative IESs with allowance for unequal 
+        logger.info(f"""Reporting putative IESs with allowance for unequal 
         insert lengths in GFF format to file {args.out}.milraa_ies_fuzzy.gff3""")
         (fuzzygff, fuzzyiesseq) = iesrecords.reportPutativeIesInsertFuzzy(
                 args.min_break_coverage,
@@ -121,7 +123,7 @@ def milraa(args):
             fuzzygff.gff2fh(fh)
 
         # Write Fasta file of putative IES sequences fuzzy clusters
-        logging.info(f"""Reporting consensus sequences of putative fuzzy IESs to
+        logger.info(f"""Reporting consensus sequences of putative fuzzy IESs to
         Fasta file {args.out}.milraa_ies_fuzzy.fasta""")
         SeqIO.write(fuzzyiesseq.values(), 
                 f"{args.out}.milraa_ies_fuzzy.fasta", 
@@ -129,23 +131,24 @@ def milraa(args):
 
     # Close AlignmentFile
     alnfile.close()
-    logging.info("Finished MILRAA")
+    logger.info("Finished MILRAA")
 
 
 def miser(args):
-    logging.info("Started BleTIES MISER")
-    logging.info("Command line:")
-    logging.info(" ".join(sys.argv))
+    logger = logging.getLogger("main.miser")
+    logger.info("Started BleTIES MISER")
+    logger.info("Command line:")
+    logger.info(" ".join(sys.argv))
     # Read input files
     iesrecords,alnfile,refgenome = read_sam_bam_ref(args)
     # Read in IES GFF file produced by Milraa
-    logging.info("Reading GFF file containing putative IESs")
+    logger.info("Reading GFF file containing putative IESs")
     iesgff = SharedFunctions.Gff()
     iesgff.file2gff(args.gff)
 
     # Compare mean mismatch percentage of reads with and without putative IES
     # for each putative IES
-    logging.info("""
+    logger.info("""
     Reporting possibly spurious IESs due to misassembly or mapped paralogs
     """)
     out_gff_split = defaultdict(list) # dict to hold split GFF file keyed by diagnosis
@@ -230,7 +233,7 @@ def miser(args):
 
     # Output split GFF files
     if args.split_gff:
-        logging.info("Splitting input GFF entries into inferred categories")
+        logger.info("Splitting input GFF entries into inferred categories")
         for diag in out_gff_split:
             outfile = f"{args.gff}.{diag}.gff3"
             with open(outfile, "w") as fh_spl:
@@ -244,27 +247,28 @@ def miser(args):
 
     # Close alignment filehandle
     alnfile.close()
-    logging.info("Finished MISER")
+    logger.info("Finished MISER")
 
 
 def milret(args):
-    logging.info("Started BleTIES MILRET")
-    logging.info("Command line:")
-    logging.info(" ".join(sys.argv))
+    logger = logging.getLogger("main.milret")
+    logger.info("Started BleTIES MILRET")
+    logger.info("Command line:")
+    logger.info(" ".join(sys.argv))
 
     # Read BAM file - SAM not supported because we need random access
-    logging.info(f"Opening alignment file {args.bam}")
+    logger.info(f"Opening alignment file {args.bam}")
     alnfile = pysam.AlignmentFile(args.bam, "rb")
 
     # Initialize IesRetentionsMacOnly object
     iesretentions = Milret.IesRetentionsMacOnly(args.ies, alnfile)
 
     # Count mapping operations per site
-    logging.info(f"Counting IES+ and IES- forms at each junction in file {args.ies}")
+    logger.info(f"Counting IES+ and IES- forms at each junction in file {args.ies}")
     iesretentions.findMappingOps()
 
     # Report retention scores to file
-    logging.info("Calculating retention scores per junction")
+    logger.info("Calculating retention scores per junction")
     iesretentions.calculateRetentionScores()
     iesretentions.reportRetentionScores(args.out)
-    logging.info("Finished MILRET")
+    logger.info("Finished MILRET")

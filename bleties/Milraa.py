@@ -18,6 +18,10 @@ from bleties.SharedValues import SharedValues
 from bleties.SharedFunctions import Gff, nested_dict_to_list, get_clusters, nested_dict_to_list_fixed_depth, get_clusters_from_seqlist
 
 
+# Define logger
+logger = logging.getLogger("Milraa")
+
+
 def getClips(cigar, pos):
     """Parse cigar string and alignment position and report left- and right-
     clipping.
@@ -181,7 +185,7 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
         # Find pointers if present
         (pointer, pointerstart, pointerend)  = getPointers(ref[ctg], start, end, iesconsseq[breakpointid])
         if pointerstart != start:
-            print(f"Position of pointer {breakpointid} has been adjusted")
+            logger.info(f"Position of pointer {breakpointid} has been adjusted")
             start = pointerstart
             end = pointerend
         # Convert pointers to TA junctions if possible
@@ -291,10 +295,10 @@ def getPointers(seq, start, end, iesseq):
         pointerstart = pointerstart - len(pointer)
         pointerend = pointerend - len(pointer)
     elif len(rightcheck) == len(leftcheck):
-        logging.info(f"Breakpoint {breakpointid} has potential pointers on both sides")
+        logger.info(f"Breakpoint {breakpointid} has potential pointers on both sides")
         pointer = "tie" # if both sides could potentially have a pointer
     else:
-        logging.warn(f"Unexpected result in pointer search for breakpoint {breakpointid}")
+        logger.warn(f"Unexpected result in pointer search for breakpoint {breakpointid}")
     return(pointer, pointerstart, pointerend)
 
 
@@ -759,7 +763,7 @@ class IesRecords(object):
                 # Find pointers if present
                 (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq)
                 if pointerstart != ins_start:
-                    logging.info(f"Position of pointer {breakpointid} has been adjusted")
+                    logger.info(f"Position of pointer {breakpointid} has been adjusted")
                     ins_start = pointerstart
                     ins_end = pointerend
                 if pointer: # Add pointer seq to attributes field if present
@@ -773,8 +777,6 @@ class IesRecords(object):
                         "ta_pointer_end=" + str(taend)])
                 # Maximize pointer lengths
                 # (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
-                print (breakpointid)
-                print (";".join(attr))
                 consseq.id = breakpointid
                 consseq.description = ";".join(attr)+";"
                 outseq[consseq.id] = consseq
@@ -881,7 +883,7 @@ class IesRecords(object):
                 # Find pointers if present
                 (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq)
                 if pointerstart != ins_start:
-                    print(f"Position of pointer {breakpointid} has been adjusted")
+                    print(f"Position of pointer {breakpointid} has been adjusted") # TODO add to logfile
                     ins_start = pointerstart
                     ins_end = pointerend
                 if pointer: # Add pointer seq to attributes field if present
