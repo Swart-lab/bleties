@@ -183,7 +183,7 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
             # Start minus one because for deletion, start is ON the deleted region
             refunedited = ref[ctg][start-flanklen-1:end+flanklen].seq.lower()
         # Find pointers if present
-        (pointer, pointerstart, pointerend)  = getPointers(ref[ctg], start, end, iesconsseq[breakpointid])
+        (pointer, pointerstart, pointerend)  = getPointers(ref[ctg], start, end, iesconsseq[breakpointid], breakpointid)
         if pointerstart != start:
             logger.info(f"Position of pointer {breakpointid} has been adjusted")
             start = pointerstart
@@ -215,7 +215,7 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
     return(outseqs)
 
 
-def getPointers(seq, start, end, iesseq):
+def getPointers(seq, start, end, iesseq, name):
     """Find potential pointer sequences at putative IES junctions
 
     Report the pointer sequences as-is from the mapper/GFF file
@@ -233,6 +233,8 @@ def getPointers(seq, start, end, iesseq):
         If start < end, the IES is retained in the reference sequence.
     iesseq : str or SeqRecord
         In case where start == end, IES sequence must be supplied separately
+    name : str
+        ID or name of breakpoint, for error reporting, optional.
 
     Returns
     -------
@@ -242,13 +244,17 @@ def getPointers(seq, start, end, iesseq):
         Adjusted IES start and IES end positions, such that the pointer sequence
         in the MDS is to the _right_ of the insert.
     """
+    # Give provisional name to this indel if none is supplied
+    if not name:
+        name = f"{seq} {int(start)} {int(end)}"
+
     if start == end:
         indel = "I"
     elif start < end:
         indel = "D"
         iesseq = seq[start-1 : end]
     else:
-        raise Exception(f"Start cannot be less than end, feature {breakpointid}")
+        raise Exception(f"Start cannot be less than end, feature {name}")
 
     # Remove gap characters from ies sequence
     if isinstance(iesseq, str):
@@ -264,6 +270,11 @@ def getPointers(seq, start, end, iesseq):
     rightcheck = ""
     # check left of IES
     i = 0
+    if name == "BREAK_POINTS_contig_18_686408_686408_309": # TODO troubleshooting
+        print(iesseq)
+        print(start)
+        print(end)
+        print(len(seq))
     while iesseq[i] == seq[end+i]:
         leftcheck += iesseq[i]
         i += 1
@@ -295,10 +306,10 @@ def getPointers(seq, start, end, iesseq):
         pointerstart = pointerstart - len(pointer)
         pointerend = pointerend - len(pointer)
     elif len(rightcheck) == len(leftcheck):
-        logger.info(f"Breakpoint {breakpointid} has potential pointers on both sides")
+        logger.info(f"Breakpoint {name} has potential pointers on both sides")
         pointer = "tie" # if both sides could potentially have a pointer
     else:
-        logger.warn(f"Unexpected result in pointer search for breakpoint {breakpointid}")
+        logger.warn(f"Unexpected result in pointer search for breakpoint {name}")
     return(pointer, pointerstart, pointerend)
 
 
@@ -379,6 +390,8 @@ def adjustPointerMaxlength(seq, start, end, pointer, iesseq):
         refstart = start
     elif indel == "D":
         refstart = start - 1
+    if not pointer:
+        pointer = ""
     while iesseq[i] == seq[refstart+i]:
         pointer = iesseq[i] + pointer
         i -= 1
@@ -761,7 +774,7 @@ class IesRecords(object):
                     attr.append("average_coverage="+str(readcov))
 
                 # Find pointers if present
-                (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq)
+                (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq, breakpointid)
                 if pointerstart != ins_start:
                     logger.info(f"Position of pointer {breakpointid} has been adjusted")
                     ins_start = pointerstart
@@ -881,9 +894,9 @@ class IesRecords(object):
                 consseq.description = ";".join(attr)+";"
                 outseq[consseq.id] = consseq
                 # Find pointers if present
-                (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq)
+                (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq, breakpointid)
                 if pointerstart != ins_start:
-                    print(f"Position of pointer {breakpointid} has been adjusted") # TODO add to logfile
+                    logger.info(f"Position of pointer {breakpointid} has been adjusted")
                     ins_start = pointerstart
                     ins_end = pointerend
                 if pointer: # Add pointer seq to attributes field if present
@@ -896,7 +909,7 @@ class IesRecords(object):
                         "ta_pointer_start=" + str(tastart),
                         "ta_pointer_end=" + str(taend)])
                 # Maximize pointer lengths
-                (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
+                # (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
                 # Build GFF entry
                 outarr = [str(ctg),            # 1 seqid
                           "MILRAA",            # 2 source

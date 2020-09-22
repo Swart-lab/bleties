@@ -51,3 +51,4 @@ To do list for MILRAA
      reads. Maybe give user option to specify "error profile" of input reads
  - [ ] Unit tests
  - [ ] Implement internal telomere finder as separate module in BleTIES
+ - [ ] Sanity check - check that contigs in reference match headers in BAM
