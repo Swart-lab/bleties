@@ -696,6 +696,7 @@ class IesRecords(object):
         # Initialize output
         gff = Gff()
         outseq = {}
+        counter = 0
 
         # Cluster inserts (junctions)
         for rec in nested_dict_to_list_fixed_depth(self._insSeqDict, 3):
@@ -804,6 +805,9 @@ class IesRecords(object):
                         ".",
                         ";".join(attr)+";"]
                 gff.addEntry(outarr, None)
+                counter += 1
+                if counter % 1000 == 0:
+                    logger.info(f"Processed {counter} entries...")
 
         return(gff, outseq)
         # TODO Fuzzy cluster both the indel positions on ref and the ins lengths
