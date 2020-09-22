@@ -683,6 +683,7 @@ class IesRecords(object):
         # Cluster inserts (junctions)
         for rec in nested_dict_to_list_fixed_depth(self._insSeqDict, 3):
             [ctg, ins_start, ins_end, dd] = rec
+            breakpointid = None
 
             if ins_end == ins_start:
                 ins_seqs = []
@@ -706,6 +707,7 @@ class IesRecords(object):
                         elif len(counts.keys()) > 1:
                             prefix = f"BREAK_POINTS_FUZZY"
                         breakpointid = "_".join([prefix, str(ctg), str(ins_start), str(ins_end)] + [str(l) for l in counts.keys()])
+                        gfftype = "junction"
 
                         # Attributes list of key-value pairs
                         # report modal IES length
@@ -714,12 +716,6 @@ class IesRecords(object):
                         # Report number of counts per insert length
                         attr.append("cigar=" + " ".join([str(l) + "I*" + str(counts[l]) for l in counts]))
 
-                        # Get average coverage of region of interest
-                        if self._alnformat == "bam":
-                            readcov = self._alnfile.count(str(ctg),
-                                    start=int(ins_start) - 1,
-                                    stop=int(ins_end))
-                            attr.append("average_coverage="+str(readcov))
 
                         # Get indel consensus
                         if len(counts.keys()) == 1: # cluster of one length
@@ -728,38 +724,71 @@ class IesRecords(object):
                         else:
                             # Otherwise use Muscle (potentially slower) to align
                             consseq = alnFromSeqs(clust)
-                        consseq.id = breakpointid
-                        consseq.description = ";".join(attr)+";"
 
-                        # Find pointers if present
-                        (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq)
-                        if pointerstart != ins_start:
-                            logging.info(f"Position of pointer {breakpointid} has been adjusted")
-                            ins_start = pointerstart
-                            ins_end = pointerend
-                        if pointer: # Add pointer seq to attributes field if present
-                            attr.append("pointer_seq=" + str(pointer))
-                        # Convert pointers to TA junctions if possible
-                        (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
-                        # Add TA pointer sequence to attributes field if present
-                        if tapointer:
-                            attr.extend(["ta_pointer_seq=" + str(tapointer),
-                                "ta_pointer_start=" + str(tastart),
-                                "ta_pointer_end=" + str(taend)])
-                        # Maximize pointer lengths
-                        # (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
-                        outseq[consseq.id] = consseq
+            elif ins_end > ins_start:
+                # Deletion feature - need to get count from _insDict
+                # This is otherwise same as reportPutativeIes
+                del_len = ins_end - ins_start + 1 # GFF is end-inclusive
+                totalcount = self._insDict[ctg][ins_start][ins_end][0]["D"]
+                if totalcount >= mindelbreaks:
+                    breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
+                    gfftype = "region"
+                    consseq = SeqRecord(Seq(dd[del_len][0], generic_dna))
+                    # Build attributes field
+                    attr = ["ID="+breakpointid,
+                            "IES_length="+str(del_len)]
+                    attr.append("cigar=" + str(del_len) + "D*" + str(totalcount))
+                    # Look for left- and rightclips that fall on the deletion boundaries
+                    # if self._insDict[ctg][ins_start][ins_start][ins_len].get("MHS") and int(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]) > 0:
+                    #     attr.append("cigar=MHS*" + str(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]))
+                    # if self._insDict[ctg][ins_end][ins_end][ins_len].get("HSM") and int(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]) > 0:
+                    #     attr.append("cigar=HSM*" + str(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]))
 
-                        outarr = [str(ctg),
-                                "MILRAA",
-                                "junction",
-                                str(ins_start),
-                                str(ins_end),
-                                str(totalcount),
-                                ".",
-                                ".",
-                                ";".join(attr)+";"]
-                        gff.addEntry(outarr, None)
+            else:
+                raise Exception("feature cannot start after it ends")
+
+            # Record to Gff
+            if breakpointid:
+                # Get average coverage of region of interest
+                if self._alnformat == "bam":
+                    readcov = self._alnfile.count(str(ctg),
+                            start=int(ins_start) - 1,
+                            stop=int(ins_end))
+                    attr.append("average_coverage="+str(readcov))
+
+                # Find pointers if present
+                (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq)
+                if pointerstart != ins_start:
+                    logging.info(f"Position of pointer {breakpointid} has been adjusted")
+                    ins_start = pointerstart
+                    ins_end = pointerend
+                if pointer: # Add pointer seq to attributes field if present
+                    attr.append("pointer_seq=" + str(pointer))
+                # Convert pointers to TA junctions if possible
+                (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
+                # Add TA pointer sequence to attributes field if present
+                if tapointer:
+                    attr.extend(["ta_pointer_seq=" + str(tapointer),
+                        "ta_pointer_start=" + str(tastart),
+                        "ta_pointer_end=" + str(taend)])
+                # Maximize pointer lengths
+                # (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
+                print (breakpointid)
+                print (";".join(attr))
+                consseq.id = breakpointid
+                consseq.description = ";".join(attr)+";"
+                outseq[consseq.id] = consseq
+
+                outarr = [str(ctg),
+                        "MILRAA",
+                        gfftype,
+                        str(ins_start),
+                        str(ins_end),
+                        str(totalcount),
+                        ".",
+                        ".",
+                        ";".join(attr)+";"]
+                gff.addEntry(outarr, None)
 
         return(gff, outseq)
         # TODO Fuzzy cluster both the indel positions on ref and the ins lengths
