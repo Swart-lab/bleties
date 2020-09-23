@@ -83,9 +83,9 @@ plt.title("Retention score")
 
 # IES lengths and pointer types
 plt.subplot(312)
-plt.hist([df.query("pointer == 'ta'")["length"],
-          df.query("pointer == 'pointer'")["length"],
-          df.query("pointer == 'none'")["length"]],
+plt.hist([df.query("pointer == 'none'")["length"],
+          df.query("pointer == 'ta'")["length"],
+          df.query("pointer == 'pointer'")["length"]],
          stacked=True, bins=100, label=['none','ta','pointer'])
 plt.legend()
 plt.xlabel("Length (bp)")
@@ -94,9 +94,9 @@ plt.title("IES length distribution")
 
 # IES lengths and pointer types - closeup
 plt.subplot(313)
-plt.hist([df.query("length > 25 & length <= 400 & pointer == 'ta'")["length"],
-          df.query("length > 25 & length <= 400 & pointer == 'pointer'")["length"],
-          df.query("length > 25 & length <= 400 & pointer == 'none'")["length"]],
+plt.hist([df.query("length > 25 & length <= 400 & pointer == 'none'")["length"],
+          df.query("length > 25 & length <= 400 & pointer == 'ta'")["length"],
+          df.query("length > 25 & length <= 400 & pointer == 'pointer'")["length"]],
          stacked=True, bins=375, label=['none','ta','pointer'])
 plt.legend()
 plt.xlabel("Length (bp)")
