@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 
-from bleties import SharedFunctions
-from sys import argv
 import re
 import json
 import argparse
+import sys
+import os
 
 import pandas as pd
 import matplotlib as mpl
 mpl.use("Agg") # allow run without X-server
 import matplotlib.pyplot as plt
+
+# Relative import relative to `scripts` folder
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+from bleties import SharedFunctions
 
 
 # Argument parser
