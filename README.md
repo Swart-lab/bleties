@@ -22,19 +22,25 @@ names:
 ./bleties.py milret --help
 ```
 
+Utility scripts are in the `scripts/` subfolder.
+
 ## MILRAA - Method of Identification by Long Read Alignment Anomalies
 
-Reimplementation of MIRAA in the ParTIES pipeline. MIRAA is used to identify IES
-retention in Paramecium genome by mapping Illumina reads against a reference
-somatic (MAC) genome. It achieves this by an initial Bowtie2 mapping step (local
-mode), then looks for breakpoints in the alignment, which are identified as
-insert (I), soft clip (S), or hard clip (H) operations in the CIGAR string of
-the alignment.
+Reimplementation of MIRAA in the ParTIES pipeline. The original MIRAA is used
+to identify IES retention in Paramecium genome by mapping Illumina reads
+against a reference somatic (MAC) genome. It achieves this by an initial
+Bowtie2 mapping step (local mode), then looks for breakpoints in the alignment,
+which are identified as insert (I), soft clip (S), or hard clip (H) operations
+in the CIGAR string of the alignment.
 
 MILRAA reimplements the MIRAA concept for PacBio and other long read alignments.
 The long reads must first be aligned to the reference genome (assumed to be
 somatic possibly with some IES retentions that have assembled), assumption is
 that the alignment is accurate.
+
+The recommended aligner is [minimap2](https://github.com/lh3/minimap2), with
+the options `--secondary=no --MD`, and with PacBio HiFi or CCS reads (use
+option `-ax asm20`).
 
 Differences of long read to Illumina alignments:
  * One read may have multiple inserts -> Have to iterate through each alignment,
@@ -43,6 +49,9 @@ Differences of long read to Illumina alignments:
    parameter, expect reads to span entire IESs
  * Error rate of reads is expected to be higher -> Set higher `-max_mismatch`
    threshold
+
+The output GFF3 file from MILRAA can be used to plot graphical summary of
+predicted IESs with the script `scripts/milraa_gff_ies_plot.py`.
 
 ## MISER - Method of IES Spurious or Erroneous Reporting
 
