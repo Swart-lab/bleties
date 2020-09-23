@@ -18,13 +18,26 @@ class TestMilraa(unittest.TestCase):
         self.assertEqual(
                 Milraa.getPointers(seq, 7, 7, iesseq_TG, "test_ins_TG"),
                 ("TG", 7, 7))
-        # Test region IESs
+        # Test deletion IESs
         self.assertEqual(
                 Milraa.getPointers(seq, 2, 13, iesseq_TG, "test_del_left"),
                 ("TAG", 2, 13))
         self.assertEqual(
                 Milraa.getPointers(seq, 5, 16, iesseq_TG, "test_del_right"),
                 ("TAG", 2, 13))
+
+
+    def test_adjustPointerMaxlength(self):
+        seq = "ATAGCGCTGCGTTTAGTT"
+        # Test insertion IESs
+        ies = "AGCGT"
+        self.assertEqual(
+                Milraa.adjustPointerMaxlength(seq, 2, 2, "AG", ies),
+                (1, 1, "TAG"))
+        # Test deletion IESs
+        self.assertEqual(
+                Milraa.adjustPointerMaxlength(seq, 3, 14, "AG", None),
+                (2, 13, "TAG"))
 
 
     def test_alnFromSeqs(self):
