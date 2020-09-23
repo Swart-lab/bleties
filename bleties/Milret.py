@@ -6,6 +6,7 @@ from bleties.SharedValues import SharedValues
 from bleties.SharedFunctions import SharedFunctions
 from bleties.SharedFunctions import Gff
 
+
 def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatchlength):
     """Identify whether a given reference position is covered by a reference-
     consuming operation.
@@ -60,6 +61,7 @@ def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatc
                     # print(f"{str(curr_int_start)} {str(curr_int_end)} {str(reftargetpos)} {cig}") # TODO diagnostic mode
                     return(cigmatch.group(2))
 
+
 class IesRetentionsMacOnly(object):
     def __init__(self, gfffile, alnfile):
         """Construct object to store IES retention data.
@@ -85,6 +87,7 @@ class IesRetentionsMacOnly(object):
                 )
         # Initialize dict to hold retention scores calculated from counts
         self._scoresDict = defaultdict(float)
+
 
     def findMappingOps(self):
         """Find mapping operations at the IES junctions, and count how many of
@@ -121,12 +124,14 @@ class IesRetentionsMacOnly(object):
                     # Record the count
                     self._countsDict[gffid][res] +=1
 
+
     def calculateRetentionScores(self):
         """Calculate retention scores from counts of I and M operations per site
         after findMappingOps() has been applied.
 
         Equation: R = IES+ / (IES+ + IES-)
         """
+        # TODO: Calculate retention scores for D operations too
 
         for gffid in self._countsDict:
             iesplus = 0
@@ -140,6 +145,7 @@ class IesRetentionsMacOnly(object):
             else:
                 score = None
             self._scoresDict[gffid] = score
+
 
     def reportRetentionScores(self, fh):
         """Report retention scores after running calculateRetentionScores().
