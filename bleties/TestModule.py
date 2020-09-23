@@ -1,13 +1,8 @@
-#!/usr/bin/env python3
+
 
 import unittest
 from bleties import Milret
 from bleties import Milraa
-
-class TestStringMethods(unittest.TestCase):
-
-    def test_upper(self):
-        self.assertEqual('foo'.upper(), "FOO")
 
 
 class TestMilraa(unittest.TestCase):
@@ -32,6 +27,24 @@ class TestMilraa(unittest.TestCase):
                 ("TAG", 2, 13))
 
 
+    def test_alnFromSeqs(self):
+        seqlist = ['ATGCG',
+                   'ATCG',
+                   'ATCG']
+        self.assertEqual(
+                str(Milraa.alnFromSeqs(seqlist, 0.7).seq),
+                "ATXCG")
+        # Milraa.alnFromSeqs produces SeqRecord object, but direct comparison
+        # of SeqRecord objects is deprecated, so must first convert to str
+
+
+    def test_alnDumbFromSeqs(self):
+        seqlist = ['ATCG','ATCG','ATGG']
+        self.assertEqual(
+                str(Milraa.alnDumbFromSeqs(seqlist, 0.7).seq),
+                "ATXG")
+
+
 class TestMilret(unittest.TestCase):
 
     def test_getOperationAtRefPos(self):
@@ -43,6 +56,7 @@ class TestMilret(unittest.TestCase):
                 Milret.getOperationAtRefPos(97, 1, "20M77D12I77M", 1, 1),"I")
         self.assertEqual(
                 Milret.getOperationAtRefPos(98, 1, "20M77D12I77M", 1, 1),"M")
+
 
 if __name__ == '__main__':
     unittest.main()

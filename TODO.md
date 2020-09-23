@@ -49,6 +49,6 @@ To do list for MILRAA
  - [ ] MILRAA prediction of inserts: how to deal with fuzzy boundaries and
      variable insert lengths? Will be more of a problem with subreads vs. CCS
      reads. Maybe give user option to specify "error profile" of input reads
- - [ ] Unit tests
+ - [x] Unit tests
  - [ ] Implement internal telomere finder as separate module in BleTIES
  - [x] Sanity check - check that contigs in reference match headers in BAM
