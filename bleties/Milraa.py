@@ -234,7 +234,7 @@ def getPointers(seq, start, end, iesseq, name):
     iesseq : str or SeqRecord
         In case where start == end, IES sequence must be supplied separately
     name : str
-        ID or name of breakpoint, for error reporting, optional.
+        ID or name of breakpoint, for error reporting.
 
     Returns
     -------
@@ -270,12 +270,9 @@ def getPointers(seq, start, end, iesseq, name):
     rightcheck = ""
     # check left of IES
     i = 0
-    if name == "BREAK_POINTS_contig_18_686408_686408_309": # TODO troubleshooting
-        print(iesseq)
-        print(start)
-        print(end)
-        print(len(seq))
     while iesseq[i] == seq[end+i]:
+        # print(f"checkleft {name} {seq} {str(i)} {iesseq[i]} {seq[end+i]}") # for debugging
+        # print(iesseq)
         leftcheck += iesseq[i]
         i += 1
         # break out of loop if the next position runs off edge
@@ -288,6 +285,7 @@ def getPointers(seq, start, end, iesseq, name):
     elif indel == "D":
         refstart = start - 1
     while iesseq[i] == seq[refstart+i]:
+        # print(f"checkright {name} {seq} {str(i)} {iesseq[i]} {seq[refstart+i]}") # for debugging
         rightcheck = iesseq[i] + rightcheck
         i -= 1
         # break out of loop if next position runs off edge
