@@ -29,9 +29,9 @@ def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatc
         Returns the operation that covers that position. If no operation covers
         that position, nothing is returned
     """
-
-    curr_int_start = refstartpos
-    curr_int_end = refstartpos
+    curr_int_start = refstartpos - 1 # the minus-one is necessary to get this to work, TODO figure out why!
+    curr_int_end = refstartpos - 1
+    # print(f"{str(refstartpos)} {str(reftargetpos)} {cigar}") # TODO: diagnostic mode
     # Split cigar string into individual operations
     cigs = re.findall(r"\d+[\w\=]", cigar)
     for cig in cigs:
@@ -50,12 +50,14 @@ def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatc
             # Check whether the target position is contained in the current interval
             if reftargetpos in range(curr_int_start,curr_int_end): # TODO check off-by-one errors
                 if int(cigmatch.group(1)) > minmatchlength:
+                    # print(f"{str(curr_int_start)} {str(curr_int_end)} {str(reftargetpos)} {cig}") # TODO diagnostic mode
                     return(cigmatch.group(2))
         # If current operation interval is zero (i.e. not ref-consuming)
         elif curr_int_end == curr_int_start:
             # and it matches exactly the target poosition
             if reftargetpos == curr_int_end:
                 if int(cigmatch.group(1)) > mininslength:
+                    # print(f"{str(curr_int_start)} {str(curr_int_end)} {str(reftargetpos)} {cig}") # TODO diagnostic mode
                     return(cigmatch.group(2))
 
 class IesRetentionsMacOnly(object):
