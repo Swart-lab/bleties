@@ -3,8 +3,7 @@
 import re
 from collections import defaultdict
 from bleties.SharedValues import SharedValues
-from bleties.SharedFunctions import SharedFunctions
-from bleties.SharedFunctions import Gff
+from bleties.SharedFunctions import SharedFunctions, Gff
 
 
 def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatchlength):
@@ -101,7 +100,9 @@ class IesRetentionsMacOnly(object):
         # TODO: Set cutoff for minimum length of match oepration, and/or min
         # distance for the match boundaries from the IES junction
         # TODO: Only count insert operations that are within X bases in length
-        # different from the reported IES length
+        # different from the reported IES length, based on the MILRAA reported
+        # IES length, if available. Have a default mode which does not assume
+        # that the GFF file is from MILRAA
         for gffid in self._gff._gffDict: # Each IES ID
             seqid = self._gff._gffDict[gffid]['seqid']
             start = int(self._gff._gffDict[gffid]['start'])

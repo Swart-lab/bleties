@@ -15,7 +15,8 @@ from Bio.Align import AlignInfo
 from Bio import AlignIO
 
 from bleties.SharedValues import SharedValues
-from bleties.SharedFunctions import Gff, nested_dict_to_list, get_clusters, nested_dict_to_list_fixed_depth, get_clusters_from_seqlist
+from bleties.SharedFunctions import (Gff, nested_dict_to_list, get_clusters,
+    nested_dict_to_list_fixed_depth, get_clusters_from_seqlist)
 
 
 # Define logger
@@ -47,8 +48,11 @@ def getClips(cigar, pos):
     rightclipmatch = re.search(r"(\d+)M(\d+)[HS]$", cigar)
     if rightclipmatch:
         refconsumematches = re.findall(r"(\d+)[MDN\=X]", cigar) # find all ref-consuming operations
-        rightclip_refconsumed = sum([int(refconsumematch) for refconsumematch in refconsumematches])
-        outarr.append((pos + rightclip_refconsumed, pos+rightclip_refconsumed, "MHS"))
+        rightclip_refconsumed = sum([int(refconsumematch) 
+            for refconsumematch in refconsumematches])
+        outarr.append((pos + rightclip_refconsumed, 
+            pos+rightclip_refconsumed, 
+            "MHS"))
     return(outarr)
 
 
@@ -152,7 +156,7 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
         elif start < end:
             indel = "D"
         else:
-            raise Exception("Start cannot be less than end, feature " + breakpointid)
+            raise Exception(f"Start cannot be less than end, feature {breakpointid}")
         # Get the left flanking junction on reference
         # Check whether sequence with flanking will run off the end
         if start >= flanklen: # TODO Check off-by-one
