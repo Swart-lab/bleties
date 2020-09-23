@@ -12,7 +12,6 @@ from numpy import array
 import logging
 
 
-# TODO define logger
 logger = logging.getLogger("SharedFunctions")
 
 
