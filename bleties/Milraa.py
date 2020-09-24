@@ -61,8 +61,9 @@ def getIndels(cigar, pos, minlength, qseq):
     deletions.
 
     Return list of tuples (start pos, end pos, insert length,
-    insertion or deletion, insert sequence). If it is a deletion then there is
-    no insert sequence reported because that can be parsed from the reference.
+    insertion or deletion, insert sequence). If it is a deletion then no insert
+    length or insert sequence are reported because that can be parsed from the
+    reference.
 
     Parameters
     ----------

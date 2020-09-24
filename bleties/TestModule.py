@@ -1,8 +1,12 @@
-
+#!/usr/bin/env python3
 
 import unittest
 from bleties import Milret
 from bleties import Milraa
+
+
+# To run tests from parent directory:
+# python -m unittest -v bleties.TestModule
 
 
 class TestMilraa(unittest.TestCase):
@@ -25,6 +29,13 @@ class TestMilraa(unittest.TestCase):
         self.assertEqual(
                 Milraa.getPointers(seq, 5, 16, iesseq_TG, "test_del_right"),
                 ("TAG", 2, 13))
+
+
+    def test_adjustPointerTA(self):
+        # Test deletion IESs
+        self.assertEqual(
+                Milraa.adjustPointerTA(2, 13, "TTAG"),
+                (3, 14, "TAG"))
 
 
     def test_adjustPointerMaxlength(self):
@@ -58,17 +69,30 @@ class TestMilraa(unittest.TestCase):
                 "ATXG")
 
 
+    def test_getIndels(self):
+        cigar = "5M2D3M2I5M"
+        qseq = "ATATATTTCCATATA"
+        self.assertEqual(
+                Milraa.getIndels(cigar, 5, 2, qseq),
+                [(10, 11, 0, "D", ""),
+                 (14, 14, 2, "I", "CC")])
+
+
 class TestMilret(unittest.TestCase):
 
     def test_getOperationAtRefPos(self):
         self.assertEqual(
-                Milret.getOperationAtRefPos(17, 15, "20M77D12I77M", 1, 1),"M")
+                Milret.getOperationAtRefPos(17, 15, "20M77D12I77M", 1, 1),
+                "M")
         self.assertEqual(
-                Milret.getOperationAtRefPos(37, 15, "20M77D12I77M", 1, 1),"D")
+                Milret.getOperationAtRefPos(37, 15, "20M77D12I77M", 1, 1),
+                "D")
         self.assertEqual(
-                Milret.getOperationAtRefPos(97, 1, "20M77D12I77M", 1, 1),"I")
+                Milret.getOperationAtRefPos(97, 1, "20M77D12I77M", 1, 1),
+                "I")
         self.assertEqual(
-                Milret.getOperationAtRefPos(98, 1, "20M77D12I77M", 1, 1),"M")
+                Milret.getOperationAtRefPos(98, 1, "20M77D12I77M", 1, 1),
+                "M")
 
 
 if __name__ == '__main__':
