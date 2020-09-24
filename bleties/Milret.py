@@ -96,6 +96,21 @@ class IesRetentionsMacOnly(object):
         self._scoresDict = defaultdict(float)
 
 
+    def dump(self, dumpfile):
+        """Dump internal objects to JSON file for troubleshooting
+
+        Parameters
+        ----------
+        dumpfile : str
+            Path to output file to write JSON
+        """
+        import json
+        with open(dumpfile, "w") as fh:
+            fh.write(json.dumps({"countsDict" : self._countsDict,
+                    "scoresDict" : self._scoresDict},
+                indent=4))
+
+
     def findMappingOps(self):
         """Find mapping operations at the IES junctions, and count how many of
         each type.
@@ -198,27 +213,28 @@ class IesRetentionsMacOnly(object):
                 logger.debug(f"Ignored GFF entry {gffid} when calculating retention scores, not a junction")
 
 
-    def reportRetentionScores(self, fh):
+    def reportRetentionScores(self, outfile):
         """Report retention scores after running calculateRetentionScores().
         Writes to filehandle.
 
         Parameters
         ----------
-        fh
-            Filehandle to write results
+        outfile : str
+            Path to file to write results
         """
         # Create header line
         headerarr = ['ID', 'score']
         headerarr.extend(SharedValues.ALLCIGAROPS)
-        fh.write("\t".join(headerarr)+"\n")
-        # Report for each IES junction
-        for gffid in sorted(self._scoresDict):
-            # Report scores
-            outarr = [gffid, str(self._scoresDict[gffid])]
-            # Report counts per CIGAR op, zero if not recorded for this junction
-            for op in SharedValues.ALLCIGAROPS:
-                if self._countsDict[gffid][op]:
-                    outarr.append(str(len(self._countsDict[gffid][op])))
-                else:
-                    outarr.append("0")
-            fh.write("\t".join(outarr) + "\n")
+        with open(outfile, "w") as fh:
+            fh.write("\t".join(headerarr)+"\n")
+            # Report for each IES junction
+            for gffid in sorted(self._scoresDict):
+                # Report scores
+                outarr = [gffid, str(self._scoresDict[gffid])]
+                # Report counts per CIGAR op, zero if not recorded for this junction
+                for op in SharedValues.ALLCIGAROPS:
+                    if self._countsDict[gffid][op]:
+                        outarr.append(str(len(self._countsDict[gffid][op])))
+                    else:
+                        outarr.append("0")
+                fh.write("\t".join(outarr) + "\n")

@@ -283,4 +283,6 @@ def milret(args):
         logger.info("Counting all inserts at junctions as potential IESs, regardless of length")
         iesretentions.calculateRetentionScores()
     iesretentions.reportRetentionScores(args.out)
+    if args.dump:
+        iesretentions.dump(f"{args.out}.dump.json")
     logger.info("Finished MILRET")

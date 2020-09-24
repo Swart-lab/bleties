@@ -219,10 +219,10 @@ milret_parser.add_argument("--length_threshold", type=float, default=0.05,
 # Output arguments
 milret_parser.add_argument("--out",
     "-o",
-    nargs='?',
-    type=argparse.FileType("w"),
-    default=sys.stdout,
-    help="Path to write table of retention scores per IES, defaults to STDOUT")
+    default="milret.test",
+    help="Path to write table of retention scores per IES")
+milret_parser.add_argument("--dump", action="store_true",
+    help="Dump contents of retention score objects to JSON file, for troubleshooting")
 
 # Assign function to this subparser
 milret_parser.set_defaults(func=main.milret)
