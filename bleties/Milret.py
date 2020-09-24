@@ -2,8 +2,14 @@
 
 import re
 from collections import defaultdict
+import logging
+
 from bleties.SharedValues import SharedValues
 from bleties.SharedFunctions import SharedFunctions, Gff
+
+
+# Define logger
+logger = logging.getLogger("Milret")
 
 
 def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatchlength):
@@ -130,21 +136,24 @@ class IesRetentionsMacOnly(object):
 
         Equation: R = IES+ / (IES+ + IES-)
         """
-        # TODO: Calculate retention scores for D operations too
 
         for gffid in self._gff:
-            if gffid in self._countsDict:
-                iesplus = 0
-                iesminus = 0
-                if 'M' in self._countsDict[gffid]:
-                    iesminus = len(self._countsDict[gffid]['M'])
-                if 'I' in self._countsDict[gffid]:
-                    iesplus = len(self._countsDict[gffid]['I'])
-                if iesplus + iesminus > 0:
-                    score = round(float(iesplus / (iesplus + iesminus)), 4)
-                else:
-                    score = None
-                self._scoresDict[gffid] = score
+            # Only calculate for junction features, i.e. inserts
+            if self._gff.getValue(gffid, "start") == self._gff.getValue(gffid, "end"):
+                if gffid in self._countsDict:
+                    iesplus = 0
+                    iesminus = 0
+                    if 'M' in self._countsDict[gffid]:
+                        iesminus = len(self._countsDict[gffid]['M'])
+                    if 'I' in self._countsDict[gffid]:
+                        iesplus = len(self._countsDict[gffid]['I'])
+                    if iesplus + iesminus > 0:
+                        score = round(float(iesplus / (iesplus + iesminus)), 4)
+                    else:
+                        score = None
+                    self._scoresDict[gffid] = score
+            else:
+                logger.debug(f"Ignored GFF entry {gffid} when calculating retention scores, not a junction")
 
 
     def calculateRetentionScoresMatchLengths(self, threshold=0.05):
@@ -158,32 +167,36 @@ class IesRetentionsMacOnly(object):
 
         Equation: R = IES+ / (IES+ + IES-)
         """
-        # TODO: Calculate retention scores for D operations too
 
         for gffid in self._gff:
-            # Get defined IES length
-            ieslength = self._gff.getAttr(gffid, "IES_length")
-            if ieslength: # None is returned if attribute absent
-                ieslens = [int(i) for i in ieslength.split("_")]
-                if len(ieslens) == 1:
-                    ieslength = ieslens[0]
-                elif len(ieslens) > 1:
-                    ieslength = round(sum(ieslens) / len(ieslens))
-            if gffid in self._countsDict:
-                iesplus = 0
-                iesminus = 0
-                if 'M' in self._countsDict[gffid]:
-                    iesminus = len(self._countsDict[gffid]['M'])
-                if 'I' in self._countsDict[gffid]:
-                    iesplus_lengthmatched = [i for i in self._countsDict[gffid]['I']
-                            if i >= ieslength*(1-threshold)
-                            and i <= ieslength*(1+threshold)]
-                    iesplus = len(iesplus_lengthmatched)
-                if iesplus + iesminus > 0:
-                    score = round(float(iesplus / (iesplus + iesminus)), 4)
-                else:
-                    score = None
-                self._scoresDict[gffid] = score
+            # Only calculate for junction features, i.e. inserts
+            if self._gff.getValue(gffid, "start") == self._gff.getValue(gffid, "end"):
+                # Get defined IES length
+                ieslength = self._gff.getAttr(gffid, "IES_length")
+                if ieslength: # None is returned if attribute absent
+                    ieslens = [int(i) for i in ieslength.split("_")]
+                    if len(ieslens) == 1:
+                        ieslength = ieslens[0]
+                    elif len(ieslens) > 1:
+                        ieslength = round(sum(ieslens) / len(ieslens))
+                if gffid in self._countsDict:
+                    iesplus = 0
+                    iesminus = 0
+                    if 'M' in self._countsDict[gffid]:
+                        iesminus = len(self._countsDict[gffid]['M'])
+                    if 'I' in self._countsDict[gffid]:
+                        iesplus_lengthmatched = [i for i in self._countsDict[gffid]['I']
+                                if i >= ieslength*(1-threshold)
+                                and i <= ieslength*(1+threshold)]
+                        iesplus = len(iesplus_lengthmatched)
+                    if iesplus + iesminus > 0:
+                        score = round(float(iesplus / (iesplus + iesminus)), 4)
+                    else:
+                        score = None
+                    self._scoresDict[gffid] = score
+            else:
+                logger.debug(f"Ignored GFF entry {gffid} when calculating retention scores, not a junction")
+
 
     def reportRetentionScores(self, fh):
         """Report retention scores after running calculateRetentionScores().

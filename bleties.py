@@ -188,6 +188,9 @@ Points to note and address in the future:
    count a match?
  * Some junctions also exhibit deletions, which may be alternative excisions,
    misassembly, or misalignments.
+ * Deletions are not counted because the reference is assumed to be IES-free.
+   Entries in the input GFF that define regions (i.e. not junctions) will be
+   ignored.
 """
 
 milret_parser = subparsers.add_parser(name="milret",
