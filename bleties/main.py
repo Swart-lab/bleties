@@ -286,3 +286,19 @@ def milret(args):
     if args.dump:
         iesretentions.dump(f"{args.out}.dump.json")
     logger.info("Finished MILRET")
+
+
+def milcor(args):
+    logger = logging.getLogger("main.milcor")
+    logger.info("Started BleTIES MILCOR")
+    logger.info("Command line:")
+    logger.info(" ".join(sys.argv))
+
+    # Read BAM file - SAM not supported because we need random access
+    logger.info(f"Opening alignment file {args.bam}")
+    alnfile = pysam.AlignmentFile(args.bam, "rb")
+
+    iescorr = Milcor.IesCorrelationsByRead(args.ies, alnfile)
+    iescorr.countIesCooccurrences()
+
+    iescorr.dump("milcor.dump.json")

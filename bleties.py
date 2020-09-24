@@ -227,6 +227,23 @@ milret_parser.add_argument("--dump", action="store_true",
 # Assign function to this subparser
 milret_parser.set_defaults(func=main.milret)
 
+
+# MILCOR -----------------------------------------------------------------------
+# TODO: Detailed description of MILCOR
+
+milcor_parser = subparsers.add_parser(name="milcor",
+        description="MILCOR - Method of IES Long-read CORrelation",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+milcor_parser.add_argument("--bam",
+    help="BAM file containing mapping, must be sorted and indexed")
+milcor_parser.add_argument("--ies",
+    help="GFF3 file containing coordinates of IES junctions in MAC genome")
+milcor_parser.add_argument("--dump", action="store_true",
+    help="Dump contents of IES correlation objects to JSON file, for troubleshooting")
+
+milcor_parser.set_defaults(func=main.milcor)
+
 # Parse arguments --------------------------------------------------------------
 args = parser.parse_args()
 
