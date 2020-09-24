@@ -15,8 +15,7 @@ from Bio.Align import AlignInfo
 from Bio import AlignIO
 
 from bleties.SharedValues import SharedValues
-from bleties.SharedFunctions import (Gff, nested_dict_to_list, get_clusters,
-    nested_dict_to_list_fixed_depth, get_clusters_from_seqlist)
+from bleties.SharedFunctions import *
 
 
 # Define logger

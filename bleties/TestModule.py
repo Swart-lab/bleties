@@ -1,12 +1,30 @@
 #!/usr/bin/env python3
 
 import unittest
-from bleties import Milret
-from bleties import Milraa
 
+from bleties import Milraa
+from bleties import SharedFunctions
+# from bleties import Milret
 
 # To run tests from parent directory:
 # python -m unittest -v bleties.TestModule
+
+
+class TestSharedFunctions(unittest.TestCase):
+
+    def test_getOperationAtRefPos(self):
+        self.assertEqual(
+                SharedFunctions.getOperationAtRefPos(17, 15, "20M77D12I77M", 1, 1),
+                ("M", 20))
+        self.assertEqual(
+                SharedFunctions.getOperationAtRefPos(37, 15, "20M77D12I77M", 1, 1),
+                ("D", 77))
+        self.assertEqual(
+                SharedFunctions.getOperationAtRefPos(97, 1, "20M77D12I77M", 1, 1),
+                ("I", 12))
+        self.assertEqual(
+                SharedFunctions.getOperationAtRefPos(98, 1, "20M77D12I77M", 1, 1),
+                ("M", 77))
 
 
 class TestMilraa(unittest.TestCase):
@@ -78,21 +96,7 @@ class TestMilraa(unittest.TestCase):
                  (14, 14, 2, "I", "CC")])
 
 
-class TestMilret(unittest.TestCase):
-
-    def test_getOperationAtRefPos(self):
-        self.assertEqual(
-                Milret.getOperationAtRefPos(17, 15, "20M77D12I77M", 1, 1),
-                ("M", 20))
-        self.assertEqual(
-                Milret.getOperationAtRefPos(37, 15, "20M77D12I77M", 1, 1),
-                ("D", 77))
-        self.assertEqual(
-                Milret.getOperationAtRefPos(97, 1, "20M77D12I77M", 1, 1),
-                ("I", 12))
-        self.assertEqual(
-                Milret.getOperationAtRefPos(98, 1, "20M77D12I77M", 1, 1),
-                ("M", 77))
+# class TestMilret(unittest.TestCase):
 
 
 if __name__ == '__main__':

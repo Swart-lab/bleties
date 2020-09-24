@@ -5,68 +5,11 @@ from collections import defaultdict
 import logging
 
 from bleties.SharedValues import SharedValues
-from bleties.SharedFunctions import SharedFunctions, Gff
+from bleties.SharedFunctions import *
 
 
 # Define logger
 logger = logging.getLogger("Milret")
-
-
-def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatchlength):
-    """Identify whether a given reference position is covered by a reference-
-    consuming operation.
-
-    Parameters
-    ----------
-    reftargetpos : int
-        Target position on the reference sequence, 1-based
-    refstartpos : int
-        Start position of the alignment on reference, 1-based
-    cigar : str
-        CIGAR string of the alignment
-    mininslength : int
-        Minimum length of insert to report
-    minmatchlength : int
-        Minimum length of match to report
-
-    Returns
-    -------
-    str
-        Operation that covers that position. If no operation covers that
-        position, nothing is returned
-    int
-        Length of the operation.
-    """
-    curr_int_start = refstartpos - 1 # the minus-one is necessary to get this to work, TODO figure out why!
-    curr_int_end = refstartpos - 1
-    # print(f"{str(refstartpos)} {str(reftargetpos)} {cigar}") # diagnostic mode
-    # Split cigar string into individual operations
-    cigs = re.findall(r"\d+[\w\=]", cigar)
-    for cig in cigs:
-        cigmatch = re.match(r"(\d+)([\w\=])",cig) # Get number and operation
-        # If reference is consumed:
-        if cigmatch.group(2) in SharedValues.REFCONSUMING:
-            # Update the current interval
-            curr_int_start = curr_int_end
-            curr_int_end = curr_int_end + int(cigmatch.group(1))
-        # Otherwise if query is consumed
-        else:
-            curr_int_start = curr_int_end # current operation has extent zero on ref
-
-        # If current operation is ref-consuming
-        if curr_int_end > curr_int_start:
-            # Check whether the target position is contained in the current interval
-            if reftargetpos in range(curr_int_start,curr_int_end): # TODO check off-by-one errors
-                if int(cigmatch.group(1)) > minmatchlength:
-                    # print(f"{str(curr_int_start)} {str(curr_int_end)} {str(reftargetpos)} {cig}") # diagnostic mode
-                    return(cigmatch.group(2), int(cigmatch.group(1)))
-        # If current operation interval is zero (i.e. not ref-consuming)
-        elif curr_int_end == curr_int_start:
-            # and it matches exactly the target poosition
-            if reftargetpos == curr_int_end:
-                if int(cigmatch.group(1)) > mininslength:
-                    # print(f"{str(curr_int_start)} {str(curr_int_end)} {str(reftargetpos)} {cig}") # diagnostic mode
-                    return(cigmatch.group(2), int(cigmatch.group(1)))
 
 
 class IesRetentionsMacOnly(object):
