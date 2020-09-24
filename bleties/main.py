@@ -298,7 +298,19 @@ def milcor(args):
     logger.info(f"Opening alignment file {args.bam}")
     alnfile = pysam.AlignmentFile(args.bam, "rb")
 
+    logger.info(f"Counting per-read presence of IESs defined in file {args.ies}")
     iescorr = Milcor.IesCorrelationsByRead(args.ies, alnfile)
     iescorr.countIesCooccurrences()
 
-    iescorr.dump("milcor.dump.json")
+    out_perread_table = iescorr.summarizePerRead()
+    logger.info(f"Writing output to file {args.out}.milcor.tsv")
+    with open(f"{args.out}.milcor.tsv", "w") as fh:
+        fh.write("\t".join(['qname', 'rname', 'start', 'end', 'ies_present', 'ies_absent']))
+        fh.write("\n")
+        for line in out_perread_table:
+            fh.write("\t".join([str(i) for i in line]))
+            fh.write("\n")
+
+    if args.dump:
+        logger.info(f"Dumping internal data to file {args.out}.dump.json for troubleshooting")
+        iescorr.dump(f"{args.out}.dump.json")

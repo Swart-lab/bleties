@@ -89,11 +89,38 @@ class IesCorrelationsByRead(object):
 
 
     def dump(self, filename):
+        """Dump internal data to JSON for troubleshooting
+
+        Parameters
+        ----------
+        filename : str
+            Path to file to write JSON
+        """
         import json
         with open(filename, "w") as fh:
             fh.write(json.dumps({"_perRead" : self._perRead,
                 "_perIes" : self._perIes}, indent=4))
 
-    # TODO: Report % of IESs observed per read
+
+    def summarizePerRead(self):
+        """Summarize statistics per read for plotting
+
+        Returns
+        -------
+        list
+            list of lists containing summary IES statistics per read.
+            Fields: read name, reference contig, start, end, number of IESs
+            with inserts present, number of IESs with inserts absent
+        """
+        out = []
+        for qname in self._perRead:
+            out.append([qname,
+             self._perRead[qname]['ref'],
+             self._perRead[qname]['start'],
+             self._perRead[qname]['end'],
+             len(self._perRead[qname]['present']),
+             len(self._perRead[qname]['absent'])])
+        return(out)
+
     # TODO: ? Graphical representation of IES co-occurrence
     # TODO: Flag IESs that have co-occurrences more or less than expected

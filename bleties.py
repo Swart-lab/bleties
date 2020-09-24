@@ -239,7 +239,14 @@ milcor_parser.add_argument("--bam",
     help="BAM file containing mapping, must be sorted and indexed")
 milcor_parser.add_argument("--ies",
     help="GFF3 file containing coordinates of IES junctions in MAC genome")
-milcor_parser.add_argument("--dump", action="store_true",
+
+# Output arguments
+milcor_parser.add_argument("--out",
+    "-o",
+    default="milcor.test",
+    help="Path to write table of retention scores per IES")
+milcor_parser.add_argument("--dump", 
+    action="store_true",
     help="Dump contents of IES correlation objects to JSON file, for troubleshooting")
 
 milcor_parser.set_defaults(func=main.milcor)
