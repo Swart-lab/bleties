@@ -26,12 +26,14 @@ def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatc
     Returns
     -------
     str
-        Returns the operation that covers that position. If no operation covers
-        that position, nothing is returned
+        Operation that covers that position. If no operation covers that
+        position, nothing is returned
+    int
+        Length of the operation.
     """
     curr_int_start = refstartpos - 1 # the minus-one is necessary to get this to work, TODO figure out why!
     curr_int_end = refstartpos - 1
-    # print(f"{str(refstartpos)} {str(reftargetpos)} {cigar}") # TODO: diagnostic mode
+    # print(f"{str(refstartpos)} {str(reftargetpos)} {cigar}") # diagnostic mode
     # Split cigar string into individual operations
     cigs = re.findall(r"\d+[\w\=]", cigar)
     for cig in cigs:
@@ -50,15 +52,15 @@ def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatc
             # Check whether the target position is contained in the current interval
             if reftargetpos in range(curr_int_start,curr_int_end): # TODO check off-by-one errors
                 if int(cigmatch.group(1)) > minmatchlength:
-                    # print(f"{str(curr_int_start)} {str(curr_int_end)} {str(reftargetpos)} {cig}") # TODO diagnostic mode
-                    return(cigmatch.group(2))
+                    # print(f"{str(curr_int_start)} {str(curr_int_end)} {str(reftargetpos)} {cig}") # diagnostic mode
+                    return(cigmatch.group(2), int(cigmatch.group(1)))
         # If current operation interval is zero (i.e. not ref-consuming)
         elif curr_int_end == curr_int_start:
             # and it matches exactly the target poosition
             if reftargetpos == curr_int_end:
                 if int(cigmatch.group(1)) > mininslength:
-                    # print(f"{str(curr_int_start)} {str(curr_int_end)} {str(reftargetpos)} {cig}") # TODO diagnostic mode
-                    return(cigmatch.group(2))
+                    # print(f"{str(curr_int_start)} {str(curr_int_end)} {str(reftargetpos)} {cig}") # diagnostic mode
+                    return(cigmatch.group(2), int(cigmatch.group(1)))
 
 
 class IesRetentionsMacOnly(object):
@@ -82,7 +84,7 @@ class IesRetentionsMacOnly(object):
         # Initialize dict to hold counts of operations at IES junctions
         self._countsDict = defaultdict( # ID of GFF feature
                 lambda: defaultdict(    # Operation (M, D, I)
-                    int)                # Count of op at junction
+                    list)               # list of op lengths at junction
                 )
         # Initialize dict to hold retention scores calculated from counts
         self._scoresDict = defaultdict(float)
@@ -117,13 +119,14 @@ class IesRetentionsMacOnly(object):
                 # For this aligned read, which alignment operation spans this
                 # position?
                 res = getOperationAtRefPos(start,
-                                           alnrec.reference_start+1, # Convert 0-based pysam numbering to 1-based in GFF TODO check off-by-one errors
-                                           alnrec.cigarstring,
-                                           1, # TODO: Let user choose thresholds
-                                           1)
+                        alnrec.reference_start+1, # Convert 0-based pysam numbering to 1-based in GFF TODO check off-by-one errors
+                        alnrec.cigarstring,
+                        1, # TODO: Let user choose thresholds
+                        1)
                 if res: # If there is no operation, will return None
+                    op, op_len = res
                     # Record the count
-                    self._countsDict[gffid][res] +=1
+                    self._countsDict[gffid][op].append(op_len)
 
 
     def calculateRetentionScores(self):
@@ -138,9 +141,9 @@ class IesRetentionsMacOnly(object):
             iesplus = 0
             iesminus = 0
             if 'M' in self._countsDict[gffid]:
-                iesminus  = self._countsDict[gffid]['M']
+                iesminus = len(self._countsDict[gffid]['M'])
             if 'I' in self._countsDict[gffid]:
-                iesplus = self._countsDict[gffid]['I']
+                iesplus = len(self._countsDict[gffid]['I'])
             if iesplus + iesminus > 0:
                 score = iesplus / (iesplus + iesminus)
             else:
@@ -168,7 +171,7 @@ class IesRetentionsMacOnly(object):
             # Report counts per CIGAR op, zero if not recorded for this junction
             for op in SharedValues.ALLCIGAROPS:
                 if self._countsDict[gffid][op]:
-                    outarr.append(str(self._countsDict[gffid][op]))
+                    outarr.append(str(len(self._countsDict[gffid][op])))
                 else:
                     outarr.append("0")
             fh.write("\t".join(outarr) + "\n")

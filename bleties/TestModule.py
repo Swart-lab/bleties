@@ -83,16 +83,16 @@ class TestMilret(unittest.TestCase):
     def test_getOperationAtRefPos(self):
         self.assertEqual(
                 Milret.getOperationAtRefPos(17, 15, "20M77D12I77M", 1, 1),
-                "M")
+                ("M", 20))
         self.assertEqual(
                 Milret.getOperationAtRefPos(37, 15, "20M77D12I77M", 1, 1),
-                "D")
+                ("D", 77))
         self.assertEqual(
                 Milret.getOperationAtRefPos(97, 1, "20M77D12I77M", 1, 1),
-                "I")
+                ("I", 12))
         self.assertEqual(
                 Milret.getOperationAtRefPos(98, 1, "20M77D12I77M", 1, 1),
-                "M")
+                ("M", 77))
 
 
 if __name__ == '__main__':
