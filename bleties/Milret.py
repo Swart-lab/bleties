@@ -101,19 +101,14 @@ class IesRetentionsMacOnly(object):
         """
         # TODO: Set cutoff for minimum length of match oepration, and/or min
         # distance for the match boundaries from the IES junction
-        # TODO: Only count insert operations that are within X bases in length
-        # different from the reported IES length, based on the MILRAA reported
-        # IES length, if available. Have a default mode which does not assume
-        # that the GFF file is from MILRAA
         for gffid in self._gff._gffDict: # Each IES ID
-            seqid = self._gff._gffDict[gffid]['seqid']
-            start = int(self._gff._gffDict[gffid]['start'])
-            end = int(self._gff._gffDict[gffid]['end'])
+            seqid = self._gff.getValue(gffid,'seqid')
+            start = int(self._gff.getValue(gffid,'start'))
+            end = int(self._gff.getValue(gffid,'end'))
             # GFF allows zero-length features. However, to fetched alignments
             # from pysam.AlignmentFile, we need nonzero interval
             if start == end:
                 end += 1
-            # TODO: Also get average coverage at this position, using pysam
             # Get alignments that span this position
             for alnrec in self._alnfile.fetch(seqid, start, end): # fetch() method uses 1-based SAM coordinates, unlike rest of Pysam!
                 # For this aligned read, which alignment operation spans this
@@ -137,19 +132,58 @@ class IesRetentionsMacOnly(object):
         """
         # TODO: Calculate retention scores for D operations too
 
-        for gffid in self._countsDict:
-            iesplus = 0
-            iesminus = 0
-            if 'M' in self._countsDict[gffid]:
-                iesminus = len(self._countsDict[gffid]['M'])
-            if 'I' in self._countsDict[gffid]:
-                iesplus = len(self._countsDict[gffid]['I'])
-            if iesplus + iesminus > 0:
-                score = round(float(iesplus / (iesplus + iesminus)), 4)
-            else:
-                score = None
-            self._scoresDict[gffid] = score
+        for gffid in self._gff:
+            if gffid in self._countsDict:
+                iesplus = 0
+                iesminus = 0
+                if 'M' in self._countsDict[gffid]:
+                    iesminus = len(self._countsDict[gffid]['M'])
+                if 'I' in self._countsDict[gffid]:
+                    iesplus = len(self._countsDict[gffid]['I'])
+                if iesplus + iesminus > 0:
+                    score = round(float(iesplus / (iesplus + iesminus)), 4)
+                else:
+                    score = None
+                self._scoresDict[gffid] = score
 
+
+    def calculateRetentionScoresMatchLengths(self, threshold=0.05):
+        """Calculate retention scores from counts of I and M operations per site
+        after findMappingOps() has been applied.
+
+        Only count inserts that match the length of reported IES in the input
+        GFF file, within a defined threshold. This assumes that the input GFF
+        file is produced by MILRAA and contains an `IES_length` field in the
+        attributes.
+
+        Equation: R = IES+ / (IES+ + IES-)
+        """
+        # TODO: Calculate retention scores for D operations too
+
+        for gffid in self._gff:
+            # Get defined IES length
+            ieslength = self._gff.getAttr(gffid, "IES_length")
+            if ieslength: # None is returned if attribute absent
+                ieslens = [int(i) for i in ieslength.split("_")]
+                if len(ieslens) == 1:
+                    ieslength = ieslens[0]
+                elif len(ieslens) > 1:
+                    ieslength = round(sum(ieslens) / len(ieslens))
+            if gffid in self._countsDict:
+                iesplus = 0
+                iesminus = 0
+                if 'M' in self._countsDict[gffid]:
+                    iesminus = len(self._countsDict[gffid]['M'])
+                if 'I' in self._countsDict[gffid]:
+                    iesplus_lengthmatched = [i for i in self._countsDict[gffid]['I']
+                            if i >= ieslength*(1-threshold)
+                            and i <= ieslength*(1+threshold)]
+                    iesplus = len(iesplus_lengthmatched)
+                if iesplus + iesminus > 0:
+                    score = round(float(iesplus / (iesplus + iesminus)), 4)
+                else:
+                    score = None
+                self._scoresDict[gffid] = score
 
     def reportRetentionScores(self, fh):
         """Report retention scores after running calculateRetentionScores().

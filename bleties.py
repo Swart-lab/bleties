@@ -201,10 +201,17 @@ milret_parser.add_argument("--bam",
     help="BAM file containing mapping, must be sorted and indexed")
 milret_parser.add_argument("--ref",
     help="""
-    FASTA file containing genomic contigs used as reference for the mapping
-    """)
+    FASTA file containing genomic contigs used as reference for the mapping""")
 milret_parser.add_argument("--ies",
     help="GFF3 file containing coordinates of IES junctions in MAC genome")
+milret_parser.add_argument("--use_ies_lengths", action="store_true",
+    help="""
+    Only count inserts that match IES lengths reported in the input GFF file.
+    This assumes that the input GFF file is produced by BleTIES MILRAA""")
+milret_parser.add_argument("--length_threshold", type=float, default=0.05,
+    help="""
+    Length threshold to count matching IES length, if option --use_ies_lengths
+    is applied""")
 
 # Output arguments
 milret_parser.add_argument("--out",
