@@ -46,7 +46,7 @@ for gff_id in gff_obj:
         iesplus = cigar_total
     elif row['type'] == "del":
         iesplus = row['mean_cov'] - cigar_total
-    row['retention_score'] = iesplus / row['mean_cov']
+    row['retention_score'] = round(float(iesplus / row['mean_cov']), 4)
     lens = gff_obj.getAttr(gff_id, "IES_length")
     lens = [int(i) for i in lens.split("_")]
     if len(lens) == 1:
