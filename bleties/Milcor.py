@@ -61,11 +61,7 @@ class IesCorrelationsByRead(object):
         # Iterate across all reads
         for alnrec in self._alnfile.fetch():
             qname = alnrec.query_name
-            if alnrec.is_secondary: # skip secondary mappings
-                logger.debug(f"Skipping secondary alignment of {alnrec.query_name} to {alnrec.reference_name}")
-            elif alnrec.is_supplementary: # skip supplementary mappings:
-                logger.debug(f"Skipping supplementary alignment of {alnrec.query_name} to {alnrec.reference_name}")
-            else:
+            if (not alnrec.is_secondary) and (not alnrec.is_supplementary):
                 ctg = alnrec.reference_name
                 start = int(alnrec.reference_start) + 1 # convert to 1-based inclusive
                 end = int(alnrec.reference_end) # 1-based inclusive
