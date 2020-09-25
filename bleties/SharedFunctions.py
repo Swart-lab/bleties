@@ -257,6 +257,30 @@ def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatc
                     return(cigmatch.group(2), int(cigmatch.group(1)))
 
 
+def mean_of_number_list(numbers, delim="_"):
+    """Report arithmetic mean of a string of integers that are separated by a
+    common delimiter. Used here to get mean of IES lengths reported in MILRAA
+    output GFF attribute.
+
+    Parameters
+    ----------
+    numbers : str
+        List of numbers separated by a common delimiter
+    delim : str
+        Character used as delimiter
+
+    Returns
+    -------
+    int
+        Arithmetic mean rounded to nearest integer
+    """
+    num_list = [int(i) for i in numbers.split(delim)]
+    if len(num_list) == 1:
+        return(num_list[0])
+    elif len(num_list) > 1:
+        return(round(sum(num_list) / len(num_list)))
+
+
 class Gff(object):
     def __init__(self):
         """Construct Gff object

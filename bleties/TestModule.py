@@ -27,6 +27,11 @@ class TestSharedFunctions(unittest.TestCase):
                 ("M", 77))
 
 
+    def test_mean_of_number_list(self):
+        self.assertEqual(
+                SharedFunctions.mean_of_number_list("12_13_14", "_"),
+                13)
+
 class TestMilraa(unittest.TestCase):
 
     def test_getPointers(self):

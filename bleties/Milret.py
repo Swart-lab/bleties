@@ -124,6 +124,10 @@ class IesRetentionsMacOnly(object):
         attributes.
 
         Equation: R = IES+ / (IES+ + IES-)
+
+        In the output table, the retention score will account for IES length,
+        but the total number of "I" operations will be unchanged (includes both
+        inserts that match the length and those that do not).
         """
 
         for gffid in self._gff:
@@ -132,11 +136,7 @@ class IesRetentionsMacOnly(object):
                 # Get defined IES length
                 ieslength = self._gff.getAttr(gffid, "IES_length")
                 if ieslength: # None is returned if attribute absent
-                    ieslens = [int(i) for i in ieslength.split("_")]
-                    if len(ieslens) == 1:
-                        ieslength = ieslens[0]
-                    elif len(ieslens) > 1:
-                        ieslength = round(sum(ieslens) / len(ieslens))
+                    ieslength = mean_of_number_list(ieslength)
                 if gffid in self._countsDict:
                     iesplus = 0
                     iesminus = 0
