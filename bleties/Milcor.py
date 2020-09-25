@@ -44,8 +44,19 @@ class IesCorrelationsByRead(object):
                     int)) # Number of co-occurrences/co-observations
 
 
-    def countIesCooccurrences(self):
+    def countIesCooccurrences(self, match_lengths=True, threshold=0.05):
         """Iterate through alignment and count IES co-occurrences per read
+
+        Parameters
+        ----------
+        match_lengths : bool
+            Match lengths of detected inserts in reads with the reported IES
+            length in GFF file?
+        threshold : float
+            Relative length difference to accept when matching IES lengths,
+            inclusive. For example, if reported IES length is 100 bp and
+            threshold is 0.05, accept insert lengths between 95 and 105
+            inclusive as IES present. Only used if match_lengths is True
         """
         # Iterate across all reads
         for alnrec in self._alnfile.fetch():
@@ -74,8 +85,24 @@ class IesCorrelationsByRead(object):
                                     if op == "I":
                                         # Read has insert corresponding to IES position
                                         for iesid in self._gffByContig[ctg][iesstart][iesend]:
-                                            self._perRead[qname]['present'].append(iesid)
-                                        # TODO account for insert length
+                                            if match_lengths:
+                                                # Get IES length from GFF input
+                                                # take average if more than one length present
+                                                ieslength = self._gff.getAttr(iesid, "IES_length")
+                                                ieslens = [int(i) for i in ieslength.split("_")]
+                                                if len(ieslens) == 1:
+                                                    ieslength = ieslens[0]
+                                                else:
+                                                    ieslength = round(sum(ieslens) / len(ieslens))
+                                                # Only add if length of "I" operation matches reported IES length
+                                                if op_len >= ieslength*(1-threshold) and op_len <= ieslength*(1+threshold):
+                                                    # print(f"Length of IES {str(op_len)} matches insert length {ieslength} on read {qname}")
+                                                    self._perRead[qname]['present'].append(iesid)
+                                                else:
+                                                    self._perRead[qname]['absent'].append(iesid)
+                                            else:
+                                                # Ignore IES lengths, count all inserts at the position
+                                                self._perRead[qname]['present'].append(iesid)
                                         # TODO also work for deletions
                                     elif op == "M":
                                         # No IES in the defined position
