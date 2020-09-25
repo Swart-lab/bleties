@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 
 # Argument parser
 parser = argparse.ArgumentParser(
+        description="Plot per-read IES retention from MILCOR output",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--table",
         help="MILCOR output table")

@@ -18,6 +18,7 @@ from bleties import SharedFunctions
 
 # Argument parser
 parser = argparse.ArgumentParser(
+        description="Plot IES statistics from MILRAA output",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--gff",
         help="GFF file produced by BleTIES MILRAA module")

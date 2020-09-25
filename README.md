@@ -1,4 +1,5 @@
-# Blepharisma Toolbox for Interspersed DNA Elimination Studies (BleTIES)
+Blepharisma Toolbox for Interspersed DNA Elimination Studies (BleTIES)
+======================================================================
 
 This is a reimplementation of [ParTIES](https://github.com/oarnaiz/ParTIES) for 
 long read alignments. 
@@ -8,7 +9,9 @@ fidelity CCS reads) read library mapping onto that assembly. The mapper should
 report valid CIGAR string and NM tag (for number of mismatches) per aligned
 read.
 
-## Usage
+
+Usage
+-----
 
 Dependencies are specified as a Conda environment YAML file `env.yaml`.
 
@@ -20,11 +23,14 @@ names:
 ./bleties.py milraa --help
 ./bleties.py miser --help
 ./bleties.py milret --help
+./bleties.py milcor --help
 ```
 
-Utility scripts are in the `scripts/` subfolder.
+Scripts for plotting and visualizing data are in the `scripts/` subfolder.
 
-## MILRAA - Method of Identification by Long Read Alignment Anomalies
+
+MILRAA - Method of Identification by Long Read Alignment Anomalies
+------------------------------------------------------------------
 
 Reimplementation of MIRAA in the ParTIES pipeline. The original MIRAA is used
 to identify IES retention in Paramecium genome by mapping Illumina reads
@@ -53,7 +59,9 @@ Differences of long read to Illumina alignments:
 The output GFF3 file from MILRAA can be used to plot graphical summary of
 predicted IESs with the script `scripts/milraa_gff_ies_plot.py`.
 
-## MISER - Method of IES Spurious or Erroneous Reporting
+
+MISER - Method of IES Spurious or Erroneous Reporting
+-----------------------------------------------------
 
 MISER takes an existing set of IES predictions, produced by MILRAA, and 
 screens it for potential mispredictions caused by paralogy, misassembly, or 
@@ -71,7 +79,9 @@ reference is taken.
    misassembly is reported.
  * Otherwise the putative IES is "ok".
 
-## MILRET - Method of IES Long-read Retention
+
+MILRET - Method of IES Long-read Retention
+------------------------------------------
 
 Reimplementation of MIRET in the ParTIES pipeline. MIRET takes two reference
 genomes: somatic and germline, and separate mapping files of the same reads to
@@ -86,3 +96,19 @@ Differences of MILRET to MIRET:
    the mapping reference. These may represent alternative excisions, 
    misassembly, or misalignments
 
+
+MILCOR - Method of IES Long-read CORrelation
+--------------------------------------------
+
+With long reads (>1 kbp) it is possible to count IES retention at the level of
+individual reads. In PacBio or Nanopore sequencing, libraries are prepared
+without amplification (e.g. by PCR), so the reads represent original molecules,
+without the possibility of PCR chimerism. We could therefore potentially
+classify reads into MIC-origin or MAC-origin, in the case of vegetative cells,
+or examine the dynamics of IES excision in developing MACs.
+
+MILCOR reports a per-read IES retention score that complements the per-IES
+retention score reported by MILRET. This is not possible with short read
+sequencing where reads typically do not span an entire IES. In the calculation
+of the per-IES retention score, reads that do not span at least one defined IES
+junction site are not counted.
