@@ -12,3 +12,5 @@ To do list for BleTIES
  - [ ] Implement Insert/Remove module, to remove putative IESs from assembly, or
      add them back in
  - [ ] Implement internal telomere finder as separate module in BleTIES
+ - [ ] Detailed docs in separate folder
+ - [ ] Add license
