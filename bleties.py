@@ -3,6 +3,7 @@
 import argparse
 import sys
 import logging
+
 from bleties import main
 
 # Argument parser
@@ -229,12 +230,26 @@ milret_parser.set_defaults(func=main.milret)
 
 
 # MILCOR -----------------------------------------------------------------------
-# TODO: Detailed description of MILCOR
+"""MILCOR - Method of IES Long-read CORrelation
+With long reads (>1 kbp) it is possible to count IES retention at the level of
+individual reads. In PacBio or Nanopore sequencing, libraries are prepared
+without amplification (e.g. by PCR), so the reads represent original molecules,
+without the possibility of PCR chimerism. We could therefore potentially
+classify reads into MIC-origin or MAC-origin, in the case of vegetative cells,
+or examine the dynamics of IES excision in developing MACs.
+
+MILCOR reports a per-read IES retention score that complements the per-IES
+retention score reported by MILRET. This is not possible with short read
+sequencing where reads typically do not span an entire IES. In the calculation
+of the per-IES retention score, reads that do not span at least one defined IES
+junction site are not counted.
+"""
 
 milcor_parser = subparsers.add_parser(name="milcor",
         description="MILCOR - Method of IES Long-read CORrelation",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+# Input arguments
 milcor_parser.add_argument("--bam",
     help="BAM file containing mapping, must be sorted and indexed")
 milcor_parser.add_argument("--ies",
@@ -244,7 +259,7 @@ milcor_parser.add_argument("--ies",
 milcor_parser.add_argument("--out",
     "-o",
     default="milcor.test",
-    help="Path to write table of retention scores per IES")
+    help="Path to write table of per-read IES retention scores")
 milcor_parser.add_argument("--dump", 
     action="store_true",
     help="Dump contents of IES correlation objects to JSON file, for troubleshooting")
