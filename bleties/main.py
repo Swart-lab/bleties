@@ -300,7 +300,9 @@ def milcor(args):
 
     logger.info(f"Counting per-read presence of IESs defined in file {args.ies}")
     iescorr = Milcor.IesCorrelationsByRead(args.ies, alnfile)
-    iescorr.countIesCooccurrences()
+    if args.use_ies_lengths:
+        logger.info(f"Counting only inserts matching defined IES lengths to threshold +/- {str(args.length_threshold)}")
+    iescorr.countIesCooccurrences(args.use_ies_lengths, threshold=args.length_threshold)
 
     out_perread_table = iescorr.summarizePerRead()
     logger.info(f"Writing output to file {args.out}.milcor.tsv")
@@ -312,5 +314,5 @@ def milcor(args):
             fh.write("\n")
 
     if args.dump:
-        logger.info(f"Dumping internal data to file {args.out}.dump.json for troubleshooting")
-        iescorr.dump(f"{args.out}.dump.json")
+        logger.info(f"Dumping internal data to file {args.out}.milcor.dump.json for troubleshooting")
+        iescorr.dump(f"{args.out}.milcor.dump.json")
