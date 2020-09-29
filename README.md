@@ -5,8 +5,8 @@ This is a reimplementation of [ParTIES](https://github.com/oarnaiz/ParTIES) for
 long read alignments. 
 
 The required inputs are a ciliate MAC genome assembly, and a PacBio HiFi (high-
-fidelity CCS reads) read library mapping onto that assembly. The mapper should
-report valid CIGAR string and NM tag (for number of mismatches) per aligned
+fidelity CCS reads) read library mapped onto that assembly. The mapper should
+report a valid CIGAR string and NM tag (for number of mismatches) per aligned
 read.
 
 
@@ -29,8 +29,25 @@ names:
 Scripts for plotting and visualizing data are in the `scripts/` subfolder.
 
 
+Outline of workflow
+-------------------
+
+ * With MILRAA, identify putative IESs and IES junctions from mapping of PacBio
+   HiFi/CCS reads to reference genome.
+ * Screen for potential erroneous IES calls with MISER, curate the list of
+   putative IES junctions.
+ * Use curated IES junction list with MILRET to calculate IES retention scores.
+ * Use curated IES junction list with MILCOR to calculate per-read IES retention
+   scores and bin reads to MIC/MAC origin.
+
+
 MILRAA - Method of Identification by Long Read Alignment Anomalies
 ------------------------------------------------------------------
+
+Inputs:
+ * Mapping of PacBio HiFi/CCS reads to reference genome (preferably BAM, sorted
+   and indexed)
+ * Reference assembly
 
 Reimplementation of MIRAA in the ParTIES pipeline. The original MIRAA is used
 to identify IES retention in Paramecium genome by mapping Illumina reads
@@ -63,9 +80,15 @@ predicted IESs with the script `scripts/milraa_gff_ies_plot.py`.
 MISER - Method of IES Spurious or Erroneous Reporting
 -----------------------------------------------------
 
-MISER takes an existing set of IES predictions, produced by MILRAA, and 
-screens it for potential mispredictions caused by paralogy, misassembly, or 
-erroneous mappings. 
+Inputs:
+ * Mapping of PacBio HiFi/CCS reads to reference genome (preferably BAM, sorted
+   and indexed)
+ * Reference assembly
+ * Feature table of putative IES coordinates, produced by MILRAA
+
+MISER takes an existing set of IES predictions, produced by MILRAA, and screens
+it for potential mispredictions caused by paralogy, misassembly, or erroneous
+mappings. 
 
 For each putative IES (insertion or deletion), the set of reads mapping to that 
 site is found, and split into two subsets: those containing the indel and those
@@ -83,10 +106,28 @@ reference is taken.
 MILRET - Method of IES Long-read Retention
 ------------------------------------------
 
-Reimplementation of MIRET in the ParTIES pipeline. MIRET takes two reference
-genomes: somatic and germline, and separate mapping files of the same reads to
-the somatic and germline genomes, to identify reads that map to the IES+
-(germline) vs. those that map to the IES- (somatic) forms. 
+Inputs:
+ * Mapping of PacBio HiFi/CCS reads to reference genome
+ * Reference assembly
+ * Feature table (GFF3) of IES junctions, either from MILRAA output or third
+   party tool
+
+Reimplementation of MIRET in the ParTIES pipeline. MIRET takes the following
+inputs: two reference genomes (somatic and germline), separate mapping files of
+the same reads to the somatic and germline genomes, and coordinates of known
+IES junctions. Reads that map with match to the somatic version are counted as
+IES-, whereas reads that map with match to the germline version are counted as
+IES+.
+
+With long reads, we assume that IESs are spanned completely by most reads, vs
+short reads, where reads are unlikely to completely span an IES insert. So we
+do not count soft/hard clips on the ends of reads, only matches and inserts. We
+also assume that the read mapper will handle mapping of reads containing inserts
+properly. Therefore, we only map the reads to the somatic genome. Reads that do
+contain IES+ forms will be reported as mappings with insert operations ("I" in
+the CIGAR string). We then simply compare reads mapping with match to the
+somatic genome at the IES junction (counted as IES-) to reads mapping with an
+insert at the exact location of the IES junction (counted as IES+).
 
 Differences of MILRET to MIRET:
  * MILRET uses only the somatic (IES-) as mapping reference, and assumes that 
@@ -99,6 +140,12 @@ Differences of MILRET to MIRET:
 
 MILCOR - Method of IES Long-read CORrelation
 --------------------------------------------
+
+Inputs:
+ * Mapping of PacBio HiFi/CCS reads to reference genome (preferably BAM, sorted
+   and indexed)
+ * Feature table (GFF3) of IES junctions, either from MILRAA output or third
+   party tool
 
 With long reads (>1 kbp) it is possible to count IES retention at the level of
 individual reads. In PacBio or Nanopore sequencing, libraries are prepared
