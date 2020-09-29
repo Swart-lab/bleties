@@ -775,6 +775,16 @@ class IesRecords(object):
                             stop=int(ins_end))
                     attr.append("average_coverage="+str(readcov))
 
+                # Provisional approximate IES retention score
+                # R = IES+ / (IES+ + IES-)
+                # here the denominator is simply average coverage
+                if readcov:
+                    if gfftype == "internal_eliminated_sequence_junction":
+                        provscore = round(totalcount/readcov, 4)
+                    elif gfftype == "internal_eliminated_sequence":
+                        # here deletions are counted
+                        provscore = round((readcov-totalcount)/readcov, 4)
+
                 # Find pointers if present
                 (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq, breakpointid)
                 if pointerstart != ins_start:
@@ -801,7 +811,7 @@ class IesRecords(object):
                         gfftype,
                         str(ins_start),
                         str(ins_end),
-                        str(totalcount),
+                        str(provscore),
                         ".",
                         ".",
                         ";".join(attr)+";"]
@@ -893,6 +903,16 @@ class IesRecords(object):
                 if self._alnformat == "bam":
                     readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end)) # TODO: Check for off-by-one errors
                     attr.append("average_coverage="+str(readcov))
+
+                # Provisional approximate IES retention score
+                # R = IES+ / (IES+ + IES-)
+                # here the denominator is simply average coverage
+                if readcov:
+                    if gfftype == "internal_eliminated_sequence_junction":
+                        provscore = round(countvalue/readcov, 4)
+                    elif gfftype == "internal_eliminated_sequence":
+                        provscore = round((readcov-countvalue)/readcov, 4)
+
                 # Get indel consensus
                 consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, indel_len)
                 consseq.id = breakpointid
@@ -921,7 +941,7 @@ class IesRecords(object):
                           gfftype,             # 3 type
                           str(ins_start),      # 4 start
                           str(ins_end),        # 5 end
-                          str(countvalue),     # 6 score - in this case, breakpoint counts
+                          str(provscore),      # 6 score - provisional IES retention score
                           ".",                 # 7 strand
                           ".",                 # 8 phase
                           ";".join(attr)+";"   # 9 attributes
