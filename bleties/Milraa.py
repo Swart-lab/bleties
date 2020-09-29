@@ -726,7 +726,7 @@ class IesRecords(object):
                         elif len(counts.keys()) > 1:
                             prefix = f"BREAK_POINTS_FUZZY"
                         breakpointid = "_".join([prefix, str(ctg), str(ins_start), str(ins_end)] + [str(l) for l in counts.keys()])
-                        gfftype = "junction"
+                        gfftype = "internal_eliminated_sequence_junction"
 
                         # Attributes list of key-value pairs
                         # report modal IES length
@@ -751,7 +751,7 @@ class IesRecords(object):
                 totalcount = self._insDict[ctg][ins_start][ins_end][0]["D"]
                 if totalcount >= mindelbreaks:
                     breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
-                    gfftype = "region"
+                    gfftype = "internal_eliminated_sequence"
                     consseq = SeqRecord(Seq(dd[del_len][0], generic_dna))
                     # Build attributes field
                     attr = ["ID="+breakpointid,
@@ -859,7 +859,7 @@ class IesRecords(object):
             if evidencetype == "I" and countvalue >= mininsbreaks:
                 breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(ins_len)])
                 indel_len = ins_len
-                gfftype = "junction"
+                gfftype = "internal_eliminated_sequence_junction"
                 # Prepare attributes list of key-value pairs
                 attr = ["ID="+breakpointid,
                         "IES_length="+str(ins_len)]
@@ -876,7 +876,7 @@ class IesRecords(object):
                 del_len = int(ins_end) - int(ins_start) + 1 # TODO: Check for off-by-one errors
                 indel_len = del_len
                 breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
-                gfftype = "region"
+                gfftype = "internal_eliminated_sequence"
                 # Build attributes field
                 attr = ["ID="+breakpointid,
                         "IES_length="+str(del_len)]
