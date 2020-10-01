@@ -14,11 +14,20 @@ sequencing where reads typically do not span an entire IES. In the calculation
 of the per-IES "retention" score, reads that do not span at least one defined IES
 junction site are not counted.
 
+
+Inputs
+------
+
+ * Mapping of PacBio HiFi/CCS reads to reference genome (preferably BAM, sorted
+   and indexed)
+ * Feature table (GFF3) of IES junctions, either from MILRAA output or third
+   party tool
+
 <!--
 Parameters
-----------
+---------
 
-->
+-->
 
 Terminology
 -----------
@@ -47,15 +56,6 @@ option. The `--bin_threshold` option sets the minimum excision/retention
 required. For example, `--bin_threshold 0.9` (the default) means that sequences
 with per-read score $\geq 0.9$ will be binned as MIC, and score $\leq 0.1$ will
 be binned as MAC.
-
-
-Inputs
-------
-
- * Mapping of PacBio HiFi/CCS reads to reference genome (preferably BAM, sorted
-   and indexed)
- * Feature table (GFF3) of IES junctions, either from MILRAA output or third
-   party tool
 
 
 Output
