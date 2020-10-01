@@ -35,10 +35,12 @@ out = []
 for gff_id in gff_obj:
     row = {}
     row['id'] = gff_id
-    if gff_obj.getValue(gff_id, "type") == "junction":
+    if int(gff_obj.getValue(gff_id, "start")) == int(gff_obj.getValue(gff_id, "end")):
         row['type'] = "ins"
-    elif gff_obj.getValue(gff_id, "type") == "region":
+    elif int(gff_obj.getValue(gff_id, "start")) < int(gff_obj.getValue(gff_id, "end")):
         row['type'] = "del"
+    else:
+        raise Exception(f"Invalid GFF3, start > end: check {row['id']}")
     row['mean_cov'] = int(gff_obj.getAttr(gff_id, "average_coverage"))
     cigar = gff_obj.getAttr(gff_id, "cigar")
     cigar_covs = re.findall(r"\d+[ID]\*(\d+)", cigar)
@@ -72,8 +74,7 @@ with open(f"{args.out}.json", "w") as fh:
 df = pd.DataFrame.from_dict(out, dtype=object)
 
 # IES retention score histogram
-plt.figure(figsize=(8,20))
-plt.subplot(311)
+plt.figure(figsize=(8,6))
 plt.hist([df.query('type == "ins"')['retention_score'],
           df.query('type == "del"')['retention_score']],
          label = ['ins','del'], stacked=True, bins=20)
@@ -81,26 +82,57 @@ plt.legend()
 plt.xlabel("IES retention score")
 plt.ylabel("Number of putative IESs")
 plt.title("Retention score")
+plt.savefig(f"{args.out}.ies_retention_score.png")
 
 # IES lengths and pointer types
-plt.subplot(312)
-plt.hist([df.query("pointer == 'none'")["length"],
-          df.query("pointer == 'ta'")["length"],
-          df.query("pointer == 'pointer'")["length"]],
-         stacked=True, bins=100, label=['none','ta','pointer'])
-plt.legend()
+plt.figure(figsize=(8,18))
+plt.subplot(311)
+plt.hist(df.query("pointer == 'ta'")["length"],
+         bins=100)
 plt.xlabel("Length (bp)")
 plt.ylabel("Number of putative IESs")
-plt.title("IES length distribution")
+plt.title("IES length distribution - TA junction")
+
+plt.subplot(312)
+plt.hist(df.query("pointer == 'pointer'")["length"],
+         bins=100)
+plt.xlabel("Length (bp)")
+plt.ylabel("Number of putative IESs")
+plt.title("IES length distribution - other pointer")
+
+plt.subplot(313)
+plt.hist(df.query("pointer == 'none'")["length"],
+         bins=100)
+plt.xlabel("Length (bp)")
+plt.ylabel("Number of putative IESs")
+plt.title("IES length distribution - no pointer")
+
+plt.savefig(f"{args.out}.ies_length_distribution.png")
+
 
 # IES lengths and pointer types - closeup
-plt.subplot(313)
-plt.hist([df.query("length > 25 & length <= 400 & pointer == 'none'")["length"],
-          df.query("length > 25 & length <= 400 & pointer == 'ta'")["length"],
-          df.query("length > 25 & length <= 400 & pointer == 'pointer'")["length"]],
-         stacked=True, bins=375, label=['none','ta','pointer'])
-plt.legend()
+plt.figure(figsize=(8,18))
+plt.subplot(311)
+plt.hist(df.query("length > 25 & length <= 400 & pointer == 'ta'")["length"],
+         bins=375)
 plt.xlabel("Length (bp)")
 plt.ylabel("Number of putative IESs")
-plt.title("IES length distribution (detail)")
+plt.title("IES length distribution (detail) - TA junction")
 plt.savefig(f"{args.out}.ies_stats_plots.png")
+
+plt.subplot(312)
+plt.hist(df.query("length > 25 & length <= 400 & pointer == 'pointer'")["length"],
+         bins=375)
+plt.xlabel("Length (bp)")
+plt.ylabel("Number of putative IESs")
+plt.title("IES length distribution (detail) - other pointer")
+plt.savefig(f"{args.out}.ies_stats_plots.png")
+
+plt.subplot(313)
+plt.hist(df.query("length > 25 & length <= 400 & pointer == 'none'")["length"],
+         bins=375)
+plt.xlabel("Length (bp)")
+plt.ylabel("Number of putative IESs")
+plt.title("IES length distribution (detail) - no pointer")
+
+plt.savefig(f"{args.out}.ies_length_distribution_detail.png")
