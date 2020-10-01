@@ -316,3 +316,10 @@ def milcor(args):
     if args.dump:
         logger.info(f"Dumping internal data to file {args.out}.milcor.dump.json for troubleshooting")
         iescorr.dump(f"{args.out}.milcor.dump.json")
+    if args.bin:
+        logger.info(f"Binning reads to likely MAC and MIC reads")
+        iescorr.binReads(f"{args.out}.milcor_bin_MAC.fasta",
+                f"{args.out}.milcor_bin_MIC.fasta",
+                f"{args.out}.milcor_bin_other.fasta",
+                f"{args.out}.milcor_bin_noies.fasta",
+                args.bin_threshold)

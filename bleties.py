@@ -200,6 +200,8 @@ milcor_parser.add_argument("--bam",
     help="BAM file containing mapping, must be sorted and indexed")
 milcor_parser.add_argument("--ies",
     help="GFF3 file containing coordinates of IES junctions in MAC genome")
+
+# Options
 milcor_parser.add_argument("--use_ies_lengths", action="store_true",
     help="""
     Only count inserts that match IES lengths reported in the input GFF file.
@@ -208,6 +210,10 @@ milcor_parser.add_argument("--length_threshold", type=float, default=0.05,
     help="""
     Length threshold to count matching IES length, if option --use_ies_lengths
     is applied""")
+milcor_parser.add_argument("--bin", action="store_true",
+    help="Bin reads into likely MIC and MAC origin and output Fasta files")
+milcor_parser.add_argument("--bin_threshold", type=float, default=0.9,
+    help="IES retention/excision threshold for binning to MIC or MAC respecitvely")
 
 # Output arguments
 milcor_parser.add_argument("--out",

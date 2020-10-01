@@ -2,7 +2,7 @@ To do list for BleTIES
 ======================
 
  - [ ] MILCOR - visualize correlations between IESs relative to distance
-     - [ ] Bin reads as "MIC" or "MAC" depending on per-read IES presence
+     - [x] Bin reads as "MIC" or "MAC" depending on per-read IES presence
      - [ ] Count telomeres on clipped-ends of MIC vs MAC reads
  - [ ] MILRAA - find suitable clustering and fuzzy matching parameters for
      PacBio subreads/CLR reads.

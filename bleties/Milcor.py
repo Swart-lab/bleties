@@ -152,5 +152,72 @@ class IesCorrelationsByRead(object):
              len(self._perRead[qname]['absent'])])
         return(out)
 
+
+    def binReads(self, macreads, micreads, otherreads, noiesreads, threshold=0.9):
+        """Bin reads into MAC or MIC origin
+
+        Parameters
+        ----------
+        macreads : str
+            Path to write MAC reads in Fasta format
+        micreads : str
+            Path to write MIC reads in Fasta format
+        otherreads : str
+            Path to write ambiguous reads which do not cross threshold
+        noiesreads : str
+            Path to write reads that do not span IES sites
+        threshold : float
+            Minimum proportion of reads with IES excision/retention to classify
+            as MAC or MIC respectively.
+        """
+
+        if threshold > 1 or threshold < 0:
+            raise Exception("Binning threshold must be between 0 and 1")
+
+        fh_mac = open(macreads, "w")
+        fh_mic = open(micreads, "w")
+        fh_oth = open(otherreads, "w")
+        fh_non = open(noiesreads, "w")
+
+        counter = 0
+        for rec in self._alnfile.fetch():
+            qname = rec.query_name
+            qseq = rec.query_sequence
+            if qname and qname in self._perRead:
+                counter += 1
+                if counter % 1000 == 0:
+                    logging.info(f"Processed {counter} reads")
+
+                iesplus = len(self._perRead[qname]['present'])
+                iesminus = len(self._perRead[qname]['absent'])
+                iestotal = iesplus + iesminus
+
+                if iestotal == 0:
+                    # Non IES read
+                    fh_non.write(f">{qname}\n")
+                    fh_non.write(f"{qseq}\n")
+                else:
+                    iesret = iesplus / iestotal
+                    if iesret >= threshold: # MIC read
+                        # MIC read
+                        fh_mic.write(f">{qname}\n")
+                        fh_mic.write(f"{qseq}\n")
+                    elif iesret <= 1-threshold:
+                        # MAC read
+                        fh_mac.write(f">{qname}\n")
+                        fh_mac.write(f"{qseq}\n")
+                    else:
+                        # other read
+                        fh_oth.write(f">{qname}\n")
+                        fh_oth.write(f"{qseq}\n")
+            else:
+                logging.debug(f"Read {qname} not in _perRead dict")
+
+        fh_mac.close()
+        fh_mic.close()
+        fh_oth.close()
+        fh_non.close()
+
+
     # TODO: ? Graphical representation of IES co-occurrence
     # TODO: Flag IESs that have co-occurrences more or less than expected
