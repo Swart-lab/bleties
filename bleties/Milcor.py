@@ -181,37 +181,38 @@ class IesCorrelationsByRead(object):
 
         counter = 0
         for rec in self._alnfile.fetch():
-            qname = rec.query_name
-            qseq = rec.query_sequence
-            if qname and qname in self._perRead:
-                counter += 1
-                if counter % 1000 == 0:
-                    logger.info(f"Processed {counter} reads")
+            if (not rec.is_unmapped) and (not rec.is_secondary) and (not rec.is_supplementary):
+                qname = rec.query_name
+                qseq = rec.query_sequence
+                if qname and qname in self._perRead:
+                    counter += 1
+                    if counter % 1000 == 0:
+                        logger.debug(f"Processed {counter} reads")
 
-                iesplus = len(self._perRead[qname]['present'])
-                iesminus = len(self._perRead[qname]['absent'])
-                iestotal = iesplus + iesminus
+                    iesplus = len(self._perRead[qname]['present'])
+                    iesminus = len(self._perRead[qname]['absent'])
+                    iestotal = iesplus + iesminus
 
-                if iestotal == 0:
-                    # Non IES read
-                    fh_non.write(f">{qname}\n")
-                    fh_non.write(f"{qseq}\n")
-                else:
-                    iesret = iesplus / iestotal
-                    if iesret >= threshold: # MIC read
-                        # MIC read
-                        fh_mic.write(f">{qname}\n")
-                        fh_mic.write(f"{qseq}\n")
-                    elif iesret <= 1-threshold:
-                        # MAC read
-                        fh_mac.write(f">{qname}\n")
-                        fh_mac.write(f"{qseq}\n")
+                    if iestotal == 0:
+                        # Non IES read
+                        fh_non.write(f">{qname}\n")
+                        fh_non.write(f"{qseq}\n")
                     else:
-                        # other read
-                        fh_oth.write(f">{qname}\n")
-                        fh_oth.write(f"{qseq}\n")
-            else:
-                logger.debug(f"Read {qname} not in _perRead dict")
+                        iesret = iesplus / iestotal
+                        if iesret >= threshold: # MIC read
+                            # MIC read
+                            fh_mic.write(f">{qname}\n")
+                            fh_mic.write(f"{qseq}\n")
+                        elif iesret <= 1-threshold:
+                            # MAC read
+                            fh_mac.write(f">{qname}\n")
+                            fh_mac.write(f"{qseq}\n")
+                        else:
+                            # other read
+                            fh_oth.write(f">{qname}\n")
+                            fh_oth.write(f"{qseq}\n")
+                else:
+                    logger.debug(f"Read {qname} not in _perRead dict")
 
         fh_mac.close()
         fh_mic.close()
