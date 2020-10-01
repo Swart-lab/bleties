@@ -195,9 +195,6 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
         # Convert pointers to TA junctions if possible
         (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
         # Maximize pointer lengths
-        # if tastart:
-        #     (ppstart, ppend, pppointer) = adjustPointerMaxlength(ref[ctg], tastart, taend, tapointer, iesconsseq[breakpointid])
-        # else:
         (ppstart, ppend, pppointer) = adjustPointerMaxlength(ref[ctg], start, end, pointer, iesconsseq[breakpointid])
         # Put everything together and return
         outseqs.append([breakpointid,
@@ -735,7 +732,6 @@ class IesRecords(object):
                         # Report number of counts per insert length
                         attr.append("cigar=" + " ".join([str(l) + "I*" + str(counts[l]) for l in counts]))
 
-
                         # Get indel consensus
                         if len(counts.keys()) == 1: # cluster of one length
                             # take dumb consensus since all seqs are same length
@@ -801,7 +797,12 @@ class IesRecords(object):
                         "ta_pointer_start=" + str(tastart),
                         "ta_pointer_end=" + str(taend)])
                 # Maximize pointer lengths
-                # (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
+                (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
+                if pppointer:
+                    attr.extend(["pp_pointer_seq=" + str(pppointer),
+                        "pp_pointer_start=" + str(ppstart),
+                        "pp_pointer_end=" + str(ppend)])
+
                 consseq.id = breakpointid
                 consseq.description = ";".join(attr)+";"
                 outseq[consseq.id] = consseq
@@ -918,6 +919,7 @@ class IesRecords(object):
                 consseq.id = breakpointid
                 consseq.description = ";".join(attr)+";"
                 outseq[consseq.id] = consseq
+
                 # Find pointers if present
                 (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq, breakpointid)
                 if pointerstart != ins_start:
@@ -934,7 +936,12 @@ class IesRecords(object):
                         "ta_pointer_start=" + str(tastart),
                         "ta_pointer_end=" + str(taend)])
                 # Maximize pointer lengths
-                # (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
+                (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
+                if pppointer:
+                    attr.extend(["pp_pointer_seq=" + str(pppointer),
+                        "pp_pointer_start=" + str(ppstart),
+                        "pp_pointer_end=" + str(ppend)])
+
                 # Build GFF entry
                 outarr = [str(ctg),            # 1 seqid
                           "MILRAA",            # 2 source
