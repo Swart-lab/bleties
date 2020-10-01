@@ -101,7 +101,7 @@ class IesCorrelationsByRead(object):
                                                 else:
                                                     self._perRead[qname]['absent'].append(iesid)
                                             else:
-                                                logging.warn(f"Input GFF file does not report IES length reported for IES {iesid}")
+                                                logger.warn(f"Input GFF file does not report IES length reported for IES {iesid}")
                                         else:
                                             # Ignore IES lengths, count all inserts at the position
                                             self._perRead[qname]['present'].append(iesid)
@@ -186,7 +186,7 @@ class IesCorrelationsByRead(object):
             if qname and qname in self._perRead:
                 counter += 1
                 if counter % 1000 == 0:
-                    logging.info(f"Processed {counter} reads")
+                    logger.info(f"Processed {counter} reads")
 
                 iesplus = len(self._perRead[qname]['present'])
                 iesminus = len(self._perRead[qname]['absent'])
@@ -211,7 +211,7 @@ class IesCorrelationsByRead(object):
                         fh_oth.write(f">{qname}\n")
                         fh_oth.write(f"{qseq}\n")
             else:
-                logging.debug(f"Read {qname} not in _perRead dict")
+                logger.debug(f"Read {qname} not in _perRead dict")
 
         fh_mac.close()
         fh_mic.close()
