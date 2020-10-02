@@ -90,11 +90,13 @@ For example, consider the following sequence containing an IES (upper case)
 surrounded by MDS (lower case), the junctions are indicated with the pipe
 character `|`:
 
-> gcgc|TAATGGTGCC|taatccgc (MDS + IES)
->
-> gcgc|----------|taatccgc (MDS only)
->
-> ----|TAATGGTGCC|-------- (IES inferred sequence)
+```
+gcgc|TAATGGTGCC|taatccgc (MDS + IES)
+
+gcgc|----------|taatccgc (MDS only)
+
+----|TAATGGTGCC|-------- (IES inferred sequence)
+```
 
 Notice the pointer sequence `TAAT` repeated in the left side in the IES, and to
 the right of the junction in the MDS.
@@ -108,11 +110,13 @@ the left of the junction in the MDS. The MDS + IES and MDS-only sequences have
 not changed, only our decision of where to place the junction of the inferred
 indel.
 
-> gcgctaat|GGTGCCTAAT|ccgc (MDS + IES)
->
-> gcgctaat|----------|ccgc (MDS only)
->
-> --------|GGTGCCTAAT|---- (IES inferred sequence)
+```
+gcgctaat|GGTGCCTAAT|ccgc (MDS + IES)
+
+gcgctaat|----------|ccgc (MDS only)
+
+--------|GGTGCCTAAT|---- (IES inferred sequence)
+```
 
 Because the insert is flanked by the repeated pointer sequence, alternative
 mappings of `5M10I7M`, `6M10I6M`, and `7M10I5M` are also possible. To deal with
