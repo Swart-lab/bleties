@@ -91,7 +91,9 @@ surrounded by MDS (lower case), the junctions are indicated with the pipe
 character `|`:
 
 > gcgc|TAATGGTGCC|taatccgc (MDS + IES)
+>
 > gcgc|----------|taatccgc (MDS only)
+>
 > ----|TAATGGTGCC|-------- (IES inferred sequence)
 
 Notice the pointer sequence `TAAT` repeated in the left side in the IES, and to
@@ -107,7 +109,9 @@ not changed, only our decision of where to place the junction of the inferred
 indel.
 
 > gcgctaat|GGTGCCTAAT|ccgc (MDS + IES)
+>
 > gcgctaat|----------|ccgc (MDS only)
+>
 > --------|GGTGCCTAAT|---- (IES inferred sequence)
 
 Because the insert is flanked by the repeated pointer sequence, alternative
