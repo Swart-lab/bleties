@@ -634,6 +634,8 @@ class IesRecords(object):
         Returns: Changes object in-place
         """
         for rname in self._insDict: # Get contig name
+            if rname not in self._refgenome:
+                logger.error(f"Sequence {rname} not found in reference genome")
             # Get reference sequence from Fasta file
             refctgseq = self._refgenome[rname].seq
             # For each start and stop position
@@ -699,6 +701,9 @@ class IesRecords(object):
         # Cluster inserts (junctions)
         for rec in nested_dict_to_list_fixed_depth(self._insSeqDict, 3):
             [ctg, ins_start, ins_end, dd] = rec
+            if ctg not in self._refgenome:
+                logger.error(f"Sequence {ctg} not found in reference genome")
+
             breakpointid = None
 
             if ins_end == ins_start:
@@ -861,6 +866,8 @@ class IesRecords(object):
         # TODO Reduce code duplication here
         for rec in nested_dict_to_list(self._insDict):
             [ctg, ins_start, ins_end, ins_len, evidencetype, countvalue] = rec
+            if ctg not in self._refgenome:
+                logger.error(f"Sequence {ctg} not found in reference genome")
 
             breakpointid = None
             attr = []
