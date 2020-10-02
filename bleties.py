@@ -4,13 +4,15 @@ import argparse
 import sys
 import logging
 
-from bleties import main
+from bleties import main, __version__
 
 # Argument parser
 parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--log", default="bleties.log",
     help="Path to write log file")
+parser.add_argument("-v", "--version", action="version",
+    version=f"BleTIES {__version__}")
 subparsers = parser.add_subparsers()
 
 # MILRAA -----------------------------------------------------------------------
