@@ -13,6 +13,7 @@ from collections import defaultdict
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from bleties import *
+from bleties import __version__
 from bleties import SharedFunctions
 
 
@@ -67,6 +68,7 @@ def read_sam_bam_ref(args):
 
 def milraa(args):
     logger = logging.getLogger("main.milraa")
+    logger.info(f"BleTIES {__version__}")
     logger.info("Started BleTIES MILRAA")
     logger.info("Command line:")
     logger.info(" ".join(sys.argv))
@@ -143,6 +145,7 @@ def milraa(args):
 
 def miser(args):
     logger = logging.getLogger("main.miser")
+    logger.info(f"BleTIES {__version__}")
     logger.info("Started BleTIES MISER")
     logger.info("Command line:")
     logger.info(" ".join(sys.argv))
@@ -259,6 +262,7 @@ def miser(args):
 
 def milret(args):
     logger = logging.getLogger("main.milret")
+    logger.info(f"BleTIES {__version__}")
     logger.info("Started BleTIES MILRET")
     logger.info("Command line:")
     logger.info(" ".join(sys.argv))
@@ -290,6 +294,7 @@ def milret(args):
 
 def milcor(args):
     logger = logging.getLogger("main.milcor")
+    logger.info(f"BleTIES {__version__}")
     logger.info("Started BleTIES MILCOR")
     logger.info("Command line:")
     logger.info(" ".join(sys.argv))
