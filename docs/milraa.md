@@ -1,17 +1,12 @@
 MILRAA - Method of Identification by Long Read Alignment Anomalies
 ==================================================================
 
-Reimplementation of MIRAA in the ParTIES pipeline. The original MIRAA is used
-to identify IES retention in Paramecium genome by mapping Illumina reads
-against a reference somatic (MAC) genome. It achieves this by an initial
-Bowtie2 mapping step (local mode), then looks for breakpoints in the alignment,
-which are identified as insert (I), soft clip (S), or hard clip (H) operations
-in the CIGAR string of the alignment.
-
-MILRAA reimplements the MIRAA concept for PacBio and other long read alignments.
-The long reads must first be aligned to the reference genome (assumed to be
-somatic possibly with some IES retentions that have assembled), assumption is
-that the alignment is accurate.
+The MILRAA module predicts likely IES insertion/deletion coordinates from a
+mapping of long sequencing reads onto a reference genome assembly. The reads
+must first be aligned to the reference, which is assumed to be somatic (MAC) but
+possibly with some IESs retained in the assembly. The alignment is assumed to be
+accurate. The outputs are the coordinates of the predicted IES indel positions,
+and IES consensus sequences.
 
 The recommended aligner is [minimap2](https://github.com/lh3/minimap2), with
 the options `--secondary=no --MD`, and with PacBio HiFi or CCS reads (use
@@ -41,12 +36,28 @@ Arguments
 Differences of long read to short read alignments
 -------------------------------------------------
 
- * One read may have multiple inserts -> Have to iterate through each alignment,
-   rather than consider each only once
- * Reads are not paired, insert size is not an issue -> Ignore insert size
-   parameter, expect reads to span entire IESs
- * Error rate of reads is expected to be higher -> Set higher `-max_mismatch`
-   threshold
+MILRAA is a reimplementation of the MIRAA module of the original ParTIES
+pipeline. The original MIRAA was used for Illumina short read data, whereas
+MILRAA should be used with long read data. ParTIES MIRAA uses an initial
+Bowtie2 mapping step (local mode), then looks for breakpoints in the alignment,
+which are identified as insert (I), soft clip (S), or hard clip (H) operations
+in the CIGAR string of the alignment.
+
+The insert size for Illumina paired end read libraries is typically around 400
+bp, so on average each read-pair would span at most one IES. Most read pairs are
+unlikely to span a complete IES nor contain the entire IES sequence. In
+comparison, a PacBio long read with lengths 10 kbp or more may span multiple
+IESs, and the entire IES sequence can potentially be read out form the sequence.
+Therefore, MILRAA has the following differences to MIRAA:
+
+ * Each read potentially covers multiple indels, unlike MIRAA which considers
+   one read as support for at most one IES.
+ * Reads are not paired, so "insert size" is not an issue, and the entire insert
+   sequence can be extracted from the reads.
+ * However, the error rate of PacBio reads, even HiFi/CCS reads, is expected to
+   be higher, so extracted insert sequences are aligned to get a consensus IES
+   sequence, and a minimum indel length is required for IES calling (because
+   many short indels are expected from sequencing error).
 
 
 Pointers and TA junctions
@@ -75,13 +86,40 @@ ambiguity as to where the "true" indel is, because it is not possible to tell
 from the sequence alone where in the repeated sequence the physical cut
 occurred.
 
-Therefore, MILRAA does the following:
+For example, consider the following sequence containing an IES (upper case)
+surrounded by MDS (lower case), the junctions are indicated with the pipe
+character `|`:
 
- * If the putative IES indel is flanked by repeats, these are reported as
-   putative pointer sequences.
- * If the mapper reports the indel with the rightmost pointer/TA in the IES
-   region, then the coordinates are adjusted so that the leftmost pointer/TA
-   lies in the IES region.
+> gcgc|TAATGGTGCC|taatccgc (MDS + IES)
+> gcgc|----------|taatccgc (MDS only)
+> ----|TAATGGTGCC|-------- (IES inferred sequence)
+
+Notice the pointer sequence `TAAT` repeated in the left side in the IES, and to
+the right of the junction in the MDS.
+
+The first sequence (MDS + IES), when mapped onto the MDS sequence, would have the CIGAR
+string `4M10I8M`. 
+
+However, it is also possible to map it another way, with the CIGAR string
+`8M10I4M`. The `TAAT` sequence now lies on the right side in the IES, and to
+the left of the junction in the MDS. The MDS + IES and MDS-only sequences have
+not changed, only our decision of where to place the junction of the inferred
+indel.
+
+> gcgctaat|GGTGCCTAAT|ccgc (MDS + IES)
+> gcgctaat|----------|ccgc (MDS only)
+> --------|GGTGCCTAAT|---- (IES inferred sequence)
+
+Because the insert is flanked by the repeated pointer sequence, alternative
+mappings of `5M10I7M`, `6M10I6M`, and `7M10I5M` are also possible. To deal with
+this ambiguity, MILRAA does the following:
+
+ * If the putative IES indel, as reported by the mapper's original output, is
+   flanked by repeats, these are reported as putative pointer sequences, along
+   with the original indel coordinates from the mapper.
+ * If the mapper reports the indel with the pointer/TA on the right side in the
+   IES region, then the coordinates are adjusted so that it lies in the left
+   side in the IES.
  * If the putative pointer contains a "TA" sequence, this is reported as a
    possible TA junction, and the adjusted coordinates for this TA junction are
    reported.
@@ -115,7 +153,8 @@ predicting a pointer sequence.
 Output
 ------
 
-MILRAA produces the following output files by default:
+MILRAA produces the following output files by default (`{OUT}` is the output
+filename prefix, supplied with the `--out` option):
 
  * `{OUT}.milraa_ies.gff3`
  * `{OUT}.milraa_ies.fasta`
