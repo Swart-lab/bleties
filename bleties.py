@@ -23,8 +23,6 @@ milraa_parser = subparsers.add_parser(name="milraa",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 # Input arguments
-milraa_parser.add_argument("--sam",
-    help="SAM file containing mapping, requires header")
 milraa_parser.add_argument("--bam",
     help="BAM file containing mapping, must be sorted and indexed")
 milraa_parser.add_argument("--ref",
@@ -96,8 +94,6 @@ miser_parser = subparsers.add_parser(name="miser",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 # Input arguments
-miser_parser.add_argument("--sam",
-    help="SAM file containing mapping, requires header")
 miser_parser.add_argument("--bam",
     help="BAM file containing mapping, must be sorted and indexed")
 miser_parser.add_argument("--ref",

@@ -537,7 +537,7 @@ class IesRecords(object):
                         )
                     )
                 )
-        # pysam.AlignmentFile object representing the SAM/BAM mapping
+        # pysam.AlignmentFile object representing the BAM mapping
         self._alnfile = alnfile
         # Format of the alignment "bam" or "sam"
         self._alnformat = alnformat
