@@ -10,8 +10,8 @@ To do list for BleTIES
      add them back in
  - [ ] MILTEL
      - [x] Parse NCRF output
-     - [ ] Assign CBS junction features
-     - [ ] Clustering of putative CBS junctions
+     - [x] Assign CBS junction features
      - [ ] Annotate non-CBS junctions
+     - [ ] Parallelize NCRF code
  - [x] Detailed docs in separate folder
  - [ ] Add license
