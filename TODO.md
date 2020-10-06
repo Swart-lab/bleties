@@ -8,6 +8,9 @@ To do list for BleTIES
      PacBio subreads/CLR reads.
  - [ ] Implement Insert/Remove module, to remove putative IESs from assembly, or
      add them back in
- - [ ] Implement internal telomere finder as separate module in BleTIES
+ - [ ] MILTEL
+     - [ ] Parse NCRF output
+     - [ ] Assign CBS junction features
+     - [ ] Clustering of putative CBS junctions
  - [x] Detailed docs in separate folder
  - [ ] Add license

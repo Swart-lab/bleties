@@ -333,3 +333,23 @@ def milcor(args):
 
     except:
         logger.error(f"No valid BAM index found for alignment file {args.bam}")
+
+
+def miltel(args):
+    logger = logging.getLogger("main.miltel")
+    logger.info(f"BleTIES {__version__}")
+    logger.info("Started BleTIES MILCOR")
+    logger.info("Command line:")
+    logger.info(" ".join(sys.argv))
+
+    alnfile = pysam.AlignmentFile(args.bam, "rb")
+    alnfile.check_index()
+    clipped_seqs = Miltel.softclipped_seqs_from_bam(alnfile)
+    ncrf_results = Miltel.find_telomeres_in_softclipped_seqs(
+                        clipped_seqs,
+                        telomere=args.telomere,
+                        minlength=args.min_telomere_length)
+    with open(args.out, "w") as fh:
+        for res in ncrf_results:
+            fh.write(str(res))
+            fh.write("\n")

@@ -224,6 +224,30 @@ milcor_parser.add_argument("--dump",
 
 milcor_parser.set_defaults(func=main.milcor)
 
+
+# MILTEL -----------------------------------------------------------------------
+miltel_parser = subparsers.add_parser(name="miltel",
+        description="MILTEL - Method of Long-read Telomere detection",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+# Input arguments
+miltel_parser.add_argument("--bam",
+    help="BAM file containing mapping, must be sorted and indexed")
+
+miltel_parser.add_argument("--telomere", type=str, default="ACACCCTA",
+    help="Telomere sequence to search for")
+miltel_parser.add_argument("--min_telomere_length", type=int, default=24,
+    help="Minimum length of telomere to call")
+
+# Output arguments
+miltel_parser.add_argument("-o", "--out", default="miltel.test",
+    help="Prefix for output files")
+miltel_parser.add_argument("--dump", action="store_true",
+    help="Dump internal data for troubleshooting")
+
+miltel_parser.set_defaults(func=main.miltel)
+
+
 # Parse arguments --------------------------------------------------------------
 args = parser.parse_args()
 
