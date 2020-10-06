@@ -185,15 +185,28 @@ def call_features_from_rekeyed_dict(seqdict):
         out_aln_gaps = []
         for rec in recs:
             if "ncrf_parse" in rec:
-                if orientation == "left":
-                    # clip on left of read, so check distance from end of 
-                    # alignment to the end of the softclipped segment
-                    gap = len(rec['seq']) - rec['ncrf_parse'][0]['alnend'] # TODO case where there is more than one aligned segmnet
-                elif orientation == "right":
-                    # clip on right of read, so check distance from beginning
-                    # of alignment to the start of softclipped segment
-                    gap = rec['ncrf_parse'][0]['alnstart']
-                out_aln_orientations.append(rec['ncrf_parse'][0]['orientation'])
+                gap = None
+                currgap = None
+                alnorientation = None
+                # If there is more than one alignment, find the one
+                # closest to the boundary
+                for alnrec in rec['ncrf_parse']:
+                    if orientation == "left":
+                        # clip on left of read, so check distance from end of 
+                        # alignment to the end of the softclipped segment
+                        currgap = len(rec['seq']) - alnrec['alnend']
+                    elif orientation == "right":
+                        # clip on right of read, so check distance from beginning
+                        # of alignment to the start of softclipped segment
+                        currgap = alnrec['alnstart']
+                    if gap:
+                        if currgap and currgap < gap:
+                            gap = currgap
+                            alnorientation = alnrec['orientation']
+                    else:
+                        gap = currgap
+                        alnorientation = alnrec['orientation']
+                out_aln_orientations.append(alnorientation)
                 out_aln_gaps.append(gap)
         if len(out_aln_gaps) > 0:
             gffid = f"CBS_{rname}_{str(rstart+1)}_{orientation}"
