@@ -308,7 +308,8 @@ def getCigarOpQuerySeqs(qseq, cigartuples, rstart, target_op="S"):
         qstart = qend
         rstart = rend
 
-    return(out)
+    if len(out) > 0:
+        return(out)
 
 
 def mean_of_number_list(numbers, delim="_"):
