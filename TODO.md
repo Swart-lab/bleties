@@ -9,8 +9,9 @@ To do list for BleTIES
  - [ ] Implement Insert/Remove module, to remove putative IESs from assembly, or
      add them back in
  - [ ] MILTEL
-     - [ ] Parse NCRF output
+     - [x] Parse NCRF output
      - [ ] Assign CBS junction features
      - [ ] Clustering of putative CBS junctions
+     - [ ] Annotate non-CBS junctions
  - [x] Detailed docs in separate folder
  - [ ] Add license

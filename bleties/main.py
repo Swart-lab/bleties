@@ -353,10 +353,10 @@ def miltel(args):
     clipped_seqs = Miltel.softclipped_seqs_from_bam(alnfile)
     logger.info(f"Searching for telomere sequence {args.telomere} with NCRF")
     clipped_seqs_dict = Miltel.rekey_softclip_recs_by_ref(clipped_seqs, args.telomere, args.min_telomere_length)
+    miltel_calls = Miltel.call_features_from_rekeyed_dict(clipped_seqs_dict)
 
-#     logger.info(f"Writing output to file {args.out}")
-#     with open(args.out, "w") as fh:
-#         fh.write() # write output
+    logger.info(f"Writing output to file {args.out}")
+    miltel_calls.gff2file(args.out)
 
     if args.dump:
         logger.info(f"Dumping internal data to file {args.out}.dump.json for troubleshooting")

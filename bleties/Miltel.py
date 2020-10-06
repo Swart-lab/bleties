@@ -6,6 +6,7 @@ import logging
 from collections import defaultdict
 
 from bleties.SharedFunctions import getCigarOpQuerySeqs, nested_dict_to_list_fixed_depth
+from bleties.SharedFunctions import Gff
 
 
 logger = logging.getLogger("Miltel")
@@ -26,8 +27,12 @@ def softclipped_seqs_from_bam(alnfile):
         Coordinates are zero-based end-exclusive (python convention)
     """
     out = []
+    counter = 0
     for rec in alnfile.fetch():
         if (not rec.is_supplementary) and (not rec.is_unmapped) and (not rec.is_secondary):
+            counter += 1
+            if counter % 1000 == 0:
+                logger.debug(f"Processed {str(counter)} entries")
             rname = rec.reference_name
             qname = rec.query_name
             qlen = rec.query_length # includes soft-clips but not hard-clips
@@ -134,7 +139,11 @@ def rekey_softclip_recs_by_ref(seqlist, telomere="ACACCCTA", min_telomere_length
             lambda: defaultdict( # rstart
                 lambda: defaultdict( # clip_orientation
                     list)))
+    counter = 0
     for rec in seqlist:
+        counter += 1
+        if counter % 1000 == 0:
+            logger.debug(f"Processed {str(counter)} entries")
         if rec['rstart'] == rec['rend']:
             orientation = None
             if rec['qstart'] == 0:
@@ -144,7 +153,9 @@ def rekey_softclip_recs_by_ref(seqlist, telomere="ACACCCTA", min_telomere_length
             if orientation:
                 # Find telomere sequence
                 ncrf = find_telomeres(rec['seq'], telomere, min_telomere_length)
-                rec['ncrf_parse'] = parse_NCRF_output(ncrf)
+                ncrf_parse = parse_NCRF_output(ncrf)
+                if ncrf_parse:
+                    rec['ncrf_parse'] = ncrf_parse
                 out[rec['rname']][rec['rstart']][orientation].append(rec)
             else:
                 logger.warn(f"No clipping orientation found for softclip {str(rec)}")
@@ -153,3 +164,48 @@ def rekey_softclip_recs_by_ref(seqlist, telomere="ACACCCTA", min_telomere_length
 
     return(out)
 
+
+def call_features_from_rekeyed_dict(seqdict):
+    """Call putative chromosome breakage sites junctions from rekeyed dict
+
+    Parameters
+    ----------
+    seqdict : dict
+        Output of rekey_softclip_recs_by_ref()
+
+    Returns
+    -------
+    Gff
+        Gff object reporting coordinates of chromosome breakage sites
+    """
+    out = Gff()
+    reclist = nested_dict_to_list_fixed_depth(seqdict, 3)
+    for rname, rstart, orientation, recs in reclist:
+        out_aln_orientations = []
+        out_aln_gaps = []
+        for rec in recs:
+            if "ncrf_parse" in rec:
+                if orientation == "left":
+                    # clip on left of read, so check distance from end of 
+                    # alignment to the end of the softclipped segment
+                    gap = len(rec['seq']) - rec['ncrf_parse'][0]['alnend'] # TODO case where there is more than one aligned segmnet
+                elif orientation == "right":
+                    # clip on right of read, so check distance from beginning
+                    # of alignment to the start of softclipped segment
+                    gap = rec['ncrf_parse'][0]['alnstart']
+                out_aln_orientations.append(rec['ncrf_parse'][0]['orientation'])
+                out_aln_gaps.append(gap)
+        if len(out_aln_gaps) > 0:
+            gffid = f"CBS_{rname}_{str(rstart+1)}_{orientation}"
+            attrs=[f"ID={gffid}",
+                   f"orientation={orientation}",
+                   "telomere_senses=" + " ".join([str(i) for i in out_aln_orientations]),
+                   "gaps_to_telomere=" + " ".join([str(i) for i in out_aln_gaps])]
+            out.addEntry( # self, linearr, gffid
+                [rname, "MILTEL", "chromeosome_breakage_site",
+                 rstart+1, rstart+1, # Convert to 1-based coords for GFF
+                 len(out_aln_gaps),
+                 '.', '.',
+                 ";".join(attrs)],
+                 gffid)
+    return(out)
