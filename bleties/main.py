@@ -342,14 +342,29 @@ def miltel(args):
     logger.info("Command line:")
     logger.info(" ".join(sys.argv))
 
+    logger.info(f"Reading BAM file {args.bam}")
     alnfile = pysam.AlignmentFile(args.bam, "rb")
-    alnfile.check_index()
+    try:
+        alnfile.check_index()
+    except:
+        logger.error(f"No valid BAM index found for alignment file {args.bam}")
+
+    logger.info("Getting softclipped sequences from aligned reads")
     clipped_seqs = Miltel.softclipped_seqs_from_bam(alnfile)
+
+    logger.info(f"Searching for telomere sequence {args.telomere} with NCRF")
     ncrf_results = Miltel.find_telomeres_in_softclipped_seqs(
                         clipped_seqs,
                         telomere=args.telomere,
                         minlength=args.min_telomere_length)
+
+    logger.info(f"Writing output to file {args.out}")
     with open(args.out, "w") as fh:
         for res in ncrf_results:
             fh.write(str(res))
             fh.write("\n")
+
+    if args.dump:
+        logger.info(f"Dumping internal data to file {args.out}.dump.json for troubleshooting")
+        with open(f"{args.out}.dump.json", "w") as fh:
+            fh.write(json.dumps({"clipped_seqs":clipped_seqs}, indent=4))

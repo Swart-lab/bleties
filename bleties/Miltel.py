@@ -16,22 +16,35 @@ def softclipped_seqs_from_bam(alnfile):
     Parameters
     ----------
     alnfile : pysam.AlignmentFile
+
+    Returns
+    -------
+    list
+        list of dicts, each dict representing a softclipped sequence segment,
+        with the keys seq, qname, qlen, qstart, qend, rname, rstart, rend.
     """
     out = []
     for rec in alnfile.fetch():
         if (not rec.is_supplementary) and (not rec.is_unmapped) and (not rec.is_secondary):
             rname = rec.reference_name
             qname = rec.query_name
+            qlen = rec.query_length # includes soft-clips but not hard-clips
             opseqs = getCigarOpQuerySeqs(
-                        rec.query_sequence,
+                        rec.query_sequence, # includes soft-clips but not hard-clips
                         rec.cigartuples,
                         rec.reference_start,
                         target_op="S")
             if opseqs and len(opseqs) > 0:
                 for (seq, qstart, qend, rstart, rend) in opseqs:
-                    out.append((seq, 
-                        qname, qstart, qend,
-                        rname, rstart, rend))
+                    out.append({
+                        "seq": seq, 
+                        "qname": qname,
+                        "qlen": qlen,
+                        "qstart": qstart,
+                        "qend": qend,
+                        "rname": rname,
+                        "rstart": rstart,
+                        "rend": rend})
     return(out)
 
 def find_telomeres_in_softclipped_seqs(seqlist, telomere="ACACCCTA", minlength=24):
@@ -42,8 +55,8 @@ def find_telomeres_in_softclipped_seqs(seqlist, telomere="ACACCCTA", minlength=2
     Parameters
     ----------
     seqlist : list
-        Output from softclipped_seqs_from_bam(), a list of tuples, where the
-        first element in each tuple is a str representing softclipped seq.
+        Output from softclipped_seqs_from_bam(), a list of dicts, where the
+        softclipped seq is a str keyed with `seq`
     telomere : str
         Sequence of the telomere repeat. Default is ACACCCTA, corresponding to
         Blepharisma and Stentor telomere.
@@ -51,10 +64,10 @@ def find_telomeres_in_softclipped_seqs(seqlist, telomere="ACACCCTA", minlength=2
         Minimum length of consecutive telomeres to detect (bp)
     """
     out = []
-    for (seq, qname, qstart, qend, rname, rstart, rend) in seqlist:
+    for rec in seqlist:
         ncrf_out = subprocess.run(
                 ["NCRF", f"telomere:{telomere}", f"--minlength={str(minlength)}"],
                 capture_output=True,
-                input=str.encode(seq))
+                input=str.encode(rec['seq']))
         out.append(ncrf_out)
     return(out)
