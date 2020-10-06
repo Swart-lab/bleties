@@ -257,6 +257,60 @@ def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatc
                     return(cigmatch.group(2), int(cigmatch.group(1)))
 
 
+def getCigarOpQuerySeqs(qseq, cigartuples, rstart, target_op="S"):
+    """Get sequence segments from a query sequence that correspond to a
+    specific CIGAR operation
+
+    Parameters
+    ----------
+    qseq : str
+        Query sequence
+    cigartuples : list
+        List of tuples of ints (operation, operation length) where operation is
+        CIGAR operation numbered 0-9 by BAM convention. Output from
+        pysam.AlignedSegment.cigartuples
+    rstart : int
+        Reference start position, 0-based
+    target_op : str
+        Name of CIGAR operation for which to report the sequence(s)
+
+    Returns
+    -------
+    list
+        list of tuples (str, int, int, int, int) corresponding to: (sequence
+        segment, query start, query end, ref start, ref end) of each segment
+        corresponding to a specific CIGAR operation. Coordinates are 0-based.
+    """
+    op2bam = {"M": 0, "I": 1, "D": 2, "N": 3, "S": 4, "H": 5, "P": 6, "=": 7, "X": 8}
+    if target_op not in op2bam:
+        raise Exception(f"Operation {target_op} not a valid CIGAR operation")
+    QUERY_CONSUMING = [0, 1, 4, 7, 8]
+    REF_CONSUMING = [0, 2, 3, 7, 8]
+
+    # initialize placeholders
+    rend = rstart
+    qstart = 0 # 0-based coordinates
+    qend = qstart
+
+    out = []
+    for op, oplen in cigartuples:
+        if op in QUERY_CONSUMING:
+            qend = qstart + oplen
+        if op in REF_CONSUMING:
+            rend = rstart + oplen
+
+        if op == op2bam[target_op]:
+            out.append((qseq[qstart:qend],
+                qstart, qend,
+                rstart, rend))
+
+        # Update counters
+        qstart = qend
+        rstart = rend
+
+    return(out)
+
+
 def mean_of_number_list(numbers, delim="_"):
     """Report arithmetic mean of a string of integers that are separated by a
     common delimiter. Used here to get mean of IES lengths reported in MILRAA

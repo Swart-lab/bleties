@@ -32,6 +32,16 @@ class TestSharedFunctions(unittest.TestCase):
                 SharedFunctions.mean_of_number_list("12_13_14", "_"),
                 13)
 
+
+    def test_getCigarOpQuerySeqs(self):
+        qseq = "AATACCCATTA"
+        cigartuples = [(4,2), (0,3), (1,3), (2,3), (4,3)]
+        rstart = 10
+        self.assertEqual(
+                SharedFunctions.getCigarOpQuerySeqs(
+                    qseq, cigartuples, rstart, target_op="S"),
+                [("AA",0,2,10,10),("TTA",8,11,16,16)])
+
 class TestMilraa(unittest.TestCase):
 
     def test_getPointers(self):
