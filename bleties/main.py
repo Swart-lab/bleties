@@ -351,20 +351,16 @@ def miltel(args):
 
     logger.info("Getting softclipped sequences from aligned reads")
     clipped_seqs = Miltel.softclipped_seqs_from_bam(alnfile)
-
     logger.info(f"Searching for telomere sequence {args.telomere} with NCRF")
-    ncrf_results = Miltel.find_telomeres_in_softclipped_seqs(
-                        clipped_seqs,
-                        telomere=args.telomere,
-                        minlength=args.min_telomere_length)
+    clipped_seqs_dict = Miltel.rekey_softclip_recs_by_ref(clipped_seqs, args.telomere, args.min_telomere_length)
 
-    logger.info(f"Writing output to file {args.out}")
-    with open(args.out, "w") as fh:
-        for res in ncrf_results:
-            fh.write(str(res))
-            fh.write("\n")
+#     logger.info(f"Writing output to file {args.out}")
+#     with open(args.out, "w") as fh:
+#         fh.write() # write output
 
     if args.dump:
         logger.info(f"Dumping internal data to file {args.out}.dump.json for troubleshooting")
         with open(f"{args.out}.dump.json", "w") as fh:
-            fh.write(json.dumps({"clipped_seqs":clipped_seqs}, indent=4))
+            fh.write(json.dumps({
+                "clipped_seqs":clipped_seqs, 
+                "clipped_seqs_dict": clipped_seqs_dict}, indent=4))
