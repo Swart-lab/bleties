@@ -80,7 +80,7 @@ def milraa(args):
         fh.write("##gff-version 3\n")
         fh.write("# " + " ".join(sys.argv) + "\n")
         # Write each GFF entry as a tab-separated line
-        iesgff.gff2fh(fh)
+        iesgff.gff2fh(fh, header=False)
 
     # Write Fasta file of putative IES sequences
     logger.info(f"""Reporting consensus sequences of putative IESs to Fasta
@@ -115,7 +115,7 @@ def milraa(args):
         with open(f"{args.out}.milraa_ies_fuzzy.gff3", "w") as fh:
             fh.write("##gff-version 3\n")
             fh.write("# " + " ".join(sys.argv) + "\n")
-            fuzzygff.gff2fh(fh)
+            fuzzygff.gff2fh(fh, header=False)
 
         # Write Fasta file of putative IES sequences fuzzy clusters
         logger.info(f"""Reporting consensus sequences of putative fuzzy IESs to

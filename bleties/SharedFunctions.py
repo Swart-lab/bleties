@@ -515,29 +515,37 @@ class Gff(object):
             self.list2gff(slurp)
 
 
-    def gff2file(self, filename):
+    def gff2file(self, filename, header=True):
         """Write Gff object directly to GFF3 file
 
         Parameters
         ----------
         filename : str
             Path to file to write
+        header : bool
+            Include ##gff-version header?
         """
         fh = open(filename,"w")
         outarr = self.gff2list()
+        if header:
+            fh.write("##gff-version 3\n")
         for line in outarr:
             fh.write(line+"\n")
         fh.close()
 
 
-    def gff2fh(self, fh):
+    def gff2fh(self, fh, header=True):
         """Write Gff object to open filehandle
 
         Parameters
         ----------
         fh : _io.TextIOWrapper
             File handle
+        header : bool
+            Include ##gff-version header?
         """
         outarr = self.gff2list()
+        if header:
+            fh.write("##gff-version 3\n")
         for line in outarr:
             fh.write(line+"\n")
