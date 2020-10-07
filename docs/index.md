@@ -27,6 +27,7 @@ names:
 ./bleties.py miser --help
 ./bleties.py milret --help
 ./bleties.py milcor --help
+./bleties.py miltel --help
 ```
 
 Scripts for plotting and visualizing data are in the `scripts/` subfolder.
@@ -45,4 +46,6 @@ Refer to the individual module pages for further information.
    from third-party tools, to calculate IES retention scores from mapping.
  * [MILCOR](milcor.md) -- Calculate per-read IES retention scores and bin reads
    as MIC/MAC in origin.
+ * [MILTEL](miltel.md) -- Identify potential chromosome breakage sites with
+   telomere addition
 
