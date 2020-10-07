@@ -17,26 +17,49 @@ from bleties import __version__
 from bleties import SharedFunctions
 
 
-def read_bam_ref(args):
+def read_bam_ref(bam, fasta=None):
     """Read input SAM or BAM alignment and reference Fasta file.
-    Returns Milraa.IesRecords object (alignment), pysam.AlignmentFile object
-    (alignment), and SeqIO object (reference).
-    This function is used by both milraa() and miser().
+
+    Checks for BAM index, and that headers in sequence files match those in BAM
+
+    Parameters
+    ----------
+    bam : str
+        Path to BAM file mapping
+    fasta : str
+        Path to Fasta file containing reference used for mapping, optional.
+
+    Returns
+    -------
+    pysam.AlignmentFile
+        Handle to BAM mapping file
+    dict
+        dict of Bio.SeqRecords objects representing reference genome
     """
     logger = logging.getLogger("main.read_bam_ref")
+
     # Open BAM file
-    logger.info(f"Opening alignment file {args.bam}")
-    alnfile = pysam.AlignmentFile(args.bam, "rb")
+    logger.info(f"Opening alignment file {bam}")
+    alnfile = pysam.AlignmentFile(bam, "rb")
+    # Check for BAM index
     try:
-        alnfile.check_index() # Check for BAM index
-        logger.info("Alignment file contains "
-                     + str(alnfile.mapped)
-                     + " reads mapped to "
-                     + str(alnfile.nreferences)
-                     + " reference sequences")
+        alnfile.check_index() 
+    except: 
+        # check_index() should return ValueError if no index found
+        logger.error(f"No valid BAM index found for alignment file {bam}")
+    # Report summary to log
+    logger.info("Alignment file contains "
+                 + str(alnfile.mapped)
+                 + " reads mapped to "
+                 + str(alnfile.nreferences)
+                 + " reference sequences")
+
+    # If Fasta file provided
+    if fasta:
         # Read reference Fasta file into memory
-        logger.info(f"Reading mapping sequence file to memory {args.ref}")
-        refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
+        logger.info(f"Reading mapping sequence file to memory {fasta}")
+        refgenome = SeqIO.to_dict(SeqIO.parse(fasta, "fasta"))
+
         # Sanity check: lengths and names of contigs in refgenome should match BAM
         for ctg in refgenome:
             if ctg in alnfile.references:
@@ -44,12 +67,13 @@ def read_bam_ref(args):
                     raise Exception(f"Contig {ctg} length does not match BAM header")
             else:
                 logger.warn(f"Contig {ctg} in reference Fasta but not in BAM header")
-        # Initialize new IesRecords object to store putative IESs
-        iesrecords = Milraa.IesRecords(alnfile, "bam", refgenome)
+
         # Return alignment and reference objects
-        return(iesrecords,alnfile,refgenome)
-    except: # check_index() should return ValueError if no index found
-        logger.error(f"No valid BAM index found for alignment file {args.bam}")
+        return(alnfile,refgenome)
+
+    else:
+        # If no Fasta file, return alignment object only
+        return(alnfile)
 
 
 def milraa(args):
@@ -59,7 +83,9 @@ def milraa(args):
     logger.info("Command line:")
     logger.info(" ".join(sys.argv))
     # Read input files
-    iesrecords,alnfile,refgenome = read_bam_ref(args)
+    alnfile,refgenome = read_bam_ref(args.bam, args.ref)
+    # Initialize new IesRecords object to store putative IESs
+    iesrecords = Milraa.IesRecords(alnfile, "bam", refgenome)
     # Process alignment to find putative IESs
     logger.info("Processing alignment to find putative IESs")
     iesrecords.findPutativeIes(args.min_ies_length)
@@ -135,8 +161,12 @@ def miser(args):
     logger.info("Started BleTIES MISER")
     logger.info("Command line:")
     logger.info(" ".join(sys.argv))
+
     # Read input files
-    iesrecords,alnfile,refgenome = read_bam_ref(args)
+    alnfile,refgenome = read_bam_ref(args.bam, args.ref)
+    # Initialize new IesRecords object to store putative IESs
+    iesrecords = Milraa.IesRecords(alnfile, "bam", refgenome)
+
     # Read in IES GFF file produced by Milraa
     logger.info("Reading GFF file containing putative IESs")
     iesgff = SharedFunctions.Gff()
@@ -254,35 +284,29 @@ def milret(args):
     logger.info(" ".join(sys.argv))
 
     # Read BAM file - SAM not supported because we need random access
-    logger.info(f"Opening alignment file {args.bam}")
-    alnfile = pysam.AlignmentFile(args.bam, "rb")
-    
-    # Check for BAM index
-    try:
-        alnfile.check_index()
+    alnfile = read_bam_ref(args.bam)
 
-        # Initialize IesRetentionsMacOnly object
-        iesretentions = Milret.IesRetentionsMacOnly(args.ies, alnfile)
+    # Initialize IesRetentionsMacOnly object
+    iesretentions = Milret.IesRetentionsMacOnly(args.ies, alnfile)
 
-        # Count mapping operations per site
-        logger.info(f"Counting IES+ and IES- forms at each junction in file {args.ies}")
-        iesretentions.findMappingOps()
+    # Count mapping operations per site
+    logger.info(f"Counting IES+ and IES- forms at each junction in file {args.ies}")
+    iesretentions.findMappingOps()
 
-        # Report retention scores to file
-        logger.info("Calculating retention scores per junction")
-        if args.use_ies_lengths:
-            logger.info(f"Counting only inserts matching defined IES lengths to threshold +/- {str(args.length_threshold)}")
-            iesretentions.calculateRetentionScoresMatchLengths(args.length_threshold)
-        else:
-            logger.info("Counting all inserts at junctions as potential IESs, regardless of length")
-            iesretentions.calculateRetentionScores()
-        iesretentions.reportRetentionScores(args.out)
-        if args.dump:
-            iesretentions.dump(f"{args.out}.dump.json")
-        logger.info("Finished MILRET")
+    # Report retention scores to file
+    logger.info("Calculating retention scores per junction")
+    if args.use_ies_lengths:
+        logger.info(f"Counting only inserts matching defined IES lengths to threshold +/- {str(args.length_threshold)}")
+        iesretentions.calculateRetentionScoresMatchLengths(args.length_threshold)
+    else:
+        logger.info("Counting all inserts at junctions as potential IESs, regardless of length")
+        iesretentions.calculateRetentionScores()
+    iesretentions.reportRetentionScores(args.out)
+    if args.dump:
+        iesretentions.dump(f"{args.out}.dump.json")
 
-    except:
-        logger.error(f"No valid BAM index found for alignment file {args.bam}")
+    alnfile.close()
+    logger.info("Finished MILRET")
 
 
 def milcor(args):
@@ -293,64 +317,56 @@ def milcor(args):
     logger.info(" ".join(sys.argv))
 
     # Read BAM file - SAM not supported because we need random access
-    logger.info(f"Opening alignment file {args.bam}")
-    alnfile = pysam.AlignmentFile(args.bam, "rb")
+    alnfile = read_bam_ref(args.bam)
 
-    try:
-        alnfile.check_index()
+    logger.info(f"Counting per-read presence of IESs defined in file {args.ies}")
+    iescorr = Milcor.IesCorrelationsByRead(args.ies, alnfile)
+    if args.use_ies_lengths:
+        logger.info(f"Counting only inserts matching defined IES lengths to threshold +/- {str(args.length_threshold)}")
+    iescorr.countIesCooccurrences(args.use_ies_lengths, threshold=args.length_threshold)
 
-        logger.info(f"Counting per-read presence of IESs defined in file {args.ies}")
-        iescorr = Milcor.IesCorrelationsByRead(args.ies, alnfile)
-        if args.use_ies_lengths:
-            logger.info(f"Counting only inserts matching defined IES lengths to threshold +/- {str(args.length_threshold)}")
-        iescorr.countIesCooccurrences(args.use_ies_lengths, threshold=args.length_threshold)
-
-        out_perread_table = iescorr.summarizePerRead()
-        logger.info(f"Writing output to file {args.out}.milcor.tsv")
-        with open(f"{args.out}.milcor.tsv", "w") as fh:
-            fh.write("\t".join(['qname', 'rname', 'start', 'end', 'ies_present', 'ies_absent']))
+    out_perread_table = iescorr.summarizePerRead()
+    logger.info(f"Writing output to file {args.out}.milcor.tsv")
+    with open(f"{args.out}.milcor.tsv", "w") as fh:
+        fh.write("\t".join(['qname', 'rname', 'start', 'end', 'ies_present', 'ies_absent']))
+        fh.write("\n")
+        for line in out_perread_table:
+            fh.write("\t".join([str(i) for i in line]))
             fh.write("\n")
-            for line in out_perread_table:
-                fh.write("\t".join([str(i) for i in line]))
-                fh.write("\n")
 
-        if args.dump:
-            logger.info(f"Dumping internal data to file {args.out}.milcor.dump.json for troubleshooting")
-            iescorr.dump(f"{args.out}.milcor.dump.json")
+    if args.dump:
+        logger.info(f"Dumping internal data to file {args.out}.milcor.dump.json for troubleshooting")
+        iescorr.dump(f"{args.out}.milcor.dump.json")
 
-        if args.bin:
-            logger.info(f"Binning reads to likely MAC and MIC reads with threshold {str(args.bin_threshold)}")
-            logger.info(f"Writing output to files:")
-            logger.info(f"  {args.out}.milcor_bin_MAC.fasta")
-            logger.info(f"  {args.out}.milcor_bin_MIC.fasta")
-            logger.info(f"  {args.out}.milcor_bin_other.fasta")
-            logger.info(f"  {args.out}.milcor_bin_noies.fasta")
-            iescorr.binReads(f"{args.out}.milcor_bin_MAC.fasta",
-                    f"{args.out}.milcor_bin_MIC.fasta",
-                    f"{args.out}.milcor_bin_other.fasta",
-                    f"{args.out}.milcor_bin_noies.fasta",
-                args.bin_threshold)
+    if args.bin:
+        logger.info(f"Binning reads to likely MAC and MIC reads with threshold {str(args.bin_threshold)}")
+        logger.info(f"Writing output to files:")
+        logger.info(f"  {args.out}.milcor_bin_MAC.fasta")
+        logger.info(f"  {args.out}.milcor_bin_MIC.fasta")
+        logger.info(f"  {args.out}.milcor_bin_other.fasta")
+        logger.info(f"  {args.out}.milcor_bin_noies.fasta")
+        iescorr.binReads(f"{args.out}.milcor_bin_MAC.fasta",
+                f"{args.out}.milcor_bin_MIC.fasta",
+                f"{args.out}.milcor_bin_other.fasta",
+                f"{args.out}.milcor_bin_noies.fasta",
+            args.bin_threshold)
 
-    except:
-        logger.error(f"No valid BAM index found for alignment file {args.bam}")
+    alnfile.close()
+    logger.info("Finished MILCOR")
 
 
 def miltel(args):
+    # TODO: Add Ref genome for future functionality
     logger = logging.getLogger("main.miltel")
     logger.info(f"BleTIES {__version__}")
     logger.info("Started BleTIES MILTEL")
     logger.info("Command line:")
     logger.info(" ".join(sys.argv))
 
-    logger.info(f"Reading BAM file {args.bam}")
-    alnfile = pysam.AlignmentFile(args.bam, "rb")
-    try:
-        alnfile.check_index()
-    except:
-        logger.error(f"No valid BAM index found for alignment file {args.bam}")
+    alnfile = read_bam_ref(args.bam)
 
     logger.info("Getting softclipped sequences from aligned reads")
-    cbscalls = Miltel.Miltel(alnfile, None) # initialize Miltel object
+    cbscalls = Miltel.Miltel(alnfile, None) # initialize Miltel object 
     cbscalls.get_softclips()
     logger.info(f"Searching for telomere sequence {args.telomere} with NCRF")
     cbscalls.find_telomeres(args.telomere, args.min_telomere_length)
@@ -363,3 +379,6 @@ def miltel(args):
         logger.info(f"Dumping internal data to file {args.out}.dump.json for troubleshooting")
         with open(f"{args.out}.dump.json", "w") as fh:
             fh.write(cbscalls.dump())
+
+    alnfile.close()
+    logger.info("Finished MILTEL")
