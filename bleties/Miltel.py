@@ -215,7 +215,7 @@ def call_features_from_rekeyed_dict(seqdict):
                    "telomere_senses=" + " ".join([str(i) for i in out_aln_orientations]),
                    "gaps_to_telomere=" + " ".join([str(i) for i in out_aln_gaps])]
             out.addEntry( # self, linearr, gffid
-                [rname, "MILTEL", "chromeosome_breakage_site",
+                [rname, "MILTEL", "chromosome_breakage_site",
                  rstart+1, rstart+1, # Convert to 1-based coords for GFF
                  len(out_aln_gaps),
                  '.', '.',
