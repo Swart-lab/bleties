@@ -11,8 +11,9 @@ To do list for BleTIES
  - [ ] MILTEL
      - [x] Parse NCRF output
      - [x] Assign CBS junction features
-     - [ ] Annotate non-CBS junctions, get consensus sequences of clipped
+     - [x] Annotate non-CBS junctions, get consensus sequences of clipped
          segments and map to assembly and check for low-complexity sequence
+     - [ ] Map clipped segments back to assembly to look for rearrangements
      - [ ] Get average coverage of M operations at junctions, "breakage score"
          or "rearrangement score"
      - [ ] Parallelize NCRF code
