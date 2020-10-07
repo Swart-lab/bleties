@@ -338,7 +338,7 @@ def milcor(args):
 def miltel(args):
     logger = logging.getLogger("main.miltel")
     logger.info(f"BleTIES {__version__}")
-    logger.info("Started BleTIES MILCOR")
+    logger.info("Started BleTIES MILTEL")
     logger.info("Command line:")
     logger.info(" ".join(sys.argv))
 
