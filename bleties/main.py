@@ -350,17 +350,16 @@ def miltel(args):
         logger.error(f"No valid BAM index found for alignment file {args.bam}")
 
     logger.info("Getting softclipped sequences from aligned reads")
-    clipped_seqs = Miltel.softclipped_seqs_from_bam(alnfile)
+    cbscalls = Miltel.Miltel(alnfile, None) # initialize Miltel object
+    cbscalls.get_softclips()
     logger.info(f"Searching for telomere sequence {args.telomere} with NCRF")
-    clipped_seqs_dict = Miltel.rekey_softclip_recs_by_ref(clipped_seqs, args.telomere, args.min_telomere_length)
-    miltel_calls = Miltel.call_features_from_rekeyed_dict(clipped_seqs_dict)
+    cbscalls.find_telomeres(args.telomere, args.min_telomere_length)
+    cbscalls_gff = cbscalls.report_CBS_GFF()
 
     logger.info(f"Writing output to file {args.out}")
-    miltel_calls.gff2file(args.out)
+    cbscalls_gff.gff2file(args.out)
 
     if args.dump:
         logger.info(f"Dumping internal data to file {args.out}.dump.json for troubleshooting")
         with open(f"{args.out}.dump.json", "w") as fh:
-            fh.write(json.dumps({
-                "clipped_seqs":clipped_seqs, 
-                "clipped_seqs_dict": clipped_seqs_dict}, indent=4))
+            fh.write(cbscalls.dump())

@@ -3,6 +3,7 @@
 import pysam
 import subprocess
 import logging
+import json
 from collections import defaultdict
 
 from bleties.SharedFunctions import getCigarOpQuerySeqs, nested_dict_to_list_fixed_depth
@@ -119,106 +120,137 @@ def parse_NCRF_output(ncrf):
             return(out)
 
 
-def rekey_softclip_recs_by_ref(seqlist, telomere="ACACCCTA", min_telomere_length=24):
-    """Rekey softclip_seqs_from_bam output to a dict organized by reference
-    
-    Search for telomeres in softclip seqs and parse NCRF output
+class Miltel(object):
+    """Object to store softclip accounting records"""
 
-    Parameters
-    ----------
-    seqlist : list
-        list of dicts, output from softclip_seqs_from_bam()
+    def __init__(self, alnfile, refgenome):
+        """Initialize Miltel object with alignment file and reference genome
 
-    Returns
-    -------
-    dict
-        dict keyed by rname -> rstart -> clip_orientation
-        for soft clips, assume that rstart == rend
-    """
-    out = defaultdict( # rname
-            lambda: defaultdict( # rstart
-                lambda: defaultdict( # clip_orientation
-                    list)))
-    counter = 0
-    for rec in seqlist:
-        counter += 1
-        if counter % 1000 == 0:
-            logger.debug(f"Processed {str(counter)} entries")
-        if rec['rstart'] == rec['rend']:
-            orientation = None
-            if rec['qstart'] == 0:
-                orientation = "left"
-            if rec['qend'] == rec['qlen']:
-                orientation = "right"
-            if orientation:
-                # Find telomere sequence
-                ncrf = find_telomeres(rec['seq'], telomere, min_telomere_length)
-                ncrf_parse = parse_NCRF_output(ncrf)
-                if ncrf_parse:
-                    rec['ncrf_parse'] = ncrf_parse
-                out[rec['rname']][rec['rstart']][orientation].append(rec)
+        Parameters
+        ----------
+        alnfile : pysam.AlignmentFile
+            Input BAM file opened in pysam
+        refgenome : Bio.SeqRecords
+            Reference genome file
+        """
+        self._alnfile = alnfile
+        self._refgenome = refgenome
+        self._clippedseqs = None # Dict to store clipped seq parses
+        self._clippeddict = None # Dict to store clipped seq parses
+
+
+    def dump(self):
+        """Data dump of Miltel object in JSON format"""
+        outstr = json.dumps({"clippedseqs": self._clippedseqs, 
+                             "_clippeddict": self._clippeddict}, 
+                            indent = 2)
+        return(outstr)
+
+
+    def get_softclips(self):
+        """Parse BAM file for softclipped reads"""
+        self._clippedseqs = softclipped_seqs_from_bam(self._alnfile)
+
+
+    def find_telomeres(self, telomere="ACACCCTA", min_telomere_length=24):
+        """Rekey softclip_seqs_from_bam output to a dict organized by reference
+        
+        Search for telomeres in softclip seqs and parse NCRF output
+
+        This function should be called after get_softclips()
+
+        Parameters
+        ----------
+        telomere : str
+            Telomere sequence (5') to search
+        min_telomere_length : int
+            Minimum telomere alignment length to count
+
+        Returns
+        -------
+        dict
+            dict keyed by rname -> rstart -> clip_orientation
+            for soft clips, assume that rstart == rend
+        """
+        self._clippeddict = defaultdict( # rname
+                                lambda: defaultdict( # rstart
+                                    lambda: defaultdict( # clip_orientation
+                                        list)))
+        counter = 0
+        for rec in self._clippedseqs:
+            counter += 1
+            if counter % 1000 == 0:
+                logger.debug(f"Processed {str(counter)} entries")
+            if rec['rstart'] == rec['rend']:
+                orientation = None
+                if rec['qstart'] == 0:
+                    orientation = "left"
+                if rec['qend'] == rec['qlen']:
+                    orientation = "right"
+                if orientation:
+                    # Find telomere sequence
+                    ncrf = find_telomeres(rec['seq'], telomere, min_telomere_length)
+                    ncrf_parse = parse_NCRF_output(ncrf)
+                    if ncrf_parse:
+                        rec['ncrf_parse'] = ncrf_parse
+                    self._clippeddict[rec['rname']][rec['rstart']][orientation].append(rec)
+                else:
+                    logger.warn(f"No clipping orientation found for softclip {str(rec)}")
             else:
-                logger.warn(f"No clipping orientation found for softclip {str(rec)}")
-        else:
-            logger.warn(f"Softclip with nonzero extent on reference, {str(rec)}")
-
-    return(out)
+                logger.warn(f"Softclip with nonzero extent on reference, {str(rec)}")
 
 
-def call_features_from_rekeyed_dict(seqdict):
-    """Call putative chromosome breakage sites junctions from rekeyed dict
+    def report_CBS_GFF(self):
+        """Call putative chromosome breakage sites junctions from rekeyed dict
 
-    Parameters
-    ----------
-    seqdict : dict
-        Output of rekey_softclip_recs_by_ref()
+        This function must be called after find_telomeres
 
-    Returns
-    -------
-    Gff
-        Gff object reporting coordinates of chromosome breakage sites
-    """
-    out = Gff()
-    reclist = nested_dict_to_list_fixed_depth(seqdict, 3)
-    for rname, rstart, orientation, recs in reclist:
-        out_aln_orientations = []
-        out_aln_gaps = []
-        for rec in recs:
-            if "ncrf_parse" in rec:
-                gap = None
-                currgap = None
-                alnorientation = None
-                # If there is more than one alignment, find the one
-                # closest to the boundary
-                for alnrec in rec['ncrf_parse']:
-                    if orientation == "left":
-                        # clip on left of read, so check distance from end of 
-                        # alignment to the end of the softclipped segment
-                        currgap = len(rec['seq']) - alnrec['alnend']
-                    elif orientation == "right":
-                        # clip on right of read, so check distance from beginning
-                        # of alignment to the start of softclipped segment
-                        currgap = alnrec['alnstart']
-                    if gap:
-                        if currgap and currgap < gap:
+        Returns
+        -------
+        Gff
+            Gff object reporting coordinates of chromosome breakage sites
+        """
+        out = Gff()
+        reclist = nested_dict_to_list_fixed_depth(self._clippeddict, 3)
+        for rname, rstart, orientation, recs in reclist:
+            out_aln_orientations = []
+            out_aln_gaps = []
+            for rec in recs:
+                if "ncrf_parse" in rec:
+                    gap = None
+                    currgap = None
+                    alnorientation = None
+                    # If there is more than one alignment, find the one
+                    # closest to the boundary
+                    for alnrec in rec['ncrf_parse']:
+                        if orientation == "left":
+                            # clip on left of read, so check distance from end of 
+                            # alignment to the end of the softclipped segment
+                            currgap = len(rec['seq']) - alnrec['alnend']
+                        elif orientation == "right":
+                            # clip on right of read, so check distance from beginning
+                            # of alignment to the start of softclipped segment
+                            currgap = alnrec['alnstart']
+                        if gap:
+                            if currgap and currgap < gap:
+                                gap = currgap
+                                alnorientation = alnrec['orientation']
+                        else:
                             gap = currgap
                             alnorientation = alnrec['orientation']
-                    else:
-                        gap = currgap
-                        alnorientation = alnrec['orientation']
-                out_aln_orientations.append(alnorientation)
-                out_aln_gaps.append(gap)
-        if len(out_aln_gaps) > 0:
-            gffid = f"CBS_{rname}_{str(rstart+1)}_{orientation}"
-            attrs=[f"ID={gffid}",
-                   f"orientation={orientation}",
-                   "telomere_senses=" + " ".join([str(i) for i in out_aln_orientations]),
-                   "gaps_to_telomere=" + " ".join([str(i) for i in out_aln_gaps])]
-            out.addEntry( # self, linearr, gffid
-                [rname, "MILTEL", "chromosome_breakage_site",
-                 rstart+1, rstart+1, # Convert to 1-based coords for GFF
-                 len(out_aln_gaps),
-                 '.', '.',
-                 ";".join(attrs)],
-                 gffid)
-    return(out)
+                    out_aln_orientations.append(alnorientation)
+                    out_aln_gaps.append(gap)
+            if len(out_aln_gaps) > 0:
+                gffid = f"CBS_{rname}_{str(rstart+1)}_{orientation}"
+                attrs=[f"ID={gffid}",
+                       f"orientation={orientation}",
+                       "telomere_senses=" + " ".join([str(i) for i in out_aln_orientations]),
+                       "gaps_to_telomere=" + " ".join([str(i) for i in out_aln_gaps])]
+                out.addEntry( # self, linearr, gffid
+                    [rname, "MILTEL", "chromosome_breakage_site",
+                     rstart+1, rstart+1, # Convert to 1-based coords for GFF
+                     len(out_aln_gaps),
+                     '.', '.',
+                     ";".join(attrs)],
+                     gffid)
+        return(out)

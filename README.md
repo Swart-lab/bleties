@@ -24,6 +24,7 @@ names:
 ./bleties.py miser --help
 ./bleties.py milret --help
 ./bleties.py milcor --help
+./bleties.py miltel --help
 ```
 
 Scripts for plotting and visualizing data are in the `scripts/` subfolder.
