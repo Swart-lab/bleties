@@ -7,6 +7,7 @@ import json
 from collections import defaultdict
 
 from bleties.SharedFunctions import getCigarOpQuerySeqs, nested_dict_to_list_fixed_depth
+from bleties.SharedFunctions import report_summary_string, report_list_modes
 from bleties.SharedFunctions import Gff
 
 
@@ -242,10 +243,16 @@ class Miltel(object):
                     out_aln_gaps.append(gap)
             if len(out_aln_gaps) > 0:
                 gffid = f"CBS_{rname}_{str(rstart+1)}_{orientation}"
+                telomere_sense = "_".join(report_list_modes(out_aln_orientations))
+                telomere_gap_average = round(sum(out_aln_gaps)/len(out_aln_gaps), 3)
+                telomere_senses = report_summary_string(out_aln_orientations)
+                telomere_gaps = report_summary_string(out_aln_gaps)
                 attrs=[f"ID={gffid}",
                        f"orientation={orientation}",
-                       "telomere_senses=" + " ".join([str(i) for i in out_aln_orientations]),
-                       "gaps_to_telomere=" + " ".join([str(i) for i in out_aln_gaps])]
+                       f"telomere_sense={telomere_sense}",
+                       f"telomere_gap_average={telomere_gap_average}",
+                       f"telomere_senses={telomere_senses}",
+                       f"telomere_gaps={telomere_gaps}"]
                 out.addEntry( # self, linearr, gffid
                     [rname, "MILTEL", "chromosome_breakage_site",
                      rstart+1, rstart+1, # Convert to 1-based coords for GFF

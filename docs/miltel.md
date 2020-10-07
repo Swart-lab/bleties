@@ -56,10 +56,11 @@ The `attributes` (column 9) contain the following fields:
  * `ID` - Unique identifier for each chromosome breakage site called.
  * `orientation` - Whether the clipped segment is to the `left` or to the
      `right` of the junction.
-<!-- not yet implemented properly
  * `telomere_sense` - Consensus (majority rule) on whether the clipped telomere
      sequences are sense (`+`) or reverse complement (`-`) of the supplied
-     repeat unit sequence.
+     repeat unit sequence. If the supplied repeat sequence is the 5' telomere
+     sequence then the `left` orientation should correspond to the `+` telomere
+     sense, and `right` to `-`.
  * `telomere_gap_average` - Mean gap distance between beginning of telomeric
      repeats and the clipping junction.
  * `telomere_senses` - String reporting the telomere sense orientations when
@@ -69,6 +70,7 @@ The `attributes` (column 9) contain the following fields:
  * `telomere_gaps` - String reporting the gap distances for each clipped read.
      For example if there were 2 reads with gap 0 and one with gap 4, then the
      string is `telomere_gaps=0*2 4*1`
+<!-- not yet implemented properly
  * `match_coverage` - Number of reads spanning this coordinate with an `M`
      operation.
 -->

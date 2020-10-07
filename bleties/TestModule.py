@@ -42,6 +42,29 @@ class TestSharedFunctions(unittest.TestCase):
                     qseq, cigartuples, rstart, target_op="S"),
                 [("AA",0,2,10,10),("TTA",8,11,16,16)])
 
+
+    def test_report_summary_string(self):
+        inlist = [3, 5, 5, 5, 2, 2]
+        self.assertEqual(
+                SharedFunctions.report_summary_string(inlist, " "),
+                "5*3 2*2 3*1")
+
+
+    def test_report_list_modes(self):
+        inlist = [1, 2, 2, 2, 2, 3, 4]
+        self.assertEqual(
+                SharedFunctions.report_list_modes(inlist),
+                [2])
+        inlist2 = ['+', '+', '+', '-']
+        self.assertEqual(
+                SharedFunctions.report_list_modes(inlist2),
+                ['+'])
+        inlist_tie = [1, 1, 2, 2]
+        self.assertEqual(
+                SharedFunctions.report_list_modes(inlist_tie),
+                [1,2])
+
+
 class TestMilraa(unittest.TestCase):
 
     def test_getPointers(self):

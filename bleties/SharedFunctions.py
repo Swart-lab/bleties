@@ -336,6 +336,45 @@ def mean_of_number_list(numbers, delim="_"):
         return(round(sum(num_list) / len(num_list)))
 
 
+def report_summary_string(inlist, delim=" "):
+    """Report summary string from a list of values
+
+    E.g. 5 5 5 2 3 2 would be summarized as 5*3 2*2 3*1
+
+    Parameters
+    ----------
+    inlist : list
+        List of strings or values that can be coerced as strings, to be 
+        summarized
+    delim : str
+        Character to separate the individual values
+    """
+    inlist = [str(i) for i in inlist] # Convert to str
+    counts = {i: inlist.count(i) for i in set(inlist)}
+    # sort items by descending order of counts
+    outlist = [str(i[0])+"*"+str(i[1]) for i in sorted(counts.items(), reverse=True, key=lambda item: item[1])]
+    return(delim.join(outlist))
+
+
+def report_list_modes(inlist):
+    """Report the mode of an input list
+    
+    Parameters
+    ----------
+    counts : list
+        List of values that can be counted
+
+    Returns
+    -------
+    list
+        List of mode values. If there is a tie then the list length > 1
+    """
+    counts = {i: inlist.count(i) for i in set(inlist)}
+    # check for ties
+    maxvals = [i for i in counts if counts[i] == max(counts.values())]
+    return(maxvals)
+
+
 class Gff(object):
     def __init__(self):
         """Construct Gff object
