@@ -6,9 +6,14 @@ import logging
 import json
 from collections import defaultdict
 
+from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq
+
 from bleties.SharedFunctions import getCigarOpQuerySeqs, nested_dict_to_list_fixed_depth
 from bleties.SharedFunctions import report_summary_string, report_list_modes
 from bleties.SharedFunctions import Gff
+from bleties.Milraa import alnFromSeqs
 
 
 logger = logging.getLogger("Miltel")
@@ -261,3 +266,59 @@ class Miltel(object):
                      ";".join(attrs)],
                      gffid)
         return(out)
+
+
+    def report_other_clips_GFF_fasta(self, min_clip_length=50):
+        """Call other clipped sequences and call consensus of their sequences
+
+        This function must be called after find_telomeres
+        
+        Parameters
+        ----------
+        min_clip_length : int
+            Minimum length of clipped sequence to consider
+
+        Returns
+        -------
+        Gff
+            Gff object reporting coordinates of clip junctions
+        list
+            List of SeqRecord objects reporting clipped sequences (consensus
+            sequences if more than one sequence at a site). SeqRecord IDs
+            correspond to ID fields in Gff output
+        """
+        out_gff = Gff()
+        out_seqs = []
+        reclist = nested_dict_to_list_fixed_depth(self._clippeddict, 3)
+        for rname, rstart, orientation, recs in reclist:
+            gffid = f"CLIPJUNCTION_{rname}_{str(rstart+1)}_{orientation}"
+            seqs = []
+            counter = 0
+            for rec in recs:
+                # Skip telomere sequences, and those that are too short
+                if (not "ncrf_parse" in rec) and (len(rec['seq']) > min_clip_length):
+                    seqs.append(SeqRecord(Seq(rec['seq']),
+                                          id=f"{gffid}_{str(counter)}"))
+                    counter += 1
+            if len(seqs) == 1:
+                out_seqs.extend(seqs)
+            elif len(seqs) > 1:
+                # Align with Muscle and get consensus sequence
+                # TODO decide if better to have dumb or gap consensus for our purposes
+                logger.debug(f"Consensus from {str(len(seqs))} seqs for {gffid}")
+                seqs_cons = alnFromSeqs(seqs)
+                seqs_cons.id = f"{gffid}_cons"
+                out_seqs.append(seqs_cons)
+
+            if len(seqs) > 0:
+                attrs=[f"ID={gffid}",
+                       f"orientation={orientation}"]
+                out_gff.addEntry( # self, linearr, gffid
+                    [rname, "MILTEL", "clip_junction",
+                     rstart+1, rstart+1, # Convert to 1-based coords for GFF
+                     len(seqs), # Number of clipped segments over threshold
+                     '.', '.',
+                     ";".join(attrs)],
+                     gffid)
+
+        return(out_gff, out_seqs)

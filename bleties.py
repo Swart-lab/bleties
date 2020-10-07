@@ -239,6 +239,11 @@ miltel_parser.add_argument("--telomere", type=str, default="ACACCCTA",
 miltel_parser.add_argument("--min_telomere_length", type=int, default=24,
     help="Minimum length of telomere to call")
 
+miltel_parser.add_argument("--other_clips", action="store_true",
+    help="Count other clipped sequences (non-telomeric) and get consensus of clipped segments")
+miltel_parser.add_argument("--min_clip_length", type=int, default=50,
+    help="Minimum length of other clipped sequences (non-telomeric) to count")
+
 # Output arguments
 miltel_parser.add_argument("-o", "--out", default="miltel.test",
     help="Prefix for output files")

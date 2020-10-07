@@ -356,7 +356,7 @@ def milcor(args):
 
 
 def miltel(args):
-    # TODO: Add Ref genome for future functionality
+    # TODO: Add Ref genome, for searching of clipped sequences
     logger = logging.getLogger("main.miltel")
     logger.info(f"BleTIES {__version__}")
     logger.info("Started BleTIES MILTEL")
@@ -368,12 +368,23 @@ def miltel(args):
     logger.info("Getting softclipped sequences from aligned reads")
     cbscalls = Miltel.Miltel(alnfile, None) # initialize Miltel object 
     cbscalls.get_softclips()
-    logger.info(f"Searching for telomere sequence {args.telomere} with NCRF")
+
+    logger.info(f"Searching for telomere repeats of {args.telomere} at least {str(args.min_telomere_length)} bp long, using NCRF")
     cbscalls.find_telomeres(args.telomere, args.min_telomere_length)
     cbscalls_gff = cbscalls.report_CBS_GFF()
 
-    logger.info(f"Writing output to file {args.out}")
-    cbscalls_gff.gff2file(args.out)
+    logger.info(f"Writing chromosome breakage sites to file {args.out}.miltel.telomeric.gff3")
+    cbscalls_gff.gff2file(f"{args.out}.miltel.telomeric.gff3")
+
+    if args.other_clips:
+        logger.info(f"Tallying up other clipping junctions with clipped sequences at least {str(args.min_clip_length)} bp")
+        othercalls_gff, othercalls_seqs = cbscalls.report_other_clips_GFF_fasta(args.min_clip_length)
+
+        logger.info(f"Writing other clipping junctions to file {args.out}.miltel.othercalls.gff3")
+        othercalls_gff.gff2file(f"{args.out}.miltel.othercalls.gff3")
+
+        logger.info(f"Writing consensus seqs for other clipped sequences to file {args.out}.miltel.othercalls.fasta")
+        SeqIO.write(othercalls_seqs, f"{args.out}.miltel.othercalls.fasta", "fasta")
 
     if args.dump:
         logger.info(f"Dumping internal data to file {args.out}.dump.json for troubleshooting")

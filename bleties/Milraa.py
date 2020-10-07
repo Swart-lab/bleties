@@ -444,9 +444,9 @@ def alnFromSeqs(seqlist, threshold=0.7):
     """
     if isinstance(seqlist[0], str):
         seqrecs = [SeqRecord(Seq(i, generic_dna)) for i in seqlist]
-    elif isinstance(seqlist[0], Bio.Seq.Seq):
+    elif isinstance(seqlist[0], Seq):
         seqrecs = [SeqRecord(i) for i in seqlist]
-    elif isinstance(seqlist[0], Bio.SeqRecord.SeqRecord):
+    elif isinstance(seqlist[0], SeqRecord):
         seqrecs = seqlist
     else:
         raise Exception("sequence list must comprise str, Seq, or SeqRecord objects")
