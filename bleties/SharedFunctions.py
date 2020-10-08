@@ -86,8 +86,13 @@ def get_clusters(in_list, cluster_type : str, width : int):
     ----------
     in_list : list
         List of integers
+    cluster_type : str
+        Type of clustering to perform, either "bp" (by base pair width) or "pc"
+        (by percentage difference)
     width : int
-        Maximum distance (exclusive) between _adjacent_ members of a cluster
+        Maximum distance (exclusive) between _adjacent_ members of a cluster,
+        i.e. width=2 would mean that 101 and 102 would be clustered together.
+        width=1 would mean no clustering.
 
     Returns:
     list
