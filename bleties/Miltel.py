@@ -260,7 +260,7 @@ class Miltel(object):
                        f"telomere_gaps={telomere_gaps}"]
                 out.addEntry( # self, linearr, gffid
                     [rname, "MILTEL", "chromosome_breakage_site",
-                     rstart+1, rstart+1, # Convert to 1-based coords for GFF
+                     rstart+1, rstart+1, # Convert to 1-based coords for GFF # TODO verify that +1 should not apply here because softclipping is not ref consuming
                      len(out_aln_gaps),
                      '.', '.',
                      ";".join(attrs)],
@@ -315,7 +315,7 @@ class Miltel(object):
                        f"orientation={orientation}"]
                 out_gff.addEntry( # self, linearr, gffid
                     [rname, "MILTEL", "clip_junction",
-                     rstart+1, rstart+1, # Convert to 1-based coords for GFF
+                     rstart+1, rstart+1, # Convert to 1-based coords for GFF # TODO verify that +1 should not apply here because softclipping is not ref consuming
                      len(seqs), # Number of clipped segments over threshold
                      '.', '.',
                      ";".join(attrs)],

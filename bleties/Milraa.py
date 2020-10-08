@@ -55,7 +55,7 @@ def getClips(cigar, pos):
     return(outarr)
 
 
-def getIndels(cigar, pos, minlength, qseq):
+def getIndels(cigar, pos, minlength, qseq): # TODO: refactor with SharedFunctions.getCigarOpQuerySeqs
     """Parse cigar string and alignment position and report insertions or
     deletions.
 
@@ -594,7 +594,7 @@ class IesRecords(object):
                 self._insDict[rname][clipstart][clipend][0][cliptype] += 1
 
 
-    def _addIndelsFromCigar(self, rname, cigar, pos, minlength, qseq):
+    def _addIndelsFromCigar(self, alignedsegment, minlength):
         """Check if alignment contains indels above minimum length, and record
         the corresponding breakpoints relative to the reference, and the insert
         length. If the indel is an insert, insert length > 0. If the indel is a
@@ -616,13 +616,37 @@ class IesRecords(object):
             Query sequence of the read
         """
         # Look for inserts that are completely spanned by the read (i.e. I operations)
-        indelarr = getIndels(cigar, pos, minlength, qseq)
-        if len(indelarr) > 0:
-            for (indelstart, indelend, indellen, indeltype, indelseq) in indelarr:
-                self._insDict[rname][indelstart][indelend][indellen][indeltype] += 1
-                # If insertion, record the inserted sequence to dict
-                if indeltype == "I":
-                    self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
+        rname = alignedsegment.reference_name
+        ins_tuples = getCigarOpQuerySeqs(alignedsegment.query_sequence,
+                            alignedsegment.cigartuples,
+                            alignedsegment.reference_start,
+                            "I")
+        del_tuples = getCigarOpQuerySeqs(alignedsegment.query_sequence,
+                            alignedsegment.cigartuples,
+                            alignedsegment.reference_start,
+                            "D")
+        if ins_tuples:
+            for (qseq, qstart, qend, rstart, rend) in ins_tuples:
+                if qend - qstart >= minlength:
+                    # Convert to 1-based end-inclusive for GFF
+                    # indelstart=indelend for inserts
+                    # it is correct to not +1 below
+                    indelstart = rstart
+                    indelend = rend
+                    indellen = len(qseq)
+                    self._insDict[rname][indelstart][indelend][indellen]['I'] += 1
+                    # If insertion, record the inserted sequence to dict
+                    self._insSeqDict[rname][indelstart][indelend][indellen].append(qseq)
+
+        if del_tuples:
+            for (qseq, qstart, qend, rstart, rend) in del_tuples:
+                if rend - rstart >= minlength:
+                    # convert coords to 1-based end-inclusive numbering for GFF
+                    # python uses 0-based end-exclusive, so no +1 for rend
+                    indelstart = rstart + 1
+                    indelend = rend
+                    indellen = len(qseq)
+                    self._insDict[rname][indelstart][indelend][indellen]['D'] += 1
 
 
     def _getDeletedSequences(self):
@@ -673,7 +697,7 @@ class IesRecords(object):
                 # Find left and right clips and record them
                 self._addClipsFromCigar(rname, line.cigarstring, pos)
                 # Find indels (putative IESs) over the minimum length and record them
-                self._addIndelsFromCigar(rname, line.cigarstring, pos, minlength, qseq)
+                self._addIndelsFromCigar(line, minlength)
                 # # if int(total_mismatch) - int(total_i) < 0:
                 #     # Sanity check - mismatches include inserts, but cannot be fewer than inserts
                 #     # print ("Uh-oh!")
