@@ -611,6 +611,7 @@ class IesRecords(object):
         """
         # Look for inserts that are completely spanned by the read (i.e. I operations)
         rname = alignedsegment.reference_name
+        qname = alignedsegment.query_name
         ins_tuples = getCigarOpQuerySeqs(alignedsegment.query_sequence,
                             alignedsegment.cigartuples,
                             alignedsegment.reference_start,
@@ -620,17 +621,20 @@ class IesRecords(object):
                             alignedsegment.reference_start,
                             "D")
         if ins_tuples:
-            for (qseq, qstart, qend, rstart, rend) in ins_tuples:
+            for (indelseq, qstart, qend, rstart, rend) in ins_tuples:
                 if qend - qstart >= minlength:
                     # Convert to 1-based end-inclusive for GFF
                     # indelstart=indelend for inserts
                     # it is correct to not +1 below
                     indelstart = rstart
                     indelend = rend
-                    indellen = len(qseq)
+                    indellen = len(indelseq)
                     self._insDict[rname][indelstart][indelend][indellen]['I'] += 1
                     # If insertion, record the inserted sequence to dict
-                    self._insSeqDict[rname][indelstart][indelend][indellen].append(qseq)
+                    record = {'indelseq' : indelseq,
+                              'qstart' : qstart, 'qend': qend, 'qname': qname,
+                              'rstart' : rstart, 'rend': rend, 'rname' :rname} # using 0-based coordinates
+                    self._insSeqDict[rname][indelstart][indelend][indellen].append(record)
 
         if del_tuples:
             for (qseq, qstart, qend, rstart, rend) in del_tuples:
@@ -646,7 +650,10 @@ class IesRecords(object):
                         if rname not in self._refgenome:
                             logger.error(f"Sequence {rname} not found in reference genome")
                         indelseq = str(self._refgenome[rname].seq[rstart:rend])
-                        self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
+                        record = {'indelseq' : indelseq,
+                                  'qstart' : qstart, 'qend': qend, 'qname': qname,
+                                  'rstart' : rstart, 'rend': rend, 'rname' :rname} # using 0-based coordinates
+                        self._insSeqDict[rname][indelstart][indelend][indellen].append(record)
 
 
     def findPutativeIes(self, minlength):
@@ -700,7 +707,7 @@ class IesRecords(object):
                 ins_seqs = []
                 for i in dd:
                     # Gather all sequences to be clustered
-                    ins_seqs.extend(dd[i])
+                    ins_seqs.extend([rec['indelseq'] for rec in dd[i]])
                 clust_seqs, clust_ids = get_clusters_from_seqlist(ins_seqs, dist_threshold)
                 # For each cluster, report a putative IES
                 for clust in clust_seqs:
@@ -743,7 +750,7 @@ class IesRecords(object):
                 if totalcount >= mindelbreaks:
                     breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
                     gfftype = "internal_eliminated_sequence"
-                    consseq = SeqRecord(Seq(dd[del_len][0], generic_dna))
+                    consseq = SeqRecord(Seq(dd[del_len][0]['indelseq'], generic_dna))
                     # Build attributes field
                     attr = ["ID="+breakpointid,
                             "IES_length="+str(del_len)]
@@ -976,7 +983,7 @@ class IesRecords(object):
         """
 
         # From list of sequences as str, make a list of SeqRecord objects
-        seqrecs = [SeqRecord(Seq(i, generic_dna)) for i in self._insSeqDict[ctg][indelstart][indelend][indellen]]
+        seqrecs = [SeqRecord(Seq(i['indelseq'], generic_dna)) for i in self._insSeqDict[ctg][indelstart][indelend][indellen]]
         # Make a pseudo-alignment from the list of SeqRecord objects
         aln = MultipleSeqAlignment(seqrecs)
         # Summarize alignment, and get dumb consensus sequence
@@ -1007,7 +1014,7 @@ class IesRecords(object):
         seqrecs = []
         for indellen in indellens:
             seqrecs.extend(
-                    [SeqRecord(Seq(i, generic_dna))
+                    [SeqRecord(Seq(i['indelseq'], generic_dna))
                         for i in self._insSeqDict[ctg][indelstart][indelend][indellen]])
         # Use Muscle to align these sequences
         aln = alignSeqsMuscle(seqrecs)
