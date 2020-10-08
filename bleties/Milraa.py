@@ -604,16 +604,10 @@ class IesRecords(object):
 
         Parameters
         ----------
-        rname : str
-            Name of reference contig
-        cigar : str
-            Cigar string of the current alignment record
-        pos : int
-            Reference position of the current alignment record
+        alignedsegment : pysam.AlignedSegment
+            Record of aligned read from BAM file
         minlength : int
             Minimum length of indel for it to be recorded
-        qseq : str
-            Query sequence of the read
         """
         # Look for inserts that are completely spanned by the read (i.e. I operations)
         rname = alignedsegment.reference_name
@@ -645,36 +639,14 @@ class IesRecords(object):
                     # python uses 0-based end-exclusive, so no +1 for rend
                     indelstart = rstart + 1
                     indelend = rend
-                    indellen = len(qseq)
-                    self._insDict[rname][indelstart][indelend][indellen]['D'] += 1
-
-
-    def _getDeletedSequences(self):
-        """Record sequences of deletions. Sequences of insertions are recorded
-        when parsing each alignment, because they are extracted from the query.
-        However deletions are extracted from the reference, so they can be done
-        in a single pass.
-
-        Returns: Changes object in-place
-        """
-        for rname in self._insDict: # Get contig name
-            if rname not in self._refgenome:
-                logger.error(f"Sequence {rname} not found in reference genome")
-            # Get reference sequence from Fasta file
-            refctgseq = self._refgenome[rname].seq
-            # For each start and stop position
-            for indelstart in self._insDict[rname]:
-                for indelend in self._insDict[rname][indelstart]:
-                    # If there is a deletion
-                    if 0 in self._insDict[rname][indelstart][indelend]:
-                        if "D" in self._insDict[rname][indelstart][indelend][0]:
-                            # Record the sequence to the insSelfDict
-                            # Convert from 1-based to 0-based numbering for slicing
-                            # Plus one because end and start in GFF features are BOTH inclusive
-                            indellen = int(indelend) - int(indelstart) + 1
-                            # Get sequence of indel sequence, note that end is also inclusive
-                            indelseq = str(refctgseq[int(indelstart)-1:int(indelend)]) # TODO: Check for off-by-one errors
-                            self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
+                    self._insDict[rname][indelstart][indelend][len(qseq)]['D'] += 1 # TODO fix inconsistency with _insSeqDict
+                    indellen = rend - rstart
+                    # For deletion it is only necessary to record sequence once
+                    if not self._insSeqDict[rname][indelstart][indelend][indellen]:
+                        if rname not in self._refgenome:
+                            logger.error(f"Sequence {rname} not found in reference genome")
+                        indelseq = str(self._refgenome[rname].seq[rstart:rend])
+                        self._insSeqDict[rname][indelstart][indelend][indellen].append(indelseq)
 
 
     def findPutativeIes(self, minlength):
@@ -698,12 +670,6 @@ class IesRecords(object):
                 self._addClipsFromCigar(rname, line.cigarstring, pos)
                 # Find indels (putative IESs) over the minimum length and record them
                 self._addIndelsFromCigar(line, minlength)
-                # # if int(total_mismatch) - int(total_i) < 0:
-                #     # Sanity check - mismatches include inserts, but cannot be fewer than inserts
-                #     # print ("Uh-oh!")
-
-        # Go through insDict and extract sequences of deleted regions, too
-        self._getDeletedSequences()
 
 
     def reportPutativeIesInsertFuzzy(self, mininsbreaks, mindelbreaks, dist_threshold=0.05):
