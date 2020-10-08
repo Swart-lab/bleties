@@ -637,23 +637,20 @@ class IesRecords(object):
                     self._insSeqDict[rname][indelstart][indelend][indellen].append(record)
 
         if del_tuples:
-            for (qseq, qstart, qend, rstart, rend) in del_tuples:
+            for (indelseq, qstart, qend, rstart, rend) in del_tuples:
                 if rend - rstart >= minlength:
                     # convert coords to 1-based end-inclusive numbering for GFF
                     # python uses 0-based end-exclusive, so no +1 for rend
                     indelstart = rstart + 1
                     indelend = rend
-                    self._insDict[rname][indelstart][indelend][len(qseq)]['D'] += 1 # TODO fix inconsistency with _insSeqDict
+                    self._insDict[rname][indelstart][indelend][len(indelseq)]['D'] += 1 # TODO fix inconsistency with _insSeqDict
                     indellen = rend - rstart
-                    # For deletion it is only necessary to record sequence once
-                    if not self._insSeqDict[rname][indelstart][indelend][indellen]:
-                        if rname not in self._refgenome:
-                            logger.error(f"Sequence {rname} not found in reference genome")
-                        indelseq = str(self._refgenome[rname].seq[rstart:rend])
-                        record = {'indelseq' : indelseq,
-                                  'qstart' : qstart, 'qend': qend, 'qname': qname,
-                                  'rstart' : rstart, 'rend': rend, 'rname' :rname} # using 0-based coordinates
-                        self._insSeqDict[rname][indelstart][indelend][indellen].append(record)
+                    if rname not in self._refgenome:
+                        logger.error(f"Sequence {rname} not found in reference genome")
+                    record = {'indelseq' : indelseq, # this will be a blank sequence
+                              'qstart' : qstart, 'qend': qend, 'qname': qname,
+                              'rstart' : rstart, 'rend': rend, 'rname' :rname} # using 0-based coordinates
+                    self._insSeqDict[rname][indelstart][indelend][indellen].append(record)
 
 
     def findPutativeIes(self, minlength):
@@ -750,7 +747,8 @@ class IesRecords(object):
                 if totalcount >= mindelbreaks:
                     breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
                     gfftype = "internal_eliminated_sequence"
-                    consseq = SeqRecord(Seq(dd[del_len][0]['indelseq'], generic_dna))
+                    indelseq = str(self._refgenome[ctg].seq[ins_start - 1:ins_end]) # get sequence from ref genome
+                    consseq = SeqRecord(Seq(indelseq, generic_dna))
                     # Build attributes field
                     attr = ["ID="+breakpointid,
                             "IES_length="+str(del_len)]
@@ -897,10 +895,10 @@ class IesRecords(object):
                         "IES_length="+str(del_len)]
                 attr.append("cigar=" + str(del_len) + "D*" + str(countvalue))
                 # Look for left- and rightclips that fall on the deletion boundaries
-                if self._insDict[ctg][ins_start][ins_start][ins_len].get("MHS") and int(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]) > 0:
-                    attr.append("cigar=MHS*" + str(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]))
-                if self._insDict[ctg][ins_end][ins_end][ins_len].get("HSM") and int(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]) > 0:
-                    attr.append("cigar=HSM*" + str(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]))
+                # if self._insDict[ctg][ins_start][ins_start][ins_len].get("MHS") and int(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]) > 0:
+                #     attr.append("cigar=MHS*" + str(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]))
+                # if self._insDict[ctg][ins_end][ins_end][ins_len].get("HSM") and int(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]) > 0:
+                #     attr.append("cigar=HSM*" + str(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]))
 
             # If the breakpoint has been defined, report it to the GFF file
             if breakpointid and attr:
@@ -981,18 +979,21 @@ class IesRecords(object):
         Bio.SeqRecord
             Consensus sequence of given indel
         """
-
-        # From list of sequences as str, make a list of SeqRecord objects
-        seqrecs = [SeqRecord(Seq(i['indelseq'], generic_dna)) for i in self._insSeqDict[ctg][indelstart][indelend][indellen]]
-        # Make a pseudo-alignment from the list of SeqRecord objects
-        aln = MultipleSeqAlignment(seqrecs)
-        # Summarize alignment, and get dumb consensus sequence
-        alninf = AlignInfo.SummaryInfo(aln)
-        alncons = alninf.dumb_consensus()
-        # alnconsrec = SeqRecord(alncons, id=consname)
-        alnconsrec = SeqRecord(alncons)
-        return(alnconsrec)
-
+        if indelstart == indelend:
+            # From list of sequences as str, make a list of SeqRecord objects
+            seqrecs = [SeqRecord(Seq(i['indelseq'], generic_dna)) for i in self._insSeqDict[ctg][indelstart][indelend][indellen]]
+            # Make a pseudo-alignment from the list of SeqRecord objects
+            aln = MultipleSeqAlignment(seqrecs)
+            # Summarize alignment, and get dumb consensus sequence
+            alninf = AlignInfo.SummaryInfo(aln)
+            alncons = alninf.dumb_consensus()
+            # alnconsrec = SeqRecord(alncons, id=consname)
+            alnconsrec = SeqRecord(alncons)
+            return(alnconsrec)
+        elif int(indelend) > int(indelstart):
+            # Get sequence from reference gneome
+            indelseq = str(self._refgenome[ctg].seq[indelstart - 1:indelend])
+            return(SeqRecord(Seq(indelseq, generic_dna)))
 
     def reportIndelConsensusSeqFuzzy(self, ctg, indelstart, indelend, indellens):
         """Report consensus alignment of insert sequence when length of insert
