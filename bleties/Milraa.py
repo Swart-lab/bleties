@@ -740,10 +740,8 @@ class IesRecords(object):
                             consseq = alnFromSeqs(clust)
 
             elif ins_end > ins_start:
-                # Deletion feature - need to get count from _insDict
-                # This is otherwise same as reportPutativeIes
                 del_len = ins_end - ins_start + 1 # GFF is end-inclusive
-                totalcount = self._insDict[ctg][ins_start][ins_end][0]["D"]
+                totalcount = len(self._insSeqDict[ctg][ins_start][ins_end][del_len])
                 if totalcount >= mindelbreaks:
                     breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
                     gfftype = "internal_eliminated_sequence"
@@ -753,11 +751,6 @@ class IesRecords(object):
                     attr = ["ID="+breakpointid,
                             "IES_length="+str(del_len)]
                     attr.append("cigar=" + str(del_len) + "D*" + str(totalcount))
-                    # Look for left- and rightclips that fall on the deletion boundaries
-                    # if self._insDict[ctg][ins_start][ins_start][ins_len].get("MHS") and int(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]) > 0:
-                    #     attr.append("cigar=MHS*" + str(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]))
-                    # if self._insDict[ctg][ins_end][ins_end][ins_len].get("HSM") and int(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]) > 0:
-                    #     attr.append("cigar=HSM*" + str(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]))
 
             else:
                 raise Exception("feature cannot start after it ends")
@@ -857,13 +850,17 @@ class IesRecords(object):
 
         # Parse the dict and report putative IESs above min coverage
         # We only check breakpoints which are completely spanned by a read ("I" or "D" operations)
-        # however we also report supporting counts from HSM and MSH type mappings
         # TODO Reduce code duplication here
-        for rec in nested_dict_to_list(self._insDict):
-            [ctg, ins_start, ins_end, ins_len, evidencetype, countvalue] = rec
+        for rec in nested_dict_to_list_fixed_depth(self._insSeqDict, 4):
+            [ctg, ins_start, ins_end, ins_len, dd] = rec
             if ctg not in self._refgenome:
                 logger.error(f"Sequence {ctg} not found in reference genome")
-
+            evidencetype = None
+            if ins_start == ins_end:
+                evidencetype = "I"
+            else:
+                evidencetype = "D"
+            countvalue = len(dd)
             breakpointid = None
             attr = []
             indel_len = 0
@@ -877,11 +874,6 @@ class IesRecords(object):
                 attr = ["ID="+breakpointid,
                         "IES_length="+str(ins_len)]
                 attr.append("cigar=" + str(ins_len) + "I*" + str(countvalue))
-                # Extend the cigar evidence counts with clipped reads that are also at this junction
-                # Clippings are recorded with nominal insert length of zero
-                attr.extend(["cigar=" + cigartype + "*"+str(self._insDict[ctg][ins_start][ins_end][0][cigartype])
-                             for cigartype in sorted(self._insDict[ctg][ins_start][ins_end][0])
-                            ])
 
             # If the breakpoint is a deletion type
             elif evidencetype == "D" and countvalue >= mindelbreaks:
@@ -894,11 +886,6 @@ class IesRecords(object):
                 attr = ["ID="+breakpointid,
                         "IES_length="+str(del_len)]
                 attr.append("cigar=" + str(del_len) + "D*" + str(countvalue))
-                # Look for left- and rightclips that fall on the deletion boundaries
-                # if self._insDict[ctg][ins_start][ins_start][ins_len].get("MHS") and int(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]) > 0:
-                #     attr.append("cigar=MHS*" + str(self._insDict[ctg][ins_start][ins_start][ins_len]["MHS"]))
-                # if self._insDict[ctg][ins_end][ins_end][ins_len].get("HSM") and int(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]) > 0:
-                #     attr.append("cigar=HSM*" + str(self._insDict[ctg][ins_end][ins_end][ins_len]["HSM"]))
 
             # If the breakpoint has been defined, report it to the GFF file
             if breakpointid and attr:
