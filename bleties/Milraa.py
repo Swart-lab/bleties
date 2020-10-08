@@ -22,39 +22,6 @@ from bleties.SharedFunctions import *
 logger = logging.getLogger("Milraa")
 
 
-def getClips(cigar, pos):
-    """Parse cigar string and alignment position and report left- and right-
-    clipping.
-
-    Parameters
-    ----------
-    cigar : str
-        CIGAR string of alignment to process
-    pos : int
-        Alignment start position on reference, 1-based numbering
-
-    Returns
-    -------
-    list
-        list of tuples (int, int, str) representing (start position, end
-        position, clipping type)
-    """
-    # Look for inserts that are on left or right ends of read (i.e. H or S clipping operations)
-    outarr = []
-    leftclipmatch = re.match(r"(\d+)[HS](\d+)M", cigar)
-    if leftclipmatch:
-        outarr.append((pos, pos, "HSM"))
-    rightclipmatch = re.search(r"(\d+)M(\d+)[HS]$", cigar)
-    if rightclipmatch:
-        refconsumematches = re.findall(r"(\d+)[MDN\=X]", cigar) # find all ref-consuming operations
-        rightclip_refconsumed = sum([int(refconsumematch) 
-            for refconsumematch in refconsumematches])
-        outarr.append((pos + rightclip_refconsumed, 
-            pos+rightclip_refconsumed, 
-            "MHS"))
-    return(outarr)
-
-
 def getIndels(cigar, pos, minlength, qseq): # TODO: refactor with SharedFunctions.getCigarOpQuerySeqs
     """Parse cigar string and alignment position and report insertions or
     deletions.
@@ -497,12 +464,12 @@ class IesRecords(object):
         """Constructor for IesRecords
 
         Internally represented by:
-        _insDict -- dict to store counts of detected inserts/deletions, keyed
-            by evidence type. Keys: contig (str) -> start pos (int) -> end
-            pos (int) -> insert length (int) -> evidence type (str) -> count (int)
         _insSeqDict -- dict of sequences of detected inserts/deletions. Keys:
             contig (str) -> startpos (int) -> endpos (int) -> indel len (int) ->
-            sequences (list of str)
+            list of dicts containing data on the mapped read segments and their
+            coordinates. The coordinates startpos and endpos in the keys are 1-
+            based GFF convention. The coordinates in the dicts are 0-based
+            python convention
         _alnfile -- as below
         _alnformat -- as below
         _refgenome -- as below
@@ -516,24 +483,12 @@ class IesRecords(object):
         refgenome : Bio.SeqIO.SeqRecord
             Reference genome sequences
         """
-        # dict to store counts of detected inserts keyed by evidence type
-        # keys: contig -> startpos -> endpos -> insert length -> evidence type -> count
-        self._insDict = defaultdict(              # contig
-                lambda: defaultdict(              # startpos
-                    lambda: defaultdict (         # endpos
-                        lambda: defaultdict(      # insert length
-                            lambda: defaultdict(  # evidence type
-                                int)              # count
-                            )
-                        )
-                    )
-                )
         # dict to store sequences of detected inserts/deletions
         self._insSeqDict = defaultdict(      # contig
                 lambda: defaultdict(         # startpos
                     lambda: defaultdict(     # endpos
                         lambda: defaultdict( # indel length
-                            list)            # list of sequences (str)
+                            list)            # list of dicts
                         )
                     )
                 )
@@ -547,15 +502,12 @@ class IesRecords(object):
 
     def __str__(self):
         """Report summary stats of IesRecords object"""
-        insdictlen = len(self._insDict)
         insseqdictlen = len(self._insSeqDict)
         nref = self._alnfile.nreferences
         alnformat = self._alnformat
         mapped = self._alnfile.mapped
         return("bleties.IesRecords object with "
-                + " insDict of length "
-                + str(insdictlen)
-                + " and insSeqDict of length "
+                + "insSeqDict of length "
                 + str(insseqdictlen)
                 + " and alignment of format "
                 + str(alnformat)
@@ -567,40 +519,20 @@ class IesRecords(object):
 
 
     def dump(self):
-        """Data dump of IesRecords._insDict in JSON format"""
-        outstr = json.dumps({"_insDict" : self._insDict, "_insSeqDict" : self._insSeqDict}, sort_keys = True, indent = 2)
+        """Data dump of IesRecords._insSeqDict in JSON format"""
+        outstr = json.dumps({"_insSeqDict" : self._insSeqDict}, sort_keys = True, indent = 2)
         return(outstr)
-
-
-    def _addClipsFromCigar(self, rname, cigar, pos):
-        """Check if alignment is clipped at the ends, and record the
-        corresponding breakpoints in the _insDict dict, keyed by contig -> start
-        position -> end position -> insert length -> evidence type, where
-        evidence type is either "HSM" (left clip) or "MHS" (right clip).
-
-        Parameters
-        ----------
-        rname : str
-            Name of reference contig
-        cigar : str
-            CIGAR string of the current alignment record
-        pos : int
-            Reference position of the current alignment record
-        """
-        # Look for inserts that are on left or right read ends (i.e. H or S clipping operations)
-        cliparr = getClips(cigar, pos)
-        if len(cliparr) > 0:
-            for (clipstart, clipend, cliptype) in cliparr:
-                self._insDict[rname][clipstart][clipend][0][cliptype] += 1
 
 
     def _addIndelsFromCigar(self, alignedsegment, minlength):
         """Check if alignment contains indels above minimum length, and record
         the corresponding breakpoints relative to the reference, and the insert
         length. If the indel is an insert, insert length > 0. If the indel is a
-        deletion, insert length = 0. Recorded in the _insDict dict, keyed by
-        contig -> start pos -> end pos -> insert length -> evidence type, where
-        evidence type is either "I" (insertion) or "D" (deletion).
+        deletion, insert length = 0. Recorded in the _insSeqDict dict, keyed by
+        contig -> start pos -> end pos -> insert length -> dict, where dict has
+        fields 'indelseq','qstart','qend','qname','rstart','rend','rname'.
+        The coordinates in the dict keys are 1-based GFF type, whereas the 
+        coordinates in the dict are 0-based python type.
 
         Parameters
         ----------
@@ -629,7 +561,6 @@ class IesRecords(object):
                     indelstart = rstart
                     indelend = rend
                     indellen = len(indelseq)
-                    self._insDict[rname][indelstart][indelend][indellen]['I'] += 1
                     # If insertion, record the inserted sequence to dict
                     record = {'indelseq' : indelseq,
                               'qstart' : qstart, 'qend': qend, 'qname': qname,
@@ -643,7 +574,6 @@ class IesRecords(object):
                     # python uses 0-based end-exclusive, so no +1 for rend
                     indelstart = rstart + 1
                     indelend = rend
-                    self._insDict[rname][indelstart][indelend][len(indelseq)]['D'] += 1 # TODO fix inconsistency with _insSeqDict
                     indellen = rend - rstart
                     if rname not in self._refgenome:
                         logger.error(f"Sequence {rname} not found in reference genome")
@@ -655,7 +585,7 @@ class IesRecords(object):
 
     def findPutativeIes(self, minlength):
         """Search alignment for clips and indels to identify putative IESs.
-        Record them in the _insDict dict and sequences in _insSeqDict
+        Record them in the _insSeqDict
 
         Parameters
         ----------
@@ -671,7 +601,7 @@ class IesRecords(object):
                 # total_i = 0
                 qseq = line.query_sequence # Get query sequence
                 # Find left and right clips and record them
-                self._addClipsFromCigar(rname, line.cigarstring, pos)
+                # self._addClipsFromCigar(rname, line.cigarstring, pos)
                 # Find indels (putative IESs) over the minimum length and record them
                 self._addIndelsFromCigar(line, minlength)
 
