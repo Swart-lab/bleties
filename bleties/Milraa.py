@@ -527,11 +527,16 @@ class IesRecords(object):
     def _addIndelsFromCigar(self, alignedsegment, minlength):
         """Check if alignment contains indels above minimum length, and record
         the corresponding breakpoints relative to the reference, and the insert
-        length. If the indel is an insert, insert length > 0. If the indel is a
-        deletion, insert length = 0. Recorded in the _insSeqDict dict, keyed by
-        contig -> start pos -> end pos -> insert length -> dict, where dict has
-        fields 'indelseq','qstart','qend','qname','rstart','rend','rname'.
-        The coordinates in the dict keys are 1-based GFF type, whereas the 
+        length. 
+        
+        If the indel is an insert, insert length > 0. 
+        If the indel is a deletion, insert length = 0. 
+        
+        Recorded in self._insSeqDict, keyed by contig -> start pos -> end pos
+        -> insert length -> dict, where dict has fields
+        'indelseq','qstart','qend','qname','rstart','rend','rname'.
+        
+        The coordinates in the dict keys are 1-based GFF type, whereas the
         coordinates in the dict are 0-based python type.
 
         Parameters
@@ -561,7 +566,6 @@ class IesRecords(object):
                     indelstart = rstart
                     indelend = rend
                     indellen = len(indelseq)
-                    # If insertion, record the inserted sequence to dict
                     record = {'indelseq' : indelseq,
                               'qstart' : qstart, 'qend': qend, 'qname': qname,
                               'rstart' : rstart, 'rend': rend, 'rname' :rname} # using 0-based coordinates
@@ -575,8 +579,6 @@ class IesRecords(object):
                     indelstart = rstart + 1
                     indelend = rend
                     indellen = rend - rstart
-                    if rname not in self._refgenome:
-                        logger.error(f"Sequence {rname} not found in reference genome")
                     record = {'indelseq' : indelseq, # this will be a blank sequence
                               'qstart' : qstart, 'qend': qend, 'qname': qname,
                               'rstart' : rstart, 'rend': rend, 'rname' :rname} # using 0-based coordinates
@@ -595,13 +597,7 @@ class IesRecords(object):
         # parse CIGAR string
         for line in self._alnfile:
             if (not line.is_unmapped) and (not line.is_secondary) and (not line.is_supplementary):
-                pos = int(line.reference_start) + 1 # Convert from 0-based numbering in pysam to 1-based in GFF3 and SAM
-                rname = line.reference_name # Get reference name
-                # total_mismatch = line.get_tag("NM") # Get number of mismatches
-                # total_i = 0
-                qseq = line.query_sequence # Get query sequence
-                # Find left and right clips and record them
-                # self._addClipsFromCigar(rname, line.cigarstring, pos)
+                # total_mismatch = line.get_tag("NM") # Get number of mismatches # TODO record mismatches?
                 # Find indels (putative IESs) over the minimum length and record them
                 self._addIndelsFromCigar(line, minlength)
 
@@ -651,7 +647,7 @@ class IesRecords(object):
                             prefix = f"BREAK_POINTS"
                         elif len(counts.keys()) > 1:
                             prefix = f"BREAK_POINTS_FUZZY"
-                        breakpointid = "_".join([prefix, str(ctg), str(ins_start), str(ins_end)] + [str(l) for l in counts.keys()])
+                        breakpointid = "_".join([prefix, str(ctg), str(ins_start), str(ins_end)] + [str(l) for l in counts.keys()]) # TODO: This is clunky...
                         gfftype = "internal_eliminated_sequence_junction"
 
                         # Attributes list of key-value pairs
@@ -808,7 +804,7 @@ class IesRecords(object):
             # If the breakpoint is a deletion type
             elif evidencetype == "D" and countvalue >= mindelbreaks:
                 # Add 1 because both start and end are inclusive
-                del_len = int(ins_end) - int(ins_start) + 1 # TODO: Check for off-by-one errors
+                del_len = int(ins_end) - int(ins_start) + 1
                 indel_len = del_len
                 breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
                 gfftype = "internal_eliminated_sequence"
@@ -912,6 +908,7 @@ class IesRecords(object):
             indelseq = str(self._refgenome[ctg].seq[indelstart - 1:indelend])
             return(SeqRecord(Seq(indelseq, generic_dna)))
 
+
     def reportIndelConsensusSeqFuzzy(self, ctg, indelstart, indelend, indellens):
         """Report consensus alignment of insert sequence when length of insert
         is fuzzy matched
@@ -986,8 +983,6 @@ class IesRecords(object):
         ins_mm = []
         # for each segment, check if it contains indel at position of interest
         for seg in segs:
-            # if seg.query_sequence is None:
-            #     print(f"Query {seg.query_name} is None!")
             indels = getIndels(seg.cigarstring, int(seg.reference_start), MIN_IES_LEN, seg.query_sequence)
             indelcoords = set([(int(indel[0]),int(indel[1])) for indel in indels])
             mismatch_pc = 100 * float(seg.get_tag("NM")) / float(seg.query_length) # number of mismatchs / query length * 100 pc
