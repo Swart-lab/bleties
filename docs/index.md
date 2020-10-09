@@ -1,6 +1,8 @@
 Blepharisma Toolbox for Interspersed DNA Elimination Studies (BleTIES)
 ======================================================================
 
+![BLETIES logo](./bleties_logo.png)
+
 This is a reimplementation of [ParTIES](https://github.com/oarnaiz/ParTIES) for 
 long read alignments. 
 
