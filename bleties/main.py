@@ -88,6 +88,10 @@ def milraa(args):
     iesrecords = Milraa.IesRecords(alnfile, "bam", refgenome)
     # Process alignment to find putative IESs
     logger.info("Processing alignment to find putative IESs")
+    if args.contig:
+        logger.info(f"Extracting only reads mapping to contig {args.contig}")
+        if args.start or args.stop:
+            logger.info(f"from {str(args.start)} : {str(args.stop)}")
     iesrecords.findPutativeIes(args.min_ies_length,
                                args.contig, args.start, args.stop)
     if args.dump:
@@ -328,6 +332,10 @@ def milcor(args):
 
     logger.info(f"Counting per-read presence of IESs defined in file {args.ies}")
     iescorr = Milcor.IesCorrelationsByRead(args.ies, alnfile)
+    if args.contig:
+        logger.info(f"Extracting only reads mapping to contig {args.contig}")
+        if args.start or args.stop:
+            logger.info(f"from {str(args.start)} : {str(args.stop)}")
     if args.use_ies_lengths:
         logger.info(f"Counting only inserts matching defined IES lengths to threshold +/- {str(args.length_threshold)}")
     iescorr.countIesCooccurrences(args.use_ies_lengths, threshold=args.length_threshold,
@@ -348,6 +356,10 @@ def milcor(args):
 
     if args.bin:
         logger.info(f"Binning reads to likely MAC and MIC reads with threshold {str(args.bin_threshold)}")
+        if args.contig:
+            logger.info(f"Extracting only reads mapping to contig {args.contig}")
+            if args.start or args.stop:
+                logger.info(f"from {str(args.start)} : {str(args.stop)}")
         logger.info(f"Writing output to files:")
         logger.info(f"  {args.out}.milcor_bin_MAC.fasta")
         logger.info(f"  {args.out}.milcor_bin_MIC.fasta")

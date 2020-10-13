@@ -8,6 +8,8 @@ import pysam
 import logging
 import subprocess
 from io import StringIO
+from tempfile import NamedTemporaryFile
+import os
 
 from Bio import SeqIO
 from Bio.Alphabet import generic_dna
@@ -476,9 +478,12 @@ def spoaConsensus(seqs, mode=1):
     SeqRecord
         Consensus sequence
     """
-    SeqIO.write(seqs, "/tmp/toaln.fasta", "fasta")
-    cons = subprocess.run(["spoa", f"-l {mode}", "-r 0", "/tmp/toaln.fasta"], capture_output=True).stdout.decode()
+    fh = NamedTemporaryFile(suffix=".fasta", mode="w", delete=False)
+    SeqIO.write(seqs, fh.name, "fasta")
+    fh.close()
+    cons = subprocess.run(["spoa", f"-l {mode}", "-r 0", fh.name], capture_output=True).stdout.decode()
     cons = SeqIO.read(StringIO(cons), "fasta")
+    os.remove(fh.name)
     return(cons)
 
 
@@ -659,7 +664,7 @@ class IesRecords(object):
         """
         # convert coordinates to pysam 0-based
         if start:
-            start =- 1
+            start = start - 1
         for line in self._alnfile.fetch(contig=ctg, start=start, stop=stop):
             if (not line.is_unmapped) and (not line.is_secondary) and (not line.is_supplementary):
                 # total_mismatch = line.get_tag("NM") # Get number of mismatches # TODO record mismatches?
@@ -798,8 +803,6 @@ class IesRecords(object):
 
         return(gff, outseq)
         # TODO Fuzzy cluster both the indel positions on ref and the ins lengths
-        # Inserts: fuzzy cluster start/end pos (start == end), then cluster
-        # ins_lengths.
         # Deletions: fuzzy cluster start and end positions separately.
         # This is somewhat trickier, because of the way the data are structured
 
@@ -1219,7 +1222,9 @@ class IesRecords(object):
         end = min([rend + margin, len(self._refgenome[rname].seq)])
         extract = self._refgenome[rname].seq[start:end]
         seqobj = SeqRecord(extract,id=rname)
-        SeqIO.write([seqobj, cons], "/tmp/margins.fasta", "fasta")
+        fh = NamedTemporaryFile(suffix=".fasta", mode="w", delete=False)
+        SeqIO.write([seqobj, cons], fh.name, "fasta")
+        fh.close()
         # key differences in settings: gap opening and extension penalties have
         # been changed to encourage long continuous gaps, which are what we
         # want to find when aligning IES+ consensus vs. IES- reference
@@ -1227,10 +1232,11 @@ class IesRecords(object):
                                 "-e 0", # gap extension penalty (defaul -6)
                                 "-g -16", # gap opening penalthy (default -8)
                                 "-r 1", # alignment mode (global)
-                                "/tmp/margins.fasta"], 
+                                fh.name], 
                                capture_output=True).stdout.decode()
         cons2 = SeqIO.parse(StringIO(cons2), "fasta")
         cons2 = {i.id : i for i in cons2}
+        os.remove(fh.name)
         return(cons2)
 
 

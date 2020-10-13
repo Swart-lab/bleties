@@ -67,7 +67,7 @@ class IesCorrelationsByRead(object):
         """
         # Iterate across all reads
         if fetch_start:
-            fetch_start =- 1
+            fetch_start = fetch_start - 1
         for alnrec in self._alnfile.fetch(contig=fetch_ctg, start=fetch_start, stop=fetch_stop):
             qname = alnrec.query_name
             if (not alnrec.is_secondary) and (not alnrec.is_supplementary):
@@ -191,7 +191,7 @@ class IesCorrelationsByRead(object):
 
         counter = 0
         if fetch_start:
-            fetch_start =- 1
+            fetch_start = fetch_start - 1
         for rec in self._alnfile.fetch(contig=fetch_ctg, start=fetch_start, stop=fetch_stop):
             if (not rec.is_unmapped) and (not rec.is_secondary) and (not rec.is_supplementary):
                 qname = rec.query_name
