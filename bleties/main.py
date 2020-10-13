@@ -94,31 +94,42 @@ def milraa(args):
         with open(f"{args.out}.dump", "w") as fh:
             # sys.stderr.write(str(iesrecords) + "\n") # Print summary of IesRecords object
             fh.write(iesrecords.dump()) # Dump data to check
+    # Get consensus locations and IES sequences
+    if args.type == "ccs":
+        logger.info("Finding coordinates and consensus sequences of IESs from CCS read mappings")
+        (iesgff, iesseq) = iesrecords.reportPutativeIes(args.min_break_coverage, 
+                args.min_del_coverage)
+    elif args.type == "subreads":
+        logger.info("Finding coordinates and consensus sequences of IESs from subread mappings")
+        (iesgff, iesseq, iesgff_prob, iesseq_prob) = iesrecords.reportPutativeIesInsertSubreads(args.min_break_coverage, args.min_del_coverage)
 
-    # Report putative IESs as list of GFF records and dict of SeqRecord objects
-    logger.info(f"""Reporting putative IESs in GFF format to file
-    {args.out}.milraa_ies.gff3""")
-    (iesgff, iesseq) = iesrecords.reportPutativeIes(args.min_break_coverage, 
-            args.min_del_coverage)
-
+    # Output files
     # Write gff version header and command line as comment
     with open(f"{args.out}.milraa_ies.gff3","w") as fh:
+        logger.info(f"Reporting putative IESs in GFF format to file {args.out}.milraa_ies.gff3")
         fh.write("##gff-version 3\n")
         fh.write("# " + " ".join(sys.argv) + "\n")
         # Write each GFF entry as a tab-separated line
         iesgff.gff2fh(fh, header=False)
-
     # Write Fasta file of putative IES sequences
-    logger.info(f"""Reporting consensus sequences of putative IESs to Fasta
-    file {args.out}.milraa_ies.fasta""")
+    logger.info(f"Reporting consensus sequences of putative IESs to Fasta file {args.out}.milraa_ies.fasta")
     SeqIO.write(iesseq.values(), f"{args.out}.milraa_ies.fasta", "fasta")
+    # Additional output files for subreads
+    if args.type == "subreads":
+        logger.info(f"Reporting putative problematic IESs in GFF format to file {args.out}.milraa_ies.problem.gff3")
+        with open(f"{args.out}.milraa_ies.problem.gff3","w") as fh:
+            fh.write("##gff-version 3\n")
+            fh.write("# " + " ".join(sys.argv) + "\n")
+            # Write each GFF entry as a tab-separated line
+            iesgff_prob.gff2fh(fh, header=False)
+        logger.info(f"Reporting consensus sequences of putative problematic IESs to Fasta file {args.out}.milraa_ies.fasta")
+        SeqIO.write(iesseq_prob.values(), f"{args.out}.milraa_ies.problem.fasta", "fasta")
 
     # Report junction sequences
     if args.junction_flank:
         junctionseqs = Milraa.getIndelJunctionSeqs(iesgff, iesseq,
                 refgenome, args.junction_flank)
-        logger.info(f"""Reporting flanking sequences of putative IESs to file
-        {args.out}.junction.out""")
+        logger.info(f"Reporting flanking sequences of putative IESs to file {args.out}.junction.out")
         with open(f"{args.out}.junction.out", "w") as fh:
             fh.write("\t".join(["id", 
                 "contig", "start", "end",
@@ -129,23 +140,18 @@ def milraa(args):
             for junc in junctionseqs:
                 fh.write("\t".join(junc) + "\n")
 
-    if args.fuzzy_ies:
-        logger.info(f"""Reporting putative IESs with allowance for unequal 
-        insert lengths in GFF format to file {args.out}.milraa_ies_fuzzy.gff3""")
+    if args.fuzzy_ies and args.type == "ccs":
+        logger.info("Finding coordinates and consensus sequences of IESs from CCS read mappings with allowance for unequal insert lengths")
         (fuzzygff, fuzzyiesseq) = iesrecords.reportPutativeIesInsertFuzzy(
                 args.min_break_coverage,
                 args.min_del_coverage,
                 args.cluster_dist)
-
-        # Write fuzzy IES gff file
+        logger.info(f"Reporting putative IESs with fuzzy lengths in GFF format to file {args.out}.milraa_ies_fuzzy.gff3")
         with open(f"{args.out}.milraa_ies_fuzzy.gff3", "w") as fh:
             fh.write("##gff-version 3\n")
             fh.write("# " + " ".join(sys.argv) + "\n")
             fuzzygff.gff2fh(fh, header=False)
-
-        # Write Fasta file of putative IES sequences fuzzy clusters
-        logger.info(f"""Reporting consensus sequences of putative fuzzy IESs to
-        Fasta file {args.out}.milraa_ies_fuzzy.fasta""")
+        logger.info(f"Reporting consensus sequences of putative fuzzy IESs to Fasta file {args.out}.milraa_ies_fuzzy.fasta")
         SeqIO.write(fuzzyiesseq.values(), 
                 f"{args.out}.milraa_ies_fuzzy.fasta", 
                 "fasta")

@@ -29,6 +29,8 @@ milraa_parser.add_argument("--ref",
     help="""
     FASTA file containing genomic contigs used as reference for the mapping
     """)
+milraa_parser.add_argument("--type", default="ccs", type=str,
+    help="Type of reads used for mapping, either 'ccs' or 'subreads'")
 
 # Output arguments
 milraa_parser.add_argument("--out",
@@ -69,14 +71,15 @@ milraa_parser.add_argument("--fuzzy_ies",
     action="store_true",
     help="""
     Allow lengths of inserts to differ slightly when defining putative IES,
-    otherwise insert lengths must be exactly the same.
+    otherwise insert lengths must be exactly the same. Only used when --type is
+    'ccs', because subreads are handled separately.
     """)
 milraa_parser.add_argument("--cluster_dist",
     default=0.05,
     type=float,
     help="""
     Sequence identity distance limit for clustering putative IESs together. 
-    Recommended settings: 0.05 for PacBio HiFi reads, ??? for PacBio CLR reads.
+    Recommended settings: 0.05 for PacBio CCS reads. Only used for --type='ccs'.
     Not yet tested extensively.
     """)
 
@@ -161,7 +164,7 @@ milret_parser = subparsers.add_parser(name="milret",
 
 # Input arguments
 milret_parser.add_argument("--bam",
-    help="BAM file containing mapping, must be sorted and indexed")
+    help="BAM file containing mapping, must be sorted and indexed.")
 milret_parser.add_argument("--ref",
     help="""
     FASTA file containing genomic contigs used as reference for the mapping""")
