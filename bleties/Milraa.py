@@ -643,7 +643,7 @@ class IesRecords(object):
                     self._insSeqDict[rname][indelstart][indelend][indellen].append(record)
 
 
-    def findPutativeIes(self, minlength):
+    def findPutativeIes(self, minlength, ctg=None, start=None, stop=None):
         """Search alignment for clips and indels to identify putative IESs.
         Record them in the _insSeqDict
 
@@ -651,9 +651,16 @@ class IesRecords(object):
         ----------
         minlength : int
             Record only putative IESs of this length and above
+        ctg : str
+            Name of contig in reference to fetch alignments from
+        start : int
+        stop : int
+            Coordinates in contig to fetch alignments from, 1-based, GFF-style
         """
-        # parse CIGAR string
-        for line in self._alnfile:
+        # convert coordinates to pysam 0-based
+        if start:
+            start =- 1
+        for line in self._alnfile.fetch(contig=ctg, start=start, stop=stop):
             if (not line.is_unmapped) and (not line.is_secondary) and (not line.is_supplementary):
                 # total_mismatch = line.get_tag("NM") # Get number of mismatches # TODO record mismatches?
                 # Find indels (putative IESs) over the minimum length and record them
@@ -1142,7 +1149,7 @@ class IesRecords(object):
         """
         coords = (min(jcs['positions']) - 1, max(jcs['positions']))
         details = jcs['seqs']
-        alns = self._alnfile.fetch(rname ,coords[0], coords[1])
+        alns = self._alnfile.fetch(rname, coords[0], coords[1])
         
         if lower_threshold and upper_threshold:
             # Keeping only sequnences within a defined range of median insert length

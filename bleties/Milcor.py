@@ -44,7 +44,8 @@ class IesCorrelationsByRead(object):
                     int)) # Number of co-occurrences/co-observations
 
 
-    def countIesCooccurrences(self, match_lengths=False, threshold=0.05):
+    def countIesCooccurrences(self, match_lengths=False, threshold=0.05,
+            fetch_ctg=None, fetch_start=None, fetch_stop=None):
         """Iterate through alignment and count IES co-occurrences per read
 
         Parameters
@@ -57,9 +58,17 @@ class IesCorrelationsByRead(object):
             inclusive. For example, if reported IES length is 100 bp and
             threshold is 0.05, accept insert lengths between 95 and 105
             inclusive as IES present. Only used if match_lengths is True
+        fetch_ctg : str
+            Name of contig to fetch alignments for. If None, all alignments used
+        fetch_start : int
+        fetch_stop : int
+            Coordinates of contigs to fetch alignments for. If None, all
+            alignments used. 1-based GFF convention
         """
         # Iterate across all reads
-        for alnrec in self._alnfile.fetch():
+        if fetch_start:
+            fetch_start =- 1
+        for alnrec in self._alnfile.fetch(contig=fetch_ctg, start=fetch_start, stop=fetch_stop):
             qname = alnrec.query_name
             if (not alnrec.is_secondary) and (not alnrec.is_supplementary):
                 ctg = alnrec.reference_name
@@ -153,7 +162,8 @@ class IesCorrelationsByRead(object):
         return(out)
 
 
-    def binReads(self, macreads, micreads, otherreads, noiesreads, threshold=0.9):
+    def binReads(self, macreads, micreads, otherreads, noiesreads, threshold=0.9,
+            fetch_ctg=None, fetch_start=None, fetch_stop=None):
         """Bin reads into MAC or MIC origin
 
         Parameters
@@ -180,7 +190,9 @@ class IesCorrelationsByRead(object):
         fh_non = open(noiesreads, "w")
 
         counter = 0
-        for rec in self._alnfile.fetch():
+        if fetch_start:
+            fetch_start =- 1
+        for rec in self._alnfile.fetch(contig=fetch_ctg, start=fetch_start, stop=fetch_stop):
             if (not rec.is_unmapped) and (not rec.is_secondary) and (not rec.is_supplementary):
                 qname = rec.query_name
                 qseq = rec.query_sequence

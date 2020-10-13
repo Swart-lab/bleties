@@ -29,6 +29,12 @@ milraa_parser.add_argument("--ref",
     help="""
     FASTA file containing genomic contigs used as reference for the mapping
     """)
+milraa_parser.add_argument("--contig", default=None, type=str,
+    help="Only process alignments from this contig")
+milraa_parser.add_argument("--start", default=None, type=int,
+    help="Start coordinate (1-based, inclusive) from contig to process")
+milraa_parser.add_argument("--stop", default=None, type=int,
+    help="Stop coordinate (1-based, inclusive) from contig to process")
 milraa_parser.add_argument("--type", default="ccs", type=str,
     help="Type of reads used for mapping, either 'ccs' or 'subreads'")
 
@@ -201,6 +207,12 @@ milcor_parser.add_argument("--bam",
     help="BAM file containing mapping, must be sorted and indexed")
 milcor_parser.add_argument("--ies",
     help="GFF3 file containing coordinates of IES junctions in MAC genome")
+milcor_parser.add_argument("--contig", default=None, type=str,
+    help="Only process alignments from this contig")
+milcor_parser.add_argument("--start", default=None, type=int,
+    help="Start coordinate (1-based, inclusive) from contig to process")
+milcor_parser.add_argument("--stop", default=None, type=int,
+    help="Stop coordinate (1-based, inclusive) from contig to process")
 
 # Options
 milcor_parser.add_argument("--use_ies_lengths", action="store_true",

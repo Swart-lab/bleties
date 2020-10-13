@@ -88,7 +88,8 @@ def milraa(args):
     iesrecords = Milraa.IesRecords(alnfile, "bam", refgenome)
     # Process alignment to find putative IESs
     logger.info("Processing alignment to find putative IESs")
-    iesrecords.findPutativeIes(args.min_ies_length)
+    iesrecords.findPutativeIes(args.min_ies_length,
+                               args.contig, args.start, args.stop)
     if args.dump:
         logger.info("Dumping data in JSON format to STDOUT")
         with open(f"{args.out}.dump", "w") as fh:
@@ -329,7 +330,8 @@ def milcor(args):
     iescorr = Milcor.IesCorrelationsByRead(args.ies, alnfile)
     if args.use_ies_lengths:
         logger.info(f"Counting only inserts matching defined IES lengths to threshold +/- {str(args.length_threshold)}")
-    iescorr.countIesCooccurrences(args.use_ies_lengths, threshold=args.length_threshold)
+    iescorr.countIesCooccurrences(args.use_ies_lengths, threshold=args.length_threshold,
+            fetch_ctg=args.contig, fetch_start=args.start, fetch_stop=args.stop)
 
     out_perread_table = iescorr.summarizePerRead()
     logger.info(f"Writing output to file {args.out}.milcor.tsv")
@@ -355,7 +357,7 @@ def milcor(args):
                 f"{args.out}.milcor_bin_MIC.fasta",
                 f"{args.out}.milcor_bin_other.fasta",
                 f"{args.out}.milcor_bin_noies.fasta",
-            args.bin_threshold)
+            args.bin_threshold, args.contig, args.start, args.stop)
 
     alnfile.close()
     logger.info("Finished MILCOR")
