@@ -1283,7 +1283,7 @@ class IesRecords(object):
             for jcs in jcss:
                 extr, coords = self.extractFlankingFromJcs(jcs, rname, margin, 0.75, 1.25) # TODO allow user to change these thresholds
                 if extr and coords:
-                    logging.debug(f"contig {rname} coordinates {str(coords[0])} {str(coords[1])}")
+                    # logging.debug(f"contig {rname} coordinates {str(coords[0])} {str(coords[1])}")
                     aln = self.spoaConsensusToFlanking(extr, rname, coords[0], coords[1], margin=100, mode=1)
                     consseq, adjpos = findLongestInsert(aln, rname, coords[0]-margin)
                     # Complain if predicted insert location from findLongestInsert
