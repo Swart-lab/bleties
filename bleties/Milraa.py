@@ -767,26 +767,9 @@ class IesRecords(object):
                         provscore = round((readcov-totalcount)/readcov, 4)
 
                 # Find pointers if present
-                (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq, breakpointid)
-                if pointerstart != ins_start:
-                    logger.info(f"Position of pointer {breakpointid} has been adjusted")
-                    ins_start = pointerstart
-                    ins_end = pointerend
-                if pointer: # Add pointer seq to attributes field if present
-                    attr.append("pointer_seq=" + str(pointer))
-                # Convert pointers to TA junctions if possible
-                (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
-                # Add TA pointer sequence to attributes field if present
-                if tapointer:
-                    attr.extend(["ta_pointer_seq=" + str(tapointer),
-                        "ta_pointer_start=" + str(tastart),
-                        "ta_pointer_end=" + str(taend)])
-                # Maximize pointer lengths
-                (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
-                if pppointer:
-                    attr.extend(["pp_pointer_seq=" + str(pppointer),
-                        "pp_pointer_start=" + str(ppstart),
-                        "pp_pointer_end=" + str(ppend)])
+                ins_start, ins_end, pointerdict = self.reportAdjustPointers(ctg, ins_start, ins_end, consseq, breakpointid)
+                for i in pointerdict:
+                    attr.append(f"{i}={str(pointerdict[i])}")
 
                 consseq.id = breakpointid
                 consseq.description = ";".join(attr)+";"
@@ -812,6 +795,60 @@ class IesRecords(object):
         # ins_lengths.
         # Deletions: fuzzy cluster start and end positions separately.
         # This is somewhat trickier, because of the way the data are structured
+
+
+    def reportAdjustPointers(self, ctg, ins_start, ins_end, consseq, breakpointid):
+        """For a given indel sequence, find pointers and check for TA junctions
+
+        Adjust to maximize pointer length if possible
+
+        Parameters
+        ----------
+        ctg : str
+            Name of sequence in self._refgenome
+        ins_start : int
+            Start position of indel, 1-based (GFF convention)
+        ins_end : int
+            End position of indel, 1-based inclusive (GFF convention). If
+            equal to ins_start, then this is an insert junction.
+        consseq : str or SeqRecord
+            Consensus sequence of indel. Must be supplied if this is an insert.
+        breakpointid : str
+            Name for current indel
+
+        Returns
+        -------
+        int, int
+            ins_start and ins_end, which may be different from the input values
+            if the pointer position has been adjusted
+        dict
+            Dict of pointer sequences and coordinates, also for putative TA
+            junctions and maximized pointers, if present
+        """
+        out = {}
+        # Find pointers if present
+        (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq, breakpointid)
+        if pointerstart != ins_start:
+            logger.info(f"Position of pointer {breakpointid} has been adjusted")
+            ins_start = pointerstart
+            ins_end = pointerend
+        if pointer: # Add pointer seq to attributes field if present
+            out['pointer_seq'] = pointer
+        # Convert pointers to TA junctions if possible
+        (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
+        # Add TA pointer sequence to attributes field if present
+        if tapointer:
+            out['ta_pointer_seq'] = tapointer
+            out['ta_pointer_start'] = tastart
+            out['ta_pointer_end'] = taend
+        # Maximize pointer lengths, report if different from original
+        (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
+        if pppointer and pppointer != pointer:
+            out['pp_pointer_seq'] = pppointer
+            out['pp_pointer_start'] = ppstart
+            out['pp_pointer_end'] = ppend
+        return(ins_start, ins_end, out)
+
 
 
     def reportPutativeIes(self, mininsbreaks, mindelbreaks):
@@ -902,26 +939,9 @@ class IesRecords(object):
                 outseq[consseq.id] = consseq
 
                 # Find pointers if present
-                (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq, breakpointid)
-                if pointerstart != ins_start:
-                    logger.info(f"Position of pointer {breakpointid} has been adjusted")
-                    ins_start = pointerstart
-                    ins_end = pointerend
-                if pointer: # Add pointer seq to attributes field if present
-                    attr.append("pointer_seq=" + str(pointer))
-                # Convert pointers to TA junctions if possible
-                (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
-                # Add TA pointer sequence to attributes field if present
-                if tapointer:
-                    attr.extend(["ta_pointer_seq=" + str(tapointer),
-                        "ta_pointer_start=" + str(tastart),
-                        "ta_pointer_end=" + str(taend)])
-                # Maximize pointer lengths
-                (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
-                if pppointer:
-                    attr.extend(["pp_pointer_seq=" + str(pppointer),
-                        "pp_pointer_start=" + str(ppstart),
-                        "pp_pointer_end=" + str(ppend)])
+                ins_start, ins_end, pointerdict = self.reportAdjustPointers(ctg, ins_start, ins_end, consseq, breakpointid)
+                for i in pointerdict:
+                    attr.append(f"{i}={str(pointerdict[i])}")
 
                 # Build GFF entry
                 outarr = [str(ctg),            # 1 seqid
@@ -1286,26 +1306,11 @@ class IesRecords(object):
                             provscore = round(len(extr)/readcov, 4)
 
                     consseq = SeqRecord(Seq(consseq), id=breakpointid, description=";".join(attr)+";")
-                    # Find pointers if present # TODO modularize this, reduce code duplication
-                    (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[rname], gffpos, gffpos, consseq, breakpointid)
-                    if pointerstart != gffpos:
-                        logger.info(f"Position of pointer {breakpointid} has been adjusted")
-                        gffpos = pointerstart
-                    if pointer: # Add pointer seq to attributes field if present
-                        attr.append("pointer_seq=" + str(pointer))
-                    # Convert pointers to TA junctions if possible
-                    (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
-                    # Add TA pointer sequence to attributes field if present
-                    if tapointer:
-                        attr.extend(["ta_pointer_seq=" + str(tapointer),
-                            "ta_pointer_start=" + str(tastart),
-                            "ta_pointer_end=" + str(taend)])
-                    # Maximize pointer lengths
-                    (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[rname], gffpos, gffpos, pointer, consseq)
-                    if pppointer:
-                        attr.extend(["pp_pointer_seq=" + str(pppointer),
-                            "pp_pointer_start=" + str(ppstart),
-                            "pp_pointer_end=" + str(ppend)])
+                    # Find pointers if present
+                    gffpos, gffpos, pointerdict = self.reportAdjustPointers(rname, gffpos, gffpos, consseq, breakpointid)
+                    for i in pointerdict:
+                        attr.append(f"{i}={str(pointerdict[i])}")
+
                     # Put together GFF entry
                     outarr = [str(rname),
                             "MILRAA",
