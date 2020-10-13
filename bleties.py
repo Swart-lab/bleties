@@ -42,7 +42,7 @@ milraa_parser.add_argument("--out",
 milraa_parser.add_argument("--junction_flank",
     type=int,
     default=5,
-    help="Length of flanking sequence to report to --out_junction")
+    help="Length of flanking sequence to report to junction report")
 milraa_parser.add_argument("--min_ies_length", # This parameter is hard-coded in the original ParTIES MIRAA
     type=int,
     default=15,

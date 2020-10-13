@@ -139,13 +139,60 @@ The pointer sequences and adjusted coordinates are reported in the `attributes`
 field of the MILRAA GFF3 file, as described below.
 
 
+CCS reads vs subreads
+---------------------
+
+PacBio sequence data is typically reported as "subreads" (see [PacBio SMRT
+primer](https://pacbiofileformats.readthedocs.io/en/10.0/Primer.html)). The
+multiple subreads from a single ZMW can be used to generate a consensus sequence
+with higher accuracy than individual subreads, known as [circular consensus
+sequencing](https://ccs.how), or CCS.
+
+CCS reads are typically highly accurate (errors less than 1%), compared to
+subreads which can have error rates of 5-15%. However, to generate CCS reads,
+the sequencing depth of a library must be relatively high.
+
+CCS reads and subreads are handled differently by MILRAA to predict the
+positions of indels. This is chosen with the option `--type ccs` or `--type
+subreads` respectively.
+
+With CCS reads, the insert position reported by the mapper is assumed to be
+accurate. The insert sequence from an individual CCS read is also assumed to be
+accurate. However, even with CCS sequences the error rate is high enough that
+individual insert sequences at the same coordinate may vary from each other,
+including by indels. The higher the coverage, the more variants will be
+expected. Furthermore there is also the possibility that a site may experience
+alternative excisions, where the sequences excised may be of different lengths:
+see the section "Fuzzy IES length matching" below.
+
+With subreads, the error rate is high enough that the insert position reported
+by the mapper may not be accurate. Therefore, from the list of insert
+coordinates reported by the mapper (inserts above a minimum length threshold),
+clusters of insert coordinates which are no more than 2 bp from each other are
+extracted. If the number of insert-containing subreads in a cluster is above the
+coverage minimum, these are further processed to get the consensus sequence of
+the insert. The insert sequence and a flanking region of the mapped reads are
+extracted and aligned to get a consensus sequence, using
+[SPOA](https://github.com/rvaser/spoa). This insert+flanking consensus is then
+aligned with the corresponding region on the reference sequence. The flanking
+sequence helps to "anchor" the consensus in the reference, so that we can
+extract a more accurate insert coordinate. If this adjusted coordinate is more
+than 5 bp away from the original coordinates, an error is reported; this may
+represent inserts where the flanking regions on some reads are not homologous to
+the reference, e.g. from mapping of paralogs or from sequencing errors.
+
+<!--
+ZMW reads vs subreads and calculation of coverage for subread mode
+-->
+
 Fuzzy IES length matching
 -------------------------
 
-The default mode is "strict", i.e. to define a given IES junction, all the
-insert operations at a given coordinate must have the same length. However,
-this does not account for sequencing errors that may introduce indels, nor the
-possibility of different excised sequences at the same coordinate.
+The default mode for CCS read mappings is "strict", i.e. to define a given IES
+junction, all the insert operations at a given coordinate must have the same
+length. However, this does not account for sequencing errors that may introduce
+indels, nor the possibility of different excised sequences at the same
+coordinate.
 
 With the `--fuzzy_ies` option, insert sequences (putative IES sequences) at a
 given coordinate are extracted from the mapped reads. These are pairwise
