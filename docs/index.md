@@ -30,6 +30,7 @@ names:
 ./bleties.py milret --help
 ./bleties.py milcor --help
 ./bleties.py miltel --help
+./bleties.py insert --help
 ```
 
 Scripts for plotting and visualizing data are in the `scripts/` subfolder.
@@ -50,4 +51,6 @@ Refer to the individual module pages for further information.
    as MIC/MAC in origin.
  * [MILTEL](miltel.md) -- Identify potential chromosome breakage sites with
    telomere addition
+ * Insert -- Utility for inserting/deleting IES sequences from a reference
+   genome to generate MAC+IES or MAC-IES versions.
 
