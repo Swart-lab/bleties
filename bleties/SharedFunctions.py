@@ -5,11 +5,12 @@
 import re
 from collections import defaultdict
 from operator import itemgetter
-from bleties.SharedValues import SharedValues
 from Bio.Align import PairwiseAligner
 from Bio.Cluster import treecluster
 from numpy import array
 import logging
+
+from bleties.SharedValues import SharedValues
 
 
 logger = logging.getLogger("SharedFunctions")
@@ -459,6 +460,28 @@ class Gff(object):
             raise Exception("Unknown GFF3 column name " + column)
 
 
+    def changeValue(self, gffid, column, newvalue):
+        """Change value of column for a given GFF entry.
+        GFF entry is specified by the ID.
+
+        Parameters
+        ----------
+        gffid : str
+            ID of the GFF entry
+        column : str
+            Name of the column to retrieve
+        newvalue
+            New value of column to put in entry
+        """
+        if column in SharedValues.GFF3COLUMNS:
+            if gffid in self._gffDict:
+                self._gffDict[gffid][column] = newvalue
+            else:
+                raise Exception("Unknown GFF3 ID " + gffid)
+        else:
+            raise Exception("Unknown GFF3 column name " + column)
+
+
     def getAttr(self, gffid, attribute):
         """Get value from attributes field of a GFF entry.
 
@@ -475,6 +498,27 @@ class Gff(object):
             else:
                 logger.debug(f"Unknown attribute {attribute} for GFF ID {gffid}")
                 return(None)
+        else:
+            raise Exception("Unknown GFF3 ID " + gffid)
+
+
+    def changeAttr(self, gffid, attribute, newvalue):
+        """Change value from attributes field of a GFF entry.
+
+        Parameters
+        ----------
+        gffid : str
+            ID of the GFF entry
+        attribute : str
+            Key of the attribute requested
+        newvalue
+            New value to put in the field
+        """
+        if gffid in self._gffDict:
+            if attribute in self._gffDict[gffid]['attrdict']:
+                self._gffDict[gffid]['attrdict'][attribute] = newvalue
+            else:
+                logger.debug(f"Unknown attribute {attribute} for GFF ID {gffid}")
         else:
             raise Exception("Unknown GFF3 ID " + gffid)
 
