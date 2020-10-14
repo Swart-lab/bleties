@@ -142,27 +142,45 @@ class TestMilraa(unittest.TestCase):
 
 
 class TestInsert(unittest.TestCase):
+    # Class variables used by several tests
+    ref = {'ctg1' : SeqRecord(Seq('AAAAAAAAAAAAAAAAAAAA'),id='ctg1'),
+           'ctg2' : SeqRecord(Seq('GGGGGGGGGGGGGGGGGGGG'),id='ctg2')}
+    ies = {'ies1' : SeqRecord(Seq('TTTT'), id='ies1'),
+           'ies2' : SeqRecord(Seq('GGGGG'), id='ies2'),
+           'ies3' : SeqRecord(Seq('CCCCC'), id='ies3')}
+    gfflist = ["ctg1\t.\t.\t5\t5\t.\t.\t.\tID=ies1;",
+               "ctg1\t.\t.\t9\t9\t.\t.\t.\tID=ies2;",
+               "ctg2\t.\t.\t9\t9\t.\t.\t.\tID=ies3;",
+               "ctg2\t.\t.\t15\t18\t.\t.\t.\tID=ies4;"]
 
-    def test_reportModifiedReference(self):
-        ref = {'ctg1' : SeqRecord(Seq('AAAAAAAAAAAAAAAAAAAA'),id='ctg1'),
-               'ctg2' : SeqRecord(Seq('GGGGGGGGGGGGGGGGGGGG'),id='ctg2')}
-        ies = {'ies1' : SeqRecord(Seq('TTTT'), id='ies1'),
-               'ies2' : SeqRecord(Seq('GGGGG'), id='ies2'),
-               'ies3' : SeqRecord(Seq('CCCCC'), id='ies3')}
-        gfflist = ["ctg1\t.\t.\t5\t5\t.\t.\t.\tID=ies1;",
-                   "ctg1\t.\t.\t9\t9\t.\t.\t.\tID=ies2;",
-                   "ctg2\t.\t.\t9\t9\t.\t.\t.\tID=ies3;",
-                   "ctg2\t.\t.\t15\t18\t.\t.\t.\tID=ies4;"]
+    def test_reportInsertedReference(self):
         gff = SharedFunctions.Gff()
-        gff.list2gff(gfflist)
-        ins = Insert.Insert(ref, gff, ies)
-        newfasta, newgff = ins.reportModifiedReference()
+        gff.list2gff(TestInsert.gfflist)
+        ins = Insert.Insert(TestInsert.ref, gff, TestInsert.ies)
+        newfasta, newgff = ins.reportInsertedReference()
         self.assertEqual(
                 str(newfasta['ctg1'].seq),
                 'AAAAATTTTAAAAGGGGGAAAAAAAAAAA')
         self.assertEqual(
                 str(newfasta['ctg2'].seq),
                 'GGGGGGGGGCCCCCGGGGGGGGGGG')
+
+    def test_reportDeletedReference(self):
+        gff = SharedFunctions.Gff()
+        gff.list2gff(TestInsert.gfflist)
+        # Insert sequences into reference
+        ins = Insert.Insert(TestInsert.ref, gff, TestInsert.ies)
+        newfasta, newgff = ins.reportInsertedReference()
+        # Take them out again
+        dels = Insert.Insert(newfasta, newgff, None)
+        delfasta, delgff = dels.reportDeletedReference()
+        # Check that they are the same sequence
+        self.assertEqual(
+                str(delfasta['ctg1'].seq),
+                str(TestInsert.ref['ctg1'].seq))
+        self.assertEqual(
+                str(delfasta['ctg2'].seq),
+                str(TestInsert.ref['ctg2'].seq))
 
 
 if __name__ == '__main__':

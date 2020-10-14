@@ -423,15 +423,26 @@ def insert(args):
     logger.info(" ".join(sys.argv))
 
     logger.info("Reading input files")
+    refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
     gff = SharedFunctions.Gff()
     gff.file2gff(args.ies)
-    ies = SeqIO.to_dict(SeqIO.parse(args.iesfasta, "fasta"))
-    refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
-    logger.info(f"Inserting IESs to MAC reference to make MAC+IES hybrid reference")
-    ins = Insert.Insert(refgenome, gff, ies)
-    newrefgenome, newgff = ins.reportModifiedReference()
-    logger.info(f"Writing output files to {args.out}.iesplus.fasta, {args.out}.iesplus.gff")
-    with open(f"{args.out}.iesplus.fasta", "w") as fh:
+
+    if re.match(r"ins", args.mode):
+        ies = SeqIO.to_dict(SeqIO.parse(args.iesfasta, "fasta"))
+        logger.info(f"Inserting IESs to MAC reference to make MAC+IES hybrid reference")
+        ins = Insert.Insert(refgenome, gff, ies)
+        newrefgenome, newgff = ins.reportInsertedReference()
+        outfasta = f"{args.out}.iesplus.fasta"
+        outgff = f"{args.out}.iesplus.gff"
+    elif re.match(r"del", args.mode):
+        logger.info(f"Removing IESs from MAC+IES reference to make MAC-IES reference")
+        dels = Insert.Insert(refgenome, gff, None)
+        newrefgenome, newgff = dels.reportDeletedReference()
+        outfasta = f"{args.out}.iesminus.fasta"
+        outgff = f"{args.out}.iesminus.gff"
+
+    logger.info(f"Writing output files to {outfasta}, {outgff}")
+    with open(outfasta, "w") as fh:
         SeqIO.write(list(newrefgenome.values()), fh, "fasta")
-    newgff.gff2file(f"{args.out}.iesplus.gff", header=True)
+    newgff.gff2file(outgff, header=True)
     logger.info("Finished Insert")

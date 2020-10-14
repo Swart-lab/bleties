@@ -270,8 +270,11 @@ miltel_parser.set_defaults(func=main.miltel)
 
 # Insert -----------------------------------------------------------------------
 insert_parser = subparsers.add_parser(name="insert",
-        description="Insert - Insert IESs into MAC reference sequence",
+        description="Insert - Insert/Remove IESs to/from MAC reference sequence",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+insert_parser.add_argument("--mode", type=str, default="insert",
+    help="Insert or delete mode? Options: 'insert', 'delete'")
 
 # Input arguments
 insert_parser.add_argument("--ref", type=str,

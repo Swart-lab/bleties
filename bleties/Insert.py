@@ -84,7 +84,65 @@ class Insert(object):
                     logger.warn(f"Insert sequence ID {gffid} not in Fasta file!")
 
 
-    def _updatePositions(self):
+    def _filterDeletions(self):
+        """Process GFF file and filter putative IESs to be deleted
+
+        Overlapping regions will be skipped, only non-overlapping features
+        retained
+
+        Returns
+        -------
+        dict
+            Dict keyed by contig ID (seqid), values are lists of dicts, each 
+            containing details on a specific deletion, with keys seqid, start
+            end, gffid. start and end are 0-based pythonic coordinates
+
+        """
+        coords = defaultdict(list)
+        filtcoords = defaultdict(list)
+        # Get region features only
+        for gffid in self._gff:
+            # Check for junctions only, i.e. start == end
+            start = int(self._gff.getValue(gffid, 'start'))
+            end = int(self._gff.getValue(gffid, 'end'))
+            if start < end:
+                seqid = self._gff.getValue(gffid, 'seqid')
+                # Convert coords to 0-based python convention
+                coords[seqid].append({'seqid':seqid, 'start':start-1, 'end':end, 'gffid':gffid})
+        # Check for overlaps
+        for seqid in coords:
+            sortrecs = sorted(coords[seqid], key=lambda x: int(x['start']))
+            currend = None
+            for i in range(len(sortrecs)):
+                gffid = sortrecs[i]['gffid']
+                if currend:
+                    if currend > int(sortrecs[i]['start']):
+                        currend = max([currend, int(sortrecs[i]['end'])])
+                        logger.debug(f"Overlapping record {gffid} skipped")
+                    else:
+                        currend = int(sortrecs[i]['end'])
+                        if i < len(sortrecs) - 1:
+                            if currend < int(sortrecs[i+1]['start']):
+                                filtcoords[seqid].append(sortrecs[i])
+                            else:
+                                logger.debug(f"Overlapping record {gffid} skipped")
+                        else:
+                            # Sweep up last entry
+                            filtcoords[seqid].append(sortrecs[i])
+                else:
+                    currend = int(sortrecs[i]['end'])
+                    if i < len(sortrecs)-1:
+                        if currend < int(sortrecs[i+1]['start']):
+                            filtcoords[seqid].append(sortrecs[i])
+                        else:
+                            logger.debug(f"Overlapping record {gffid} skipped")
+                    else:
+                        # Sweet up last first entry
+                        filtcoords[seqid].append(sortrecs[i])
+        return(filtcoords)
+
+
+    def _updatePositionsInserts(self):
         """After filtering inserts and recording them in iesdict, update their
         coordinates after adding the sequences in
         
@@ -114,6 +172,56 @@ class Insert(object):
                     self._newgff.changeValue(gffid, 'end', newend)
 
 
+    def _updatePositionsDeletions(self, dels):
+        """After filtering deletions and recording them, update their
+        coordinates in Gff object after removing the sequences from contigs
+        
+        Run this after filterDeletions()
+        """
+        for seqid in dels:
+            sortedrecs = sorted(dels[seqid], key=lambda x: int(x['start']))
+            for i in sortedrecs:
+                i['newpos'] = i['start']
+            for i in range(len(sortedrecs)):
+                inslen = sortedrecs[i]['end'] - sortedrecs[i]['start']
+                for j in range(i+1, len(sortedrecs)):
+                    sortedrecs[j]['newpos'] = sortedrecs[j]['newpos'] - inslen
+            # Record new Gff entry and update coordinates
+            for i in sortedrecs:
+                self._newgff.addEntry(self._gff.getEntry(i['gffid']), i['gffid'])
+                self._newgff.changeValue(i['gffid'], 'start', i['newpos'])
+                self._newgff.changeValue(i['gffid'], 'end', i['newpos'])
+
+
+    def get_not_gaps(start, end, gaplist):
+        """Get inverse coords of gaps
+
+        Parameters
+        ----------
+        start : int
+        end : int
+            Coords for original sequence, 0-based pythonic
+        gaplist : list
+            list of (int, int) tuples specifying gaps. Must not be overlapping
+            otherwise GIGO
+
+        Returns
+        -------
+        list
+            list of (int, int) tuples specifying not-gaps
+        """
+        coords = [start]
+        sortedgaps = sorted(gaplist, key=lambda x: int(x[0]))
+        for tup in sortedgaps:
+            coords.extend([tup[0],tup[1]])
+        coords.append(end)
+        # Reslice
+        out = []
+        for i in range(int(len(coords)/2)):
+            out.append((coords[2*i],coords[2*i+1]))
+        return(out)
+
+
     def _addSequences(self):
         """Insert IES sequences to the reference assembly
         
@@ -129,30 +237,81 @@ class Insert(object):
                 self._newgenome[ctg].seq = self._newgenome[ctg].seq[0:inspos] + insseq + self._newgenome[ctg].seq[inspos:]
 
 
-    def reportModifiedReference(self):
+    def _deleteSequences(self, dels):
+        """
+        Run this after filterDeletions()
+
+        Parameters
+        ----------
+        dels : dict
+            Output from _filterDeletions()
+        """
+        for seqid in dels:
+            gaps = [(i['start'], i['end']) for i in dels[seqid]]
+            end = len(self._refgenome[seqid].seq)
+            notgaps = Insert.get_not_gaps(0, end, gaps)
+            newseq = ""
+            for i in notgaps:
+                newseq += str(self._refgenome[seqid].seq[i[0]:i[1]])
+            self._newgenome[seqid].seq = Seq(newseq)
+
+
+    def reportInsertedReference(self):
         """Add IESs to reference genome, report modified MAC+IES assembly and
         GFF file containing updated positions
-        
+
+        Only IESs defined in the GFF as inserts (i.e. start == end) will be 
+        added to the reference sequence. IES sequences containing gaps or
+        mismatches (- or X characters) will be skipped.
+
         Returns
         -------
         dict
             dict of SeqRecords representing modified reference genome
         Gff
-            IES records with updated inserted positions
+            IES records with updated region coords. Only the start and end
+            columns are changed, all other columns are inherited from the 
+            original GFF records
         """
         self._filterInserts()
-        self._updatePositions()
-        ctg_orig_lengths = defaultdict(int)
-        for ctg in self._refgenome:
-            ctg_orig_lengths[ctg] = len(self._refgenome[ctg].seq)
+        self._updatePositionsInserts()
         self._addSequences()
-        ctg_new_lengths = defaultdict(int)
-        for ctg in self._newgenome:
-            ctg_new_lengths[ctg] = len(self._newgenome[ctg].seq)
-        newtotal = sum(ctg_new_lengths.values())
-        oldtotal = sum(ctg_orig_lengths.values())
+        # Count difference in size
+        oldtotal = sum([len(self._refgenome[ctg].seq) for ctg in self._refgenome])
+        newtotal = sum([len(self._newgenome[ctg].seq) for ctg in self._newgenome])
         addedlen = newtotal - oldtotal
         logging.info(f"Original contigs total length: {str(oldtotal)}")
         logging.info(f"Modified contigs total length: {str(newtotal)}")
         logging.info(f"Total sequence length added: {str(addedlen)}")
+        return(self._newgenome, self._newgff)
+
+
+    def reportDeletedReference(self):
+        """Remove IESs from reference MAC+IES genome, report modified MAC-IES
+        assembly and GFF file containing updated positions
+
+        Only IESs defined in the GFF as retentions (i.e. end > start) will be
+        removed from the reference sequence. IESs that overlap with each other
+        will be skipped: the input GFF should be manually curated to select
+        which region should actually be excised.
+
+        Returns
+        -------
+        dict
+            dict of SeqRecords representing modified reference genome
+        Gff
+            IES records with updated insert positions. Only the start and end
+            columns are changed, all other columns are inherited from the 
+            original GFF records
+        """
+        dels = self._filterDeletions()
+        self._updatePositionsDeletions(dels)
+        self._deleteSequences(dels)
+        # Count difference in size
+        oldtotal = sum([len(self._refgenome[ctg].seq) for ctg in self._refgenome])
+        newtotal = sum([len(self._newgenome[ctg].seq) for ctg in self._newgenome])
+        deletedlen = oldtotal - newtotal
+        logging.info(f"Original contigs total length: {str(oldtotal)}")
+        logging.info(f"Modified contigs total length: {str(newtotal)}")
+        logging.info(f"Total sequence length removed: {str(deletedlen)}")
         return(self._newgenome, self._newgff)
