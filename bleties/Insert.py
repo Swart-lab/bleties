@@ -72,7 +72,7 @@ class Insert(object):
                                         'seqlen' : len (seq),
                                         'gffid' : gffid,
                                         'newstart' : int(start),
-                                        'newend' : int(end)}
+                                        'newend' : int(end) + len(seq)}
                         else:
                             self._iesdict[ctg][start] = {
                                     'seq' : seq,
@@ -98,8 +98,11 @@ class Insert(object):
                     oldstart = int(self._iesdict[ctg][sp[j]]['newstart'])
                     oldend = int(self._iesdict[ctg][sp[j]]['newend'])
                     gffid = self._iesdict[ctg][sp[j]]['gffid']
-                    newstart = oldstart + seqlen
-                    newend = oldend + seqlen
+                    newstart = oldstart
+                    newend = oldend
+                    if j > i: # don't add if this is the same entry
+                        newstart += seqlen
+                        newend += seqlen
                     # New coordinates in dict are 0-based [), python convention
                     self._iesdict[ctg][sp[j]]['newstart'] = newstart
                     self._iesdict[ctg][sp[j]]['newend'] = newend

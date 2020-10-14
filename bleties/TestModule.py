@@ -2,8 +2,12 @@
 
 import unittest
 
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
 from bleties import Milraa
 from bleties import SharedFunctions
+from bleties import Insert
 # from bleties import Milret
 
 # To run tests from parent directory:
@@ -135,6 +139,30 @@ class TestMilraa(unittest.TestCase):
 
 
 # class TestMilret(unittest.TestCase):
+
+
+class TestInsert(unittest.TestCase):
+
+    def test_reportModifiedReference(self):
+        ref = {'ctg1' : SeqRecord(Seq('AAAAAAAAAAAAAAAAAAAA'),id='ctg1'),
+               'ctg2' : SeqRecord(Seq('GGGGGGGGGGGGGGGGGGGG'),id='ctg2')}
+        ies = {'ies1' : SeqRecord(Seq('TTTT'), id='ies1'),
+               'ies2' : SeqRecord(Seq('GGGGG'), id='ies2'),
+               'ies3' : SeqRecord(Seq('CCCCC'), id='ies3')}
+        gfflist = ["ctg1\t.\t.\t5\t5\t.\t.\t.\tID=ies1;",
+                   "ctg1\t.\t.\t9\t9\t.\t.\t.\tID=ies2;",
+                   "ctg2\t.\t.\t9\t9\t.\t.\t.\tID=ies3;",
+                   "ctg2\t.\t.\t15\t18\t.\t.\t.\tID=ies4;"]
+        gff = SharedFunctions.Gff()
+        gff.list2gff(gfflist)
+        ins = Insert.Insert(ref, gff, ies)
+        newfasta, newgff = ins.reportModifiedReference()
+        self.assertEqual(
+                str(newfasta['ctg1'].seq),
+                'AAAAATTTTAAAAGGGGGAAAAAAAAAAA')
+        self.assertEqual(
+                str(newfasta['ctg2'].seq),
+                'GGGGGGGGGCCCCCGGGGGGGGGGG')
 
 
 if __name__ == '__main__':
