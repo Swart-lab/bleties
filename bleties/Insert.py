@@ -149,8 +149,8 @@ class Insert(object):
         ctg_new_lengths = defaultdict(int)
         for ctg in self._newgenome:
             ctg_new_lengths[ctg] = len(self._newgenome[ctg].seq)
-        oldtotal = sum(ctg_new_lengths.values())
-        newtotal = sum(ctg_orig_lengths.values())
+        newtotal = sum(ctg_new_lengths.values())
+        oldtotal = sum(ctg_orig_lengths.values())
         addedlen = newtotal - oldtotal
         logging.info(f"Original contigs total length: {str(oldtotal)}")
         logging.info(f"Modified contigs total length: {str(newtotal)}")

@@ -284,6 +284,9 @@ insert_parser.add_argument("--iesfasta", type=str,
 # Output arguments
 insert_parser.add_argument("-o", "--out", default="test",
     help="Prefix for output files")
+
+insert_parser.set_defaults(func=main.insert)
+
 # Parse arguments --------------------------------------------------------------
 args = parser.parse_args()
 

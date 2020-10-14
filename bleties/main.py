@@ -432,6 +432,6 @@ def insert(args):
     newrefgenome, newgff = ins.reportModifiedReference()
     logger.info(f"Writing output files to {args.out}.iesplus.fasta, {args.out}.iesplus.gff")
     with open(f"{args.out}.iesplus.fasta", "w") as fh:
-        SeqIO.write(newrefgenome, fh, "fasta")
+        SeqIO.write(list(newrefgenome.values()), fh, "fasta")
     newgff.gff2file(f"{args.out}.iesplus.gff", header=True)
     logger.info("Finished Insert")
