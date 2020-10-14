@@ -413,3 +413,25 @@ def miltel(args):
 
     alnfile.close()
     logger.info("Finished MILTEL")
+
+
+def insert(args):
+    logger = logging.getLogger("main.insert")
+    logger.info(f"BleTIES {__version__}")
+    logger.info("Started BleTIES Insert")
+    logger.info("Command line:")
+    logger.info(" ".join(sys.argv))
+
+    logger.info("Reading input files")
+    gff = SharedFunctions.Gff()
+    gff.file2gff(args.ies)
+    ies = SeqIO.to_dict(SeqIO.parse(args.iesfasta, "fasta"))
+    refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
+    logger.info(f"Inserting IESs to MAC reference to make MAC+IES hybrid reference")
+    ins = Insert.Insert(refgenome, gff, ies)
+    newrefgenome, newgff = ins.reportModifiedReference()
+    logger.info(f"Writing output files to {args.out}.iesplus.fasta, {args.out}.iesplus.gff")
+    with open(f"{args.out}.iesplus.fasta", "w") as fh:
+        SeqIO.write(newrefgenome, fh, "fasta")
+    newgff.gff2file(f"{args.out}.iesplus.gff", header=True)
+    logger.info("Finished Insert")

@@ -268,6 +268,22 @@ miltel_parser.add_argument("--dump", action="store_true",
 miltel_parser.set_defaults(func=main.miltel)
 
 
+# Insert -----------------------------------------------------------------------
+insert_parser = subparsers.add_parser(name="insert",
+        description="Insert - Insert IESs into MAC reference sequence",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+# Input arguments
+insert_parser.add_argument("--ref", type=str,
+    help="FASTA file of MAC genome containing reference to be modified")
+insert_parser.add_argument("--ies", type=str,
+    help="GFF file of IES features to be added to reference")
+insert_parser.add_argument("--iesfasta", type=str,
+    help="FASTA file containing sequences of IES features to be added. Sequence IDs must correspond to IDs in GFF file")
+
+# Output arguments
+insert_parser.add_argument("-o", "--out", default="test",
+    help="Prefix for output files")
 # Parse arguments --------------------------------------------------------------
 args = parser.parse_args()
 
