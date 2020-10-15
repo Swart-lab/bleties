@@ -11,8 +11,6 @@ import matplotlib as mpl
 mpl.use("Agg") # allow run without X-server
 import matplotlib.pyplot as plt
 
-# Relative import relative to `scripts` folder
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from bleties import SharedFunctions
 
 
