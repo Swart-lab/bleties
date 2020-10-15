@@ -15,25 +15,45 @@ Input data
    BAM format; mapper should report valid CIGAR string and NM tag.
 
 
+Installation
+------------
+
+Dependencies are specified as a Conda environment YAML file `env.yaml`. Create a
+Conda environment with the specified dependencies, then install bleties locally
+with `pip`:
+
+```bash
+conda env create -f env.yaml -n bleties
+conda activate bleties
+cd /path/to/bleties # path to this folder
+pip install -e .
+```
+
+
 Usage
 -----
-
-Dependencies are specified as a Conda environment YAML file `env.yaml`.
 
 For help, use the `-h` or `--help` option, with or without the subworkflow 
 names:
 
 ```
-./bleties.py --help
-./bleties.py milraa --help
-./bleties.py miser --help
-./bleties.py milret --help
-./bleties.py milcor --help
-./bleties.py miltel --help
-./bleties.py insert --help
+bleties --help
+bleties milraa --help
+bleties miser --help
+bleties milret --help
+bleties milcor --help
+bleties miltel --help
+bleties insert --help
 ```
 
-Scripts for plotting and visualizing data are in the `scripts/` subfolder.
+
+In addition there are two scripts for plotting the output from the MILRAA and
+MILCOR modules. See the `--help` messages for usage instructions:
+
+```
+milcor_plot.py --help
+milraa_plot.py --help
+```
 
 
 Outline of workflow
