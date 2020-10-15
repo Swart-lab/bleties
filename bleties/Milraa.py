@@ -769,15 +769,17 @@ class IesRecords(object):
                             prefix = f"BREAK_POINTS"
                         elif len(counts.keys()) > 1:
                             prefix = f"BREAK_POINTS_FUZZY"
+                        # Add median length to the bpid
                         breakpointfields = [
-                            prefix, ctg, ins_start, ins_end] + [l for l in counts.keys()]
+                            prefix, ctg, ins_start, ins_end, 
+                            median([l for l in counts.keys()])]
                         breakpointid = "_".join([str(i)
                                                  for i in breakpointfields])
                         gfftype = "internal_eliminated_sequence_junction"
 
                         # Attributes list of key-value pairs
                         # report modal IES length
-                        attr = ["ID=" + breakpointid,
+                        attr = [f"ID={breakpointid}",
                                 "IES_length="+"_".join([str(l) for l in maxcounts])]
                         # Report number of counts per insert length
                         attr.append(
@@ -804,10 +806,9 @@ class IesRecords(object):
                         self._refgenome[ctg].seq[ins_start - 1:ins_end])
                     consseq = SeqRecord(Seq(indelseq, generic_dna))
                     # Build attributes field
-                    attr = ["ID="+breakpointid,
-                            "IES_length="+str(del_len)]
-                    attr.append("cigar=" + str(del_len) +
-                                "D*" + str(totalcount))
+                    attr = [f"ID={breakpointid}",
+                            f"IES_length={str(del_len)}"]
+                    attr.append(f"cigar={str(del_len)}D*{str(totalcount)}")
 
             else:
                 raise Exception("feature cannot start after it ends")
@@ -966,31 +967,31 @@ class IesRecords(object):
                 indel_len = ins_len
                 gfftype = "internal_eliminated_sequence_junction"
                 # Prepare attributes list of key-value pairs
-                attr = ["ID="+breakpointid,
-                        "IES_length="+str(ins_len)]
-                attr.append("cigar=" + str(ins_len) + "I*" + str(countvalue))
+                attr = [f"ID={breakpointid}",
+                        f"IES_length={str(ins_len)}"]
+                attr.append(f"cigar={str(ins_len)}I*{str(countvalue)}")
 
             # If the breakpoint is a deletion type
             elif evidencetype == "D" and countvalue >= mindelbreaks:
                 # Add 1 because both start and end are inclusive
                 del_len = int(ins_end) - int(ins_start) + 1
                 indel_len = del_len
-                breakpointid = "_".join(["BREAK_POINTS", str(
-                    ctg), str(ins_start), str(ins_end), str(del_len)])
+                breakpointid = "_".join(["BREAK_POINTS", str(ctg),
+                    str(ins_start), str(ins_end), str(del_len)])
                 gfftype = "internal_eliminated_sequence"
                 # Build attributes field
-                attr = ["ID="+breakpointid,
-                        "IES_length="+str(del_len)]
-                attr.append("cigar=" + str(del_len) + "D*" + str(countvalue))
+                attr = [f"ID={breakpointid}",
+                        f"IES_length={str(del_len)}"]
+                attr.append(f"cigar={str(del_len)}D*{str(countvalue)}")
 
             # If the breakpoint has been defined, report it to the GFF file
             if breakpointid and attr:
                 # Get read coverage from BAM file; SAM does not allow random access
                 if self._alnformat == "bam":
                     readcov = self._alnfile.count(
-                        str(ctg), start=int( ins_start)-1, stop=int(ins_end),
+                        str(ctg), start=int(ins_start) - 1, stop=int(ins_end),
                         read_callback=lambda r: (not r.is_supplementary) and (not r.is_secondary))
-                    attr.append("average_coverage="+str(readcov))
+                    attr.append(f"average_coverage={str(readcov)}")
 
                 # Provisional approximate IES retention score
                 # R = IES+ / (IES+ + IES-)
@@ -1404,8 +1405,8 @@ class IesRecords(object):
                                     and (not r.is_secondary)]
                         readcov = len(regnames)
                         zmwcov = subreadNamesToZmwCoverage(regnames)
-                        attr.append("average_subread_coverage="+str(readcov))
-                        attr.append("average_zmw_coverage="+str(zmwcov))
+                        attr.append(f"average_subread_coverage={str(readcov)}")
+                        attr.append(f"average_zmw_coverage={str(zmwcov)}")
                     # Provisional approximate IES retention score
                     # R = IES+ / (IES+ + IES-)
                     # here the denominator is simply average coverage
