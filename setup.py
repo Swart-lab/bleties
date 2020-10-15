@@ -7,6 +7,6 @@ setup(
     author='Brandon Seah',
     author_email='kb.seah@tuebingen.mpg.de',
     url='https://github.com/Swart-lab/bleties',
-    py_modules = ['bleties'],
+    packages = ['bleties'],
     scripts=['bin/bleties', 'bin/milcor_plot.py', 'bin/milraa_plot.py']
     )
