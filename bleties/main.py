@@ -12,7 +12,7 @@ from collections import defaultdict
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
-from bleties import *
+from bleties import Milraa, Milret, Milcor, Miltel, Insert
 from bleties import __version__
 from bleties import SharedFunctions
 
