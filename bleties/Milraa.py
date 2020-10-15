@@ -542,6 +542,29 @@ def findLongestInsert(seqs, rname, rstart=0):
 # longest gap
 
 
+def subreadNamesToZmwCoverage(qnames):
+    """From list of PacBio subread names, report number of ZMWs represented
+
+    QNAME of a PacBio subread has the following convention:
+    {movieName}/{holeNumber}/{qStart}_{qEnd}
+    We want to count the number of holes (ZMWs), because a given hole may result
+    in multiple subreads.
+
+    Parameters
+    ----------
+    qnames : list
+        read names of PacBio subreads
+
+    Returns
+    -------
+    int
+        Number of ZMWs represented by the above subreads
+    """
+    zmwnames = ["/".join(n.split("/")[0:2]) for n in qnames]
+    zmwnames = set(zmwnames)
+    return(len(zmwnames))
+
+
 class IesRecords(object):
     """Records of putative IESs from mappings"""
 
@@ -793,10 +816,10 @@ class IesRecords(object):
             if breakpointid:
                 # Get average coverage of region of interest
                 if self._alnformat == "bam":
-                    readcov = self._alnfile.count(str(ctg),
-                                                  start=int(ins_start) - 1,
-                                                  stop=int(ins_end))
-                    attr.append("average_coverage="+str(readcov))
+                    readcov = self._alnfile.count(
+                        str(ctg), start=int(ins_start) - 1, stop=int(ins_end),
+                        read_callback=lambda r: (not r.is_supplementary) and (not r.is_secondary))
+                    attr.append(f"average_coverage={str(readcov)}")
 
                 # Provisional approximate IES retention score
                 # R = IES+ / (IES+ + IES-)
@@ -964,8 +987,9 @@ class IesRecords(object):
             if breakpointid and attr:
                 # Get read coverage from BAM file; SAM does not allow random access
                 if self._alnformat == "bam":
-                    readcov = self._alnfile.count(str(ctg), start=int(
-                        ins_start)-1, stop=int(ins_end))  # TODO: Check for off-by-one errors
+                    readcov = self._alnfile.count(
+                        str(ctg), start=int( ins_start)-1, stop=int(ins_end),
+                        read_callback=lambda r: (not r.is_supplementary) and (not r.is_secondary))
                     attr.append("average_coverage="+str(readcov))
 
                 # Provisional approximate IES retention score
@@ -1187,8 +1211,11 @@ class IesRecords(object):
         Returns
         -------
         list
-            list of strings of the extracted insert sequences and the flanking
-            regions from mapped query sequences.
+            list of SeqRecord of the extracted insert sequences and the flanking
+            regions from mapped query sequences, Seq.id is the query QNAME
+        tuple
+            range of coordinates (min, max) on reference contig where the
+            extracted insert sequences are positioned
         """
         coords = (min(jcs['positions']) - 1, max(jcs['positions']))
         details = jcs['seqs']
@@ -1210,8 +1237,8 @@ class IesRecords(object):
             # Key by query name
             subsetqnames = {i['qname']: {
                 'qstart': i['qstart'], 'qend': i['qend']} for i in details}
-            coords = min([i['rstart'] for i in details]), max(
-                [i['rend'] for i in details])
+            coords = (min([i['rstart'] for i in details]),
+                      max([i['rend'] for i in details]))
             extractedseqs = []
             extractedids = []
             for i in alns:
@@ -1361,21 +1388,30 @@ class IesRecords(object):
                     gffpos = adjpos + 1  # GFF convention
                     breakpointid = f"BREAK_POINTS_SUBREADS_{rname}_{str(gffpos)}_{str(len(consseq))}"
                     gfftype = "internal_eliminated_sequence_junction"
-                    # TODO: subread coverage, physical coverage, CIGAR
+                    # TODO: CIGAR
+                    extrzmwcov = subreadNamesToZmwCoverage(
+                        [r.id for r in extr])
                     attr = [f"ID={breakpointid}",
-                            f"IES_length={str(len(consseq))}"]
-
+                            f"IES_length={str(len(consseq))}",
+                            f"IES_subread_coverage={str(len(extr))}",
+                            f"IES_zmw_coverage={str(extrzmwcov)}"]
                     # Get average coverage of region of interest
                     if self._alnformat == "bam":
-                        readcov = self._alnfile.count(
+                        regreads = self._alnfile.fetch(
                             str(rname), coords[0], coords[1])
-                        attr.append("average_coverage="+str(readcov))
+                        regnames = [r.query_name for r in regreads
+                                    if (not r.is_supplementary)
+                                    and (not r.is_secondary)]
+                        readcov = len(regnames)
+                        zmwcov = subreadNamesToZmwCoverage(regnames)
+                        attr.append("average_subread_coverage="+str(readcov))
+                        attr.append("average_zmw_coverage="+str(zmwcov))
                     # Provisional approximate IES retention score
                     # R = IES+ / (IES+ + IES-)
                     # here the denominator is simply average coverage
                     if readcov:
                         if gfftype == "internal_eliminated_sequence_junction":
-                            provscore = round(len(extr)/readcov, 4)
+                            provscore = round(extrzmwcov/zmwcov, 4)
 
                     consseq = SeqRecord(
                         Seq(consseq), id=breakpointid, description=";".join(attr)+";")

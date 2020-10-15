@@ -3,6 +3,8 @@
 import argparse
 import sys
 import logging
+import faulthandler
+faulthandler.enable()
 
 from bleties import main, __version__
 
