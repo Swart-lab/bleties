@@ -37,6 +37,7 @@ def nested_dict_to_list(d):
         [key1, key2, ..., val]
     """
     out = []
+
     def recc(dd, p=[]):
         if not (type(dd) is dict or type(dd) is defaultdict):
             out.append(p + [dd])
@@ -67,6 +68,7 @@ def nested_dict_to_list_fixed_depth(d, depth):
         would yield [key1, dict]
     """
     out = []
+
     def recc(dd, p=[]):
         if len(p) == depth or not (type(dd) is dict or type(dd) is defaultdict):
             out.append(p + [dd])
@@ -78,7 +80,7 @@ def nested_dict_to_list_fixed_depth(d, depth):
     return(out)
 
 
-def get_clusters(in_list, cluster_type : str, width : int):
+def get_clusters(in_list, cluster_type: str, width: int):
     """Cluster a list of integers into groups not more than _width_ apart
 
     Note that this will also report clusters of length 1
@@ -122,7 +124,7 @@ def get_clusters(in_list, cluster_type : str, width : int):
                 merged.append(hold)
                 hold = []
         prev = i
-    if prev: #sweet up last entry
+    if prev:  # sweet up last entry
         hold.append(prev)
         merged.append(hold)
     return(merged)
@@ -189,14 +191,15 @@ def get_clusters_from_seqlist(seqlist, dist_threshold=0.05):
                 # Take percentage identity of pairwise alignment score (match base
                 # +1, all other operations +0) over the longer sequence in pair
                 idval = aligner.align(seq1, seq2).score / maxlen
-                distval = 1 - idval # convert to distance fraction
+                distval = 1 - idval  # convert to distance fraction
                 row.append(distval)
             distmatrix.append(row)
         # Hierarchical clustering from the distance matrix
         htree = treecluster(data=None, distancematrix=array(distmatrix))
-        # Find number of branches with length longer than threshold, and add 1 
+        # Find number of branches with length longer than threshold, and add 1
         # to get number of cuts
-        cuts = 1 + len([htree[i].distance for i in range(len(htree)) if htree[i].distance > dist_threshold])
+        cuts = 1 + len([htree[i].distance for i in range(len(htree))
+                        if htree[i].distance > dist_threshold])
         clust_ids = list(htree.cut(cuts))
         clust_seqs_dict = defaultdict(list)
         for i in range(len(seqlist)):
@@ -231,13 +234,14 @@ def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatc
     int
         Length of the operation.
     """
-    curr_int_start = refstartpos - 1 # the minus-one is necessary to get this to work, TODO figure out why!
+    curr_int_start = refstartpos - \
+        1  # the minus-one is necessary to get this to work, TODO figure out why!
     curr_int_end = refstartpos - 1
     # print(f"{str(refstartpos)} {str(reftargetpos)} {cigar}") # diagnostic mode
     # Split cigar string into individual operations
     cigs = re.findall(r"\d+[\w\=]", cigar)
     for cig in cigs:
-        cigmatch = re.match(r"(\d+)([\w\=])",cig) # Get number and operation
+        cigmatch = re.match(r"(\d+)([\w\=])", cig)  # Get number and operation
         # If reference is consumed:
         if cigmatch.group(2) in SharedValues.REFCONSUMING:
             # Update the current interval
@@ -245,12 +249,13 @@ def getOperationAtRefPos(reftargetpos, refstartpos, cigar, mininslength, minmatc
             curr_int_end = curr_int_end + int(cigmatch.group(1))
         # Otherwise if query is consumed
         else:
-            curr_int_start = curr_int_end # current operation has extent zero on ref
+            curr_int_start = curr_int_end  # current operation has extent zero on ref
 
         # If current operation is ref-consuming
         if curr_int_end > curr_int_start:
             # Check whether the target position is contained in the current interval
-            if reftargetpos in range(curr_int_start,curr_int_end): # TODO check off-by-one errors
+            # TODO check off-by-one errors
+            if reftargetpos in range(curr_int_start, curr_int_end):
                 if int(cigmatch.group(1)) > minmatchlength:
                     # print(f"{str(curr_int_start)} {str(curr_int_end)} {str(reftargetpos)} {cig}") # diagnostic mode
                     return(cigmatch.group(2), int(cigmatch.group(1)))
@@ -287,7 +292,8 @@ def getCigarOpQuerySeqs(qseq, cigartuples, rstart, target_op="S"):
         segment, query start, query end, ref start, ref end) of each segment
         corresponding to a specific CIGAR operation. Coordinates are 0-based.
     """
-    op2bam = {"M": 0, "I": 1, "D": 2, "N": 3, "S": 4, "H": 5, "P": 6, "=": 7, "X": 8}
+    op2bam = {"M": 0, "I": 1, "D": 2, "N": 3,
+              "S": 4, "H": 5, "P": 6, "=": 7, "X": 8}
     if target_op not in op2bam:
         raise Exception(f"Operation {target_op} not a valid CIGAR operation")
     QUERY_CONSUMING = [0, 1, 4, 7, 8]
@@ -295,7 +301,7 @@ def getCigarOpQuerySeqs(qseq, cigartuples, rstart, target_op="S"):
 
     # initialize placeholders
     rend = rstart
-    qstart = 0 # 0-based coordinates
+    qstart = 0  # 0-based coordinates
     qend = qstart
 
     out = []
@@ -307,8 +313,8 @@ def getCigarOpQuerySeqs(qseq, cigartuples, rstart, target_op="S"):
 
         if op == op2bam[target_op]:
             out.append((qseq[qstart:qend],
-                qstart, qend,
-                rstart, rend))
+                        qstart, qend,
+                        rstart, rend))
 
         # Update counters
         qstart = qend
@@ -355,16 +361,17 @@ def report_summary_string(inlist, delim=" "):
     delim : str
         Character to separate the individual values
     """
-    inlist = [str(i) for i in inlist] # Convert to str
+    inlist = [str(i) for i in inlist]  # Convert to str
     counts = {i: inlist.count(i) for i in set(inlist)}
     # sort items by descending order of counts
-    outlist = [str(i[0])+"*"+str(i[1]) for i in sorted(counts.items(), reverse=True, key=lambda item: item[1])]
+    outlist = [str(i[0])+"*"+str(i[1])
+               for i in sorted(counts.items(), reverse=True, key=lambda item: item[1])]
     return(delim.join(outlist))
 
 
 def report_list_modes(inlist):
     """Report the mode of an input list
-    
+
     Parameters
     ----------
     counts : list
@@ -393,20 +400,17 @@ class Gff(object):
         # Create dict
         self._gffDict = defaultdict(dict)
 
-
     def __iter__(self):
         """Return iterator object for GFF.
         Iterate over keys of the _gffDict object
         """
         return(iter(self._gffDict.keys()))
 
-
     def __len__(self):
         """Length of a Gff object.
         Same as length of internal _gffDict object
         """
         return(len(self._gffDict))
-
 
     def addEntry(self, linearr, gffid):
         """ Add single GFF entry to Gff object
@@ -420,7 +424,8 @@ class Gff(object):
         """
         # Check that GFF line has only nine fields
         if len(linearr) != 9:
-            raise Exception('GFF3 input encountered with incorrect number of fields')
+            raise Exception(
+                'GFF3 input encountered with incorrect number of fields')
         idval = ""
         idsearch = re.search(r"ID=([^;]+);", linearr[8])
         if idsearch:
@@ -437,7 +442,6 @@ class Gff(object):
         attrvals = [match[1] for match in attrs]
         attrdict = dict(zip(attrkeys, attrvals))
         self._gffDict[idval]['attrdict'] = attrdict
-
 
     def getValue(self, gffid, column):
         """Get value of column for a given GFF entry.
@@ -458,7 +462,6 @@ class Gff(object):
                 raise Exception("Unknown GFF3 ID " + gffid)
         else:
             raise Exception("Unknown GFF3 column name " + column)
-
 
     def changeValue(self, gffid, column, newvalue):
         """Change value of column for a given GFF entry.
@@ -481,7 +484,6 @@ class Gff(object):
         else:
             raise Exception("Unknown GFF3 column name " + column)
 
-
     def getAttr(self, gffid, attribute):
         """Get value from attributes field of a GFF entry.
 
@@ -496,11 +498,11 @@ class Gff(object):
             if attribute in self._gffDict[gffid]['attrdict']:
                 return(self._gffDict[gffid]['attrdict'][attribute])
             else:
-                logger.debug(f"Unknown attribute {attribute} for GFF ID {gffid}")
+                logger.debug(
+                    f"Unknown attribute {attribute} for GFF ID {gffid}")
                 return(None)
         else:
             raise Exception("Unknown GFF3 ID " + gffid)
-
 
     def changeAttr(self, gffid, attribute, newvalue):
         """Change value from attributes field of a GFF entry.
@@ -518,10 +520,10 @@ class Gff(object):
             if attribute in self._gffDict[gffid]['attrdict']:
                 self._gffDict[gffid]['attrdict'][attribute] = newvalue
             else:
-                logger.debug(f"Unknown attribute {attribute} for GFF ID {gffid}")
+                logger.debug(
+                    f"Unknown attribute {attribute} for GFF ID {gffid}")
         else:
             raise Exception("Unknown GFF3 ID " + gffid)
-
 
     def getEntry(self, gffid):
         """Get entry from Gff object with ID key, returns a list
@@ -531,9 +533,9 @@ class Gff(object):
         gffid : str
             ID of the GFF entry
         """
-        linearr = [self._gffDict[gffid][colname] for colname in SharedValues.GFF3COLUMNS]
+        linearr = [self._gffDict[gffid][colname]
+                   for colname in SharedValues.GFF3COLUMNS]
         return(linearr)
-
 
     def combineGff(self, gff):
         """Combine another Gff object into the current one by appending entries
@@ -550,8 +552,8 @@ class Gff(object):
             if gffid not in self._gffDict:
                 self.addEntry(gffid, gff.getEntry(gffid))
             else:
-                raise Exception(f"Attempting to merge two Gff objects with same ID {gffid} present in both")
-
+                raise Exception(
+                    f"Attempting to merge two Gff objects with same ID {gffid} present in both")
 
     def list2gff(self, gfflist):
         """Add entries to Gff object from a list of GFF3 lines.
@@ -563,11 +565,10 @@ class Gff(object):
         """
         # Iterate through list, split each line into columns
         for line in gfflist:
-            if not re.match(r"#", line): # Skip header lines
-                line = line.rstrip() # Strip trailing whitespace
+            if not re.match(r"#", line):  # Skip header lines
+                line = line.rstrip()  # Strip trailing whitespace
                 linearr = line.split("\t")
                 self.addEntry(linearr, None)
-
 
     def gff2list(self):
         """Write Gff3 object to list of strings, for printing.
@@ -575,20 +576,19 @@ class Gff(object):
         Effectively reconstitutes the input to list2gff()
         """
 
-        outarr=[]
-        for gffid in self._gffDict: # ID value
+        outarr = []
+        for gffid in self._gffDict:  # ID value
             linearr = self.getEntry(gffid)
             # Make numeric fields int - necessary for correct sorting later
             linearr[3] = int(linearr[3])
             linearr[4] = int(linearr[4])
             outarr.append(linearr)
         # Sort by seqid, start, and end fields in that order
-        outarr = sorted(outarr, key=itemgetter(0,3,4))
+        outarr = sorted(outarr, key=itemgetter(0, 3, 4))
         # Covnert fields back to str and join back into a tab-separated string
         outarr = [map(str, linearr) for linearr in outarr]
         outarr = ["\t".join(linearr) for linearr in outarr]
         return(outarr)
-
 
     def file2gff(self, filename):
         """Read in GFF3 file directly to Gff object
@@ -602,7 +602,6 @@ class Gff(object):
             slurp = [line.rstrip() for line in fh]
             self.list2gff(slurp)
 
-
     def gff2file(self, filename, header=True):
         """Write Gff object directly to GFF3 file
 
@@ -613,14 +612,13 @@ class Gff(object):
         header : bool
             Include ##gff-version header?
         """
-        fh = open(filename,"w")
+        fh = open(filename, "w")
         outarr = self.gff2list()
         if header:
             fh.write("##gff-version 3\n")
         for line in outarr:
             fh.write(line+"\n")
         fh.close()
-
 
     def gff2fh(self, fh, header=True):
         """Write Gff object to open filehandle

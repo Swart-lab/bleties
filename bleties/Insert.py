@@ -33,17 +33,16 @@ class Insert(object):
         self._refgenome = refgenome
         # Make copy of refgenome to modify, otherwise original will also be
         # modified
-        self._newgenome = {ctg : SeqRecord(Seq(str(refgenome[ctg].seq)),
-                                           id=ctg, name=refgenome[ctg].name,
-                                           description=refgenome[ctg].description)
-                            for ctg in refgenome}
+        self._newgenome = {ctg: SeqRecord(Seq(str(refgenome[ctg].seq)),
+                                          id=ctg, name=refgenome[ctg].name,
+                                          description=refgenome[ctg].description)
+                           for ctg in refgenome}
         self._gff = gff
         self._iesfasta = iesfasta
-        self._iesdict = defaultdict( # contig
-                lambda: defaultdict( # pos
-                    dict))           # dict of gffid, seqlen, seq, newstart, newend
+        self._iesdict = defaultdict(  # contig
+            lambda: defaultdict(  # pos
+                dict))           # dict of gffid, seqlen, seq, newstart, newend
         self._newgff = Gff()        # Gff entries for IESs with updated coords
-
 
     def _filterInserts(self):
         """Process GFF file and filter putative IESs to be inserted
@@ -61,28 +60,30 @@ class Insert(object):
                     seq = str(self._iesfasta[gffid].seq)
                     # reject if there are X or - characters
                     if 'X' in seq or '-' in seq:
-                        logger.debug(f"Skipping sequence {gffid} because of X and - characters")
+                        logger.debug(
+                            f"Skipping sequence {gffid} because of X and - characters")
                     else:
                         # if an insert already recorded, take the longer one
                         if self._iesdict[ctg][start]:
                             if len(seq) > self._iesdict[ctg][start]['seqlen']:
-                                logger.debug(f"More than one insert at location {ctg} {str(start)}, choosing the longer one {gffid}")
+                                logger.debug(
+                                    f"More than one insert at location {ctg} {str(start)}, choosing the longer one {gffid}")
                                 self._iesdict[ctg][start] = {
-                                        'seq' : seq,
-                                        'seqlen' : len (seq),
-                                        'gffid' : gffid,
-                                        'newstart' : int(start),
-                                        'newend' : int(end) + len(seq)}
+                                    'seq': seq,
+                                    'seqlen': len(seq),
+                                    'gffid': gffid,
+                                    'newstart': int(start),
+                                    'newend': int(end) + len(seq)}
                         else:
                             self._iesdict[ctg][start] = {
-                                    'seq' : seq,
-                                    'seqlen' : len(seq),
-                                    'gffid' : gffid,
-                                    'newstart' : int(start),
-                                    'newend' : int(start) + len(seq)}
+                                'seq': seq,
+                                'seqlen': len(seq),
+                                'gffid': gffid,
+                                'newstart': int(start),
+                                'newend': int(start) + len(seq)}
                 else:
-                    logger.warn(f"Insert sequence ID {gffid} not in Fasta file!")
-
+                    logger.warn(
+                        f"Insert sequence ID {gffid} not in Fasta file!")
 
     def _filterDeletions(self):
         """Process GFF file and filter putative IESs to be deleted
@@ -108,7 +109,8 @@ class Insert(object):
             if start < end:
                 seqid = self._gff.getValue(gffid, 'seqid')
                 # Convert coords to 0-based python convention
-                coords[seqid].append({'seqid':seqid, 'start':start-1, 'end':end, 'gffid':gffid})
+                coords[seqid].append(
+                    {'seqid': seqid, 'start': start-1, 'end': end, 'gffid': gffid})
         # Check for overlaps
         for seqid in coords:
             sortrecs = sorted(coords[seqid], key=lambda x: int(x['start']))
@@ -125,7 +127,8 @@ class Insert(object):
                             if currend < int(sortrecs[i+1]['start']):
                                 filtcoords[seqid].append(sortrecs[i])
                             else:
-                                logger.debug(f"Overlapping record {gffid} skipped")
+                                logger.debug(
+                                    f"Overlapping record {gffid} skipped")
                         else:
                             # Sweep up last entry
                             filtcoords[seqid].append(sortrecs[i])
@@ -141,11 +144,10 @@ class Insert(object):
                         filtcoords[seqid].append(sortrecs[i])
         return(filtcoords)
 
-
     def _updatePositionsInserts(self):
         """After filtering inserts and recording them in iesdict, update their
         coordinates after adding the sequences in
-        
+
         Run this after filterInserts()
         """
         for ctg in self._iesdict:
@@ -158,7 +160,7 @@ class Insert(object):
                     gffid = self._iesdict[ctg][sp[j]]['gffid']
                     newstart = oldstart
                     newend = oldend
-                    if j > i: # don't add if this is the same entry
+                    if j > i:  # don't add if this is the same entry
                         newstart += seqlen
                         newend += seqlen
                     # New coordinates in dict are 0-based [), python convention
@@ -171,11 +173,10 @@ class Insert(object):
                     self._newgff.changeValue(gffid, 'start', newstart + 1)
                     self._newgff.changeValue(gffid, 'end', newend)
 
-
     def _updatePositionsDeletions(self, dels):
         """After filtering deletions and recording them, update their
         coordinates in Gff object after removing the sequences from contigs
-        
+
         Run this after filterDeletions()
         """
         for seqid in dels:
@@ -188,10 +189,10 @@ class Insert(object):
                     sortedrecs[j]['newpos'] = sortedrecs[j]['newpos'] - inslen
             # Record new Gff entry and update coordinates
             for i in sortedrecs:
-                self._newgff.addEntry(self._gff.getEntry(i['gffid']), i['gffid'])
+                self._newgff.addEntry(
+                    self._gff.getEntry(i['gffid']), i['gffid'])
                 self._newgff.changeValue(i['gffid'], 'start', i['newpos'])
                 self._newgff.changeValue(i['gffid'], 'end', i['newpos'])
-
 
     def get_not_gaps(start, end, gaplist):
         """Get inverse coords of gaps
@@ -213,18 +214,17 @@ class Insert(object):
         coords = [start]
         sortedgaps = sorted(gaplist, key=lambda x: int(x[0]))
         for tup in sortedgaps:
-            coords.extend([tup[0],tup[1]])
+            coords.extend([tup[0], tup[1]])
         coords.append(end)
         # Reslice
         out = []
         for i in range(int(len(coords)/2)):
-            out.append((coords[2*i],coords[2*i+1]))
+            out.append((coords[2*i], coords[2*i+1]))
         return(out)
-
 
     def _addSequences(self):
         """Insert IES sequences to the reference assembly
-        
+
         Run this after updatePositions()
         """
         for ctg in self._iesdict:
@@ -234,8 +234,8 @@ class Insert(object):
                 # Use coordinates from iesdict because these follow python
                 # convention
                 inspos = int(self._iesdict[ctg][i]['newstart'])
-                self._newgenome[ctg].seq = self._newgenome[ctg].seq[0:inspos] + insseq + self._newgenome[ctg].seq[inspos:]
-
+                self._newgenome[ctg].seq = self._newgenome[ctg].seq[0:inspos] + \
+                    insseq + self._newgenome[ctg].seq[inspos:]
 
     def _deleteSequences(self, dels):
         """
@@ -254,7 +254,6 @@ class Insert(object):
             for i in notgaps:
                 newseq += str(self._refgenome[seqid].seq[i[0]:i[1]])
             self._newgenome[seqid].seq = Seq(newseq)
-
 
     def reportInsertedReference(self):
         """Add IESs to reference genome, report modified MAC+IES assembly and
@@ -277,14 +276,15 @@ class Insert(object):
         self._updatePositionsInserts()
         self._addSequences()
         # Count difference in size
-        oldtotal = sum([len(self._refgenome[ctg].seq) for ctg in self._refgenome])
-        newtotal = sum([len(self._newgenome[ctg].seq) for ctg in self._newgenome])
+        oldtotal = sum([len(self._refgenome[ctg].seq)
+                        for ctg in self._refgenome])
+        newtotal = sum([len(self._newgenome[ctg].seq)
+                        for ctg in self._newgenome])
         addedlen = newtotal - oldtotal
         logging.info(f"Original contigs total length: {str(oldtotal)}")
         logging.info(f"Modified contigs total length: {str(newtotal)}")
         logging.info(f"Total sequence length added: {str(addedlen)}")
         return(self._newgenome, self._newgff)
-
 
     def reportDeletedReference(self):
         """Remove IESs from reference MAC+IES genome, report modified MAC-IES
@@ -308,8 +308,10 @@ class Insert(object):
         self._updatePositionsDeletions(dels)
         self._deleteSequences(dels)
         # Count difference in size
-        oldtotal = sum([len(self._refgenome[ctg].seq) for ctg in self._refgenome])
-        newtotal = sum([len(self._newgenome[ctg].seq) for ctg in self._newgenome])
+        oldtotal = sum([len(self._refgenome[ctg].seq)
+                        for ctg in self._refgenome])
+        newtotal = sum([len(self._newgenome[ctg].seq)
+                        for ctg in self._newgenome])
         deletedlen = oldtotal - newtotal
         logging.info(f"Original contigs total length: {str(oldtotal)}")
         logging.info(f"Modified contigs total length: {str(newtotal)}")

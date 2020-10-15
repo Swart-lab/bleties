@@ -8,61 +8,61 @@ from bleties import main, __version__
 
 # Argument parser
 parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument("--log", default="bleties.log",
-    help="Path to write log file")
-parser.add_argument("-v", "--version", action="version",
-    version=f"BleTIES {__version__}")
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument(
+    "--log", default="bleties.log", help="Path to write log file")
+parser.add_argument(
+    "-v", "--version", action="version", version=f"BleTIES {__version__}")
 subparsers = parser.add_subparsers()
 
 # MILRAA -----------------------------------------------------------------------
-milraa_parser = subparsers.add_parser(name="milraa",
+milraa_parser = subparsers.add_parser(
+    name="milraa",
     description="""
     MILRAA - Method of Identification by Long Read Alignment Anomalies
     """,
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 # Input arguments
-milraa_parser.add_argument("--bam",
-    help="BAM file containing mapping, must be sorted and indexed")
-milraa_parser.add_argument("--ref",
+milraa_parser.add_argument(
+    "--bam", help="BAM file containing mapping, must be sorted and indexed")
+milraa_parser.add_argument(
+    "--ref",
     help="""
     FASTA file containing genomic contigs used as reference for the mapping
     """)
-milraa_parser.add_argument("--contig", default=None, type=str,
+milraa_parser.add_argument(
+    "--contig", default=None, type=str,
     help="Only process alignments from this contig")
-milraa_parser.add_argument("--start", default=None, type=int,
+milraa_parser.add_argument(
+    "--start", default=None, type=int,
     help="Start coordinate (1-based, inclusive) from contig to process")
-milraa_parser.add_argument("--stop", default=None, type=int,
+milraa_parser.add_argument(
+    "--stop", default=None, type=int,
     help="Stop coordinate (1-based, inclusive) from contig to process")
-milraa_parser.add_argument("--type", default="ccs", type=str,
+milraa_parser.add_argument(
+    "--type", default="ccs", type=str,
     help="Type of reads used for mapping, either 'ccs' or 'subreads'")
 
 # Output arguments
-milraa_parser.add_argument("--out",
-    "-o",
-    default="milraa.test",
-    help="Output filename prefix")
+milraa_parser.add_argument(
+    "--out", "-o", default="milraa.test", help="Output filename prefix")
 
 # Params for reporting candidate IESs
-milraa_parser.add_argument("--junction_flank",
-    type=int,
-    default=5,
+milraa_parser.add_argument(
+    "--junction_flank", type=int, default=5,
     help="Length of flanking sequence to report to junction report")
-milraa_parser.add_argument("--min_ies_length", # This parameter is hard-coded in the original ParTIES MIRAA
-    type=int,
-    default=15,
+milraa_parser.add_argument(  # This parameter is hard-coded in the original ParTIES MIRAA
+    "--min_ies_length", type=int, default=15,
     help="Minimum length of candidate IES")
-milraa_parser.add_argument("--min_break_coverage", # For insertions
-    type=int,
-    default=10,
+milraa_parser.add_argument(  # For insertions
+    "--min_break_coverage", type=int, default=10,
     help="""
     Minimum number of partially aligned reads to define a putative IES insertion
     breakpoint
     """)
-milraa_parser.add_argument("--min_del_coverage", # For deletions (sensu MILORD)
-    type=int,
-    default=10,
+milraa_parser.add_argument(  # For deletions (sensu MILORD)
+    "--min_del_coverage", type=int, default=10,
     help="""
     Minimum number of partially aligned reads to define a deletion relative to
     reference
@@ -73,16 +73,15 @@ milraa_parser.add_argument("--min_del_coverage", # For deletions (sensu MILORD)
 #    help="Maximum mismatch in the alignment for a read to be used")
 
 # Params for fuzzy length reporting candidate IESs
-milraa_parser.add_argument("--fuzzy_ies",
-    action="store_true",
+milraa_parser.add_argument(
+    "--fuzzy_ies", action="store_true",
     help="""
     Allow lengths of inserts to differ slightly when defining putative IES,
     otherwise insert lengths must be exactly the same. Only used when --type is
     'ccs', because subreads are handled separately.
     """)
-milraa_parser.add_argument("--cluster_dist",
-    default=0.05,
-    type=float,
+milraa_parser.add_argument(
+    "--cluster_dist", default=0.05, type=float,
     help="""
     Sequence identity distance limit for clustering putative IESs together. 
     Recommended settings: 0.05 for PacBio CCS reads. Only used for --type='ccs'.
@@ -90,55 +89,53 @@ milraa_parser.add_argument("--cluster_dist",
     """)
 
 # Others
-milraa_parser.add_argument("--dump",
-    action="store_true",
+milraa_parser.add_argument(
+    "--dump", action="store_true",
     help="Dump contents of dict for troubleshooting")
 
 # Assign function to this subparser
 milraa_parser.set_defaults(func=main.milraa)
 
 # MISER ------------------------------------------------------------------------
-miser_parser = subparsers.add_parser(name="miser",
+miser_parser = subparsers.add_parser(
+    name="miser",
     description="MISER - Method of IES Spurious or Erroneous Reporting",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 # Input arguments
-miser_parser.add_argument("--bam",
-    help="BAM file containing mapping, must be sorted and indexed")
-miser_parser.add_argument("--ref",
+miser_parser.add_argument(
+    "--bam", help="BAM file containing mapping, must be sorted and indexed")
+miser_parser.add_argument(
+    "--ref",
     help="""
     FASTA file containing genomic contigs used as reference for the mapping""")
-miser_parser.add_argument("--gff",
+miser_parser.add_argument(
+    "--gff",
     help="GFF file containing coordinates for putative IESs")
 
 # Output arguments
-miser_parser.add_argument("--out",
-    "-o",
-    nargs='?',
-    type=argparse.FileType("w"),
-    default=sys.stdout,
+miser_parser.add_argument(
+    "--out", "-o", nargs='?', type=argparse.FileType("w"), default=sys.stdout,
     help="""
     Path to write report statistics on possibly spurious IESs due to misassembly
     or mapped paralogs, defaults to STDOUT
     """)
-miser_parser.add_argument("--split_gff",
-    action="store_true",
+miser_parser.add_argument(
+    "--split_gff", action="store_true",
     help="""
     Split input GFF entries into separate files for each category (ok,
     misassembly, paralog, ...), using input GFF filename as prefix
     """)
 
 # Test parameters
-miser_parser.add_argument("--spurious_ies_test",
-    type=str,
-    default="mann-whitney",
+miser_parser.add_argument(
+    "--spurious_ies_test", type=str, default="mann-whitney",
     help="""
     Test to use to evaluate spurious IESs by mismatch percentage comparisons,
     either \"mann-whitney\" (Mann-Whitney's U) or \"t\" (Ward's t-test)
     """)
-miser_parser.add_argument("--spurious_ies_pvalue",
-    type=float,
-    default=0.05,
+miser_parser.add_argument(
+    "--spurious_ies_pvalue", type=float, default=0.05,
     help="""
     P-value cutoff (uncorrected) to use for spurious IES mismatch test; the
     Bonferroni correction will be applied depending on the number of tests
@@ -162,35 +159,40 @@ Points to note and address in the future:
    ignored.
 """
 
-milret_parser = subparsers.add_parser(name="milret",
-    description="""
-    MILRET - Method of IES Long-read RETention
-    """,
+milret_parser = subparsers.add_parser(
+    name="milret",
+    description="MILRET - Method of IES Long-read RETention",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 # Input arguments
-milret_parser.add_argument("--bam",
-    help="BAM file containing mapping, must be sorted and indexed.")
-milret_parser.add_argument("--ref",
+milret_parser.add_argument(
+    "--bam", help="BAM file containing mapping, must be sorted and indexed.")
+milret_parser.add_argument(
+    "--ref",
     help="""
     FASTA file containing genomic contigs used as reference for the mapping""")
-milret_parser.add_argument("--ies",
-    help="GFF3 file containing coordinates of IES junctions in MAC genome, from MILRAA or third party tool")
-milret_parser.add_argument("--use_ies_lengths", action="store_true",
+milret_parser.add_argument(
+    "--ies",
+    help="""
+    GFF3 file containing coordinates of IES junctions in MAC genome, from
+    MILRAA or third party tool""")
+milret_parser.add_argument(
+    "--use_ies_lengths", action="store_true",
     help="""
     Only count inserts that match IES lengths reported in the input GFF file.
     This assumes that the input GFF file is produced by BleTIES MILRAA""")
-milret_parser.add_argument("--length_threshold", type=float, default=0.05,
+milret_parser.add_argument(
+    "--length_threshold", type=float, default=0.05,
     help="""
     Length threshold to count matching IES length, if option --use_ies_lengths
     is applied""")
 
 # Output arguments
-milret_parser.add_argument("--out",
-    "-o",
-    default="milret.test",
+milret_parser.add_argument(
+    "--out", "-o", default="milret.test",
     help="Path to write table of retention scores per IES")
-milret_parser.add_argument("--dump", action="store_true",
+milret_parser.add_argument(
+    "--dump", action="store_true",
     help="Dump contents of retention score objects to JSON file, for troubleshooting")
 
 # Assign function to this subparser
@@ -198,95 +200,120 @@ milret_parser.set_defaults(func=main.milret)
 
 
 # MILCOR -----------------------------------------------------------------------
-milcor_parser = subparsers.add_parser(name="milcor",
-        description="MILCOR - Method of IES Long-read CORrelation",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+milcor_parser = subparsers.add_parser(
+    name="milcor",
+    description="MILCOR - Method of IES Long-read CORrelation",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 # Input arguments
-milcor_parser.add_argument("--bam",
+milcor_parser.add_argument(
+    "--bam",
     help="BAM file containing mapping, must be sorted and indexed")
-milcor_parser.add_argument("--ies",
+milcor_parser.add_argument(
+    "--ies",
     help="GFF3 file containing coordinates of IES junctions in MAC genome")
-milcor_parser.add_argument("--contig", default=None, type=str,
+milcor_parser.add_argument(
+    "--contig", default=None, type=str,
     help="Only process alignments from this contig")
-milcor_parser.add_argument("--start", default=None, type=int,
+milcor_parser.add_argument(
+    "--start", default=None, type=int,
     help="Start coordinate (1-based, inclusive) from contig to process")
-milcor_parser.add_argument("--stop", default=None, type=int,
+milcor_parser.add_argument(
+    "--stop", default=None, type=int,
     help="Stop coordinate (1-based, inclusive) from contig to process")
 
 # Options
-milcor_parser.add_argument("--use_ies_lengths", action="store_true",
+milcor_parser.add_argument(
+    "--use_ies_lengths", action="store_true",
     help="""
     Only count inserts that match IES lengths reported in the input GFF file.
     This assumes that the input GFF file is produced by BleTIES MILRAA""")
-milcor_parser.add_argument("--length_threshold", type=float, default=0.05,
+milcor_parser.add_argument(
+    "--length_threshold", type=float, default=0.05,
     help="""
     Length threshold to count matching IES length, if option --use_ies_lengths
     is applied""")
-milcor_parser.add_argument("--bin", action="store_true",
+milcor_parser.add_argument(
+    "--bin", action="store_true",
     help="Bin reads into likely MIC and MAC origin and output Fasta files")
-milcor_parser.add_argument("--bin_threshold", type=float, default=0.9,
+milcor_parser.add_argument(
+    "--bin_threshold", type=float, default=0.9,
     help="IES retention/excision threshold for binning to MIC or MAC respecitvely")
 
 # Output arguments
-milcor_parser.add_argument("--out",
-    "-o",
-    default="milcor.test",
+milcor_parser.add_argument(
+    "--out", "-o", default="milcor.test",
     help="Path to write table of per-read IES retention scores")
-milcor_parser.add_argument("--dump", 
-    action="store_true",
+milcor_parser.add_argument(
+    "--dump", action="store_true",
     help="Dump contents of IES correlation objects to JSON file, for troubleshooting")
 
 milcor_parser.set_defaults(func=main.milcor)
 
 
 # MILTEL -----------------------------------------------------------------------
-miltel_parser = subparsers.add_parser(name="miltel",
-        description="MILTEL - Method of Long-read Telomere detection",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+miltel_parser = subparsers.add_parser(
+    name="miltel",
+    description="MILTEL - Method of Long-read Telomere detection",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 # Input arguments
-miltel_parser.add_argument("--bam",
-    help="BAM file containing mapping, must be sorted and indexed")
+miltel_parser.add_argument(
+    "--bam", help="BAM file containing mapping, must be sorted and indexed")
 
-miltel_parser.add_argument("--telomere", type=str, default="ACACCCTA",
+miltel_parser.add_argument(
+    "--telomere", type=str, default="ACACCCTA",
     help="Telomere sequence to search for")
-miltel_parser.add_argument("--min_telomere_length", type=int, default=24,
+miltel_parser.add_argument(
+    "--min_telomere_length", type=int, default=24,
     help="Minimum length of telomere to call")
 
-miltel_parser.add_argument("--other_clips", action="store_true",
-    help="Count other clipped sequences (non-telomeric) and get consensus of clipped segments")
-miltel_parser.add_argument("--min_clip_length", type=int, default=50,
+miltel_parser.add_argument(
+    "--other_clips", action="store_true",
+    help="""
+    Count other clipped sequences (non-telomeric) and get consensus of clipped segments
+    """)
+miltel_parser.add_argument(
+    "--min_clip_length", type=int, default=50,
     help="Minimum length of other clipped sequences (non-telomeric) to count")
 
 # Output arguments
-miltel_parser.add_argument("-o", "--out", default="miltel.test",
-    help="Prefix for output files")
-miltel_parser.add_argument("--dump", action="store_true",
+miltel_parser.add_argument(
+    "-o", "--out", default="miltel.test", help="Prefix for output files")
+miltel_parser.add_argument(
+    "--dump", action="store_true",
     help="Dump internal data for troubleshooting")
 
 miltel_parser.set_defaults(func=main.miltel)
 
 
 # Insert -----------------------------------------------------------------------
-insert_parser = subparsers.add_parser(name="insert",
-        description="Insert - Insert/Remove IESs to/from MAC reference sequence",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+insert_parser = subparsers.add_parser(
+    name="insert",
+    description="Insert - Insert/Remove IESs to/from MAC reference sequence",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-insert_parser.add_argument("--mode", type=str, default="insert",
+insert_parser.add_argument(
+    "--mode", type=str, default="insert",
     help="Insert or delete mode? Options: 'insert', 'delete'")
 
 # Input arguments
-insert_parser.add_argument("--ref", type=str,
+insert_parser.add_argument(
+    "--ref", type=str,
     help="FASTA file of MAC genome containing reference to be modified")
-insert_parser.add_argument("--ies", type=str,
+insert_parser.add_argument(
+    "--ies", type=str,
     help="GFF file of IES features to be added to reference")
-insert_parser.add_argument("--iesfasta", type=str,
-    help="FASTA file containing sequences of IES features to be added. Sequence IDs must correspond to IDs in GFF file")
+insert_parser.add_argument(
+    "--iesfasta", type=str,
+    help="""
+    FASTA file containing sequences of IES features to be added. Sequence IDs
+    must correspond to IDs in GFF file
+    """)
 
 # Output arguments
-insert_parser.add_argument("-o", "--out", default="test",
-    help="Prefix for output files")
+insert_parser.add_argument(
+    "-o", "--out", default="test", help="Prefix for output files")
 
 insert_parser.set_defaults(func=main.insert)
 
@@ -294,10 +321,9 @@ insert_parser.set_defaults(func=main.insert)
 args = parser.parse_args()
 
 # Logging
-logging.basicConfig(format='[%(asctime)s] %(name)-12s %(levelname)-8s %(message)s',
-        level=logging.DEBUG,
-        filename=args.log,
-        filemode="a")
+logging.basicConfig(
+    format='[%(asctime)s] %(name)-12s %(levelname)-8s %(message)s',
+    level=logging.DEBUG, filename=args.log, filemode="a")
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
 formatter = logging.Formatter("%(name)-24s %(levelname)-8s %(message)s")

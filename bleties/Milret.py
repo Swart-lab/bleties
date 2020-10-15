@@ -31,13 +31,12 @@ class IesRetentionsMacOnly(object):
         self._gff = Gff()
         self._gff.file2gff(gfffile)
         # Initialize dict to hold counts of operations at IES junctions
-        self._countsDict = defaultdict( # ID of GFF feature
-                lambda: defaultdict(    # Operation (M, D, I)
-                    list)               # list of op lengths at junction
-                )
+        self._countsDict = defaultdict(  # ID of GFF feature
+            lambda: defaultdict(    # Operation (M, D, I)
+                list)               # list of op lengths at junction
+        )
         # Initialize dict to hold retention scores calculated from counts
         self._scoresDict = defaultdict(float)
-
 
     def dump(self, dumpfile):
         """Dump internal objects to JSON file for troubleshooting
@@ -49,10 +48,9 @@ class IesRetentionsMacOnly(object):
         """
         import json
         with open(dumpfile, "w") as fh:
-            fh.write(json.dumps({"countsDict" : self._countsDict,
-                    "scoresDict" : self._scoresDict},
-                indent=4))
-
+            fh.write(json.dumps({"countsDict": self._countsDict,
+                                 "scoresDict": self._scoresDict},
+                                indent=4))
 
     def findMappingOps(self):
         """Find mapping operations at the IES junctions, and count how many of
@@ -65,28 +63,30 @@ class IesRetentionsMacOnly(object):
         """
         # TODO: Set cutoff for minimum length of match oepration, and/or min
         # distance for the match boundaries from the IES junction
-        for gffid in self._gff._gffDict: # Each IES ID
-            seqid = self._gff.getValue(gffid,'seqid')
-            start = int(self._gff.getValue(gffid,'start'))
-            end = int(self._gff.getValue(gffid,'end'))
+        for gffid in self._gff._gffDict:  # Each IES ID
+            seqid = self._gff.getValue(gffid, 'seqid')
+            start = int(self._gff.getValue(gffid, 'start'))
+            end = int(self._gff.getValue(gffid, 'end'))
             # GFF allows zero-length features. However, to fetched alignments
             # from pysam.AlignmentFile, we need nonzero interval
             if start == end:
                 end += 1
             # Get alignments that span this position
-            for alnrec in self._alnfile.fetch(seqid, start, end): # fetch() method uses 1-based SAM coordinates, unlike rest of Pysam!
+            # fetch() method uses 1-based SAM coordinates, unlike rest of Pysam!
+            for alnrec in self._alnfile.fetch(seqid, start, end):
                 # For this aligned read, which alignment operation spans this
                 # position?
+                # Convert 0-based pysam numbering to 1-based in GFF 
+                # TODO check off-by-one errors
                 res = getOperationAtRefPos(start,
-                        alnrec.reference_start+1, # Convert 0-based pysam numbering to 1-based in GFF TODO check off-by-one errors
-                        alnrec.cigarstring,
-                        1, # TODO: Let user choose thresholds
-                        1)
-                if res: # If there is no operation, will return None
+                                           alnrec.reference_start+1,
+                                           alnrec.cigarstring,
+                                           1,  # TODO: Let user choose thresholds
+                                           1)
+                if res:  # If there is no operation, will return None
                     op, op_len = res
                     # Record the count
                     self._countsDict[gffid][op].append(op_len)
-
 
     def calculateRetentionScores(self):
         """Calculate retention scores from counts of I and M operations per site
@@ -111,8 +111,8 @@ class IesRetentionsMacOnly(object):
                         score = None
                     self._scoresDict[gffid] = score
             else:
-                logger.debug(f"Ignored GFF entry {gffid} when calculating retention scores, not a junction")
-
+                logger.debug(
+                    f"Ignored GFF entry {gffid} when calculating retention scores, not a junction")
 
     def calculateRetentionScoresMatchLengths(self, threshold=0.05):
         """Calculate retention scores from counts of I and M operations per site
@@ -135,7 +135,7 @@ class IesRetentionsMacOnly(object):
             if self._gff.getValue(gffid, "start") == self._gff.getValue(gffid, "end"):
                 # Get defined IES length
                 ieslength = self._gff.getAttr(gffid, "IES_length")
-                if ieslength: # None is returned if attribute absent
+                if ieslength:  # None is returned if attribute absent
                     ieslength = mean_of_number_list(ieslength)
                 if gffid in self._countsDict:
                     iesplus = 0
@@ -144,8 +144,8 @@ class IesRetentionsMacOnly(object):
                         iesminus = len(self._countsDict[gffid]['M'])
                     if 'I' in self._countsDict[gffid]:
                         iesplus_lengthmatched = [i for i in self._countsDict[gffid]['I']
-                                if i >= ieslength*(1-threshold)
-                                and i <= ieslength*(1+threshold)]
+                                                 if i >= ieslength*(1-threshold)
+                                                 and i <= ieslength*(1+threshold)]
                         iesplus = len(iesplus_lengthmatched)
                     if iesplus + iesminus > 0:
                         score = round(float(iesplus / (iesplus + iesminus)), 4)
@@ -153,8 +153,8 @@ class IesRetentionsMacOnly(object):
                         score = None
                     self._scoresDict[gffid] = score
             else:
-                logger.debug(f"Ignored GFF entry {gffid} when calculating retention scores, not a junction")
-
+                logger.debug(
+                    f"Ignored GFF entry {gffid} when calculating retention scores, not a junction")
 
     def reportRetentionScores(self, outfile):
         """Report retention scores after running calculateRetentionScores().

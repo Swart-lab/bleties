@@ -27,7 +27,8 @@ from bleties.SharedFunctions import *
 logger = logging.getLogger("Milraa")
 
 
-def getIndels(cigar, pos, minlength, qseq): # TODO: refactor with SharedFunctions.getCigarOpQuerySeqs
+# TODO: refactor with SharedFunctions.getCigarOpQuerySeqs
+def getIndels(cigar, pos, minlength, qseq):
     """Parse cigar string and alignment position and report insertions or
     deletions.
 
@@ -53,36 +54,41 @@ def getIndels(cigar, pos, minlength, qseq): # TODO: refactor with SharedFunction
         list of tuples (int, int, int, str, str) representing (start pos, end
         pos, insert length, insertion/deletion, insert sequence)
     """
-    outarr = [] # Array to store tuples of results
+    outarr = []  # Array to store tuples of results
     # Initialize counters for how much query or reference seq is consumed
     ref_consumed = 0
     que_consumed = 0
     # Split cigar string into individual operations
     cigs = re.findall(r"\d+[\w\=]", cigar)
     for cig in cigs:
-        cigmatch = re.match(r"(\d+)([\w\=])",cig) # Get number and operation
+        cigmatch = re.match(r"(\d+)([\w\=])", cig)  # Get number and operation
         # We want to look for insert operations above a min length,
         # map their positions on the reference, and count how many reads
         # support a given putative insert
         # This requires that we count the operations that consume reference
         # and add it to the POS field
-        if cigmatch.group(2) == "I": # If insert operation,
-            ins_len = int(cigmatch.group(1)) # Length of the current insert
-            if ins_len >= minlength: # Check that insert is above min length
+        if cigmatch.group(2) == "I":  # If insert operation,
+            ins_len = int(cigmatch.group(1))  # Length of the current insert
+            if ins_len >= minlength:  # Check that insert is above min length
                 # Get the start and end positions of the insert
-                ins_pos_start = pos + ref_consumed - 1 # 1-based, insert is to the right of position
+                # 1-based, insert is to the right of position
+                ins_pos_start = pos + ref_consumed - 1
                 # Get the sequence of the insert
-                ins_seq = qseq[que_consumed:que_consumed + ins_len] # 0-based, following pysam convention
-                outarr.append((ins_pos_start, ins_pos_start, ins_len, "I", ins_seq))
+                # 0-based, following pysam convention
+                ins_seq = qseq[que_consumed:que_consumed + ins_len]
+                outarr.append(
+                    (ins_pos_start, ins_pos_start, ins_len, "I", ins_seq))
         # We also look for delete operations above a min length
         # These are already present in the reference, so the "insert length" is 0
-        if cigmatch.group(2) == "D": # If delete operation,
-            del_len = int(cigmatch.group(1)) # Length of current deletion
+        if cigmatch.group(2) == "D":  # If delete operation,
+            del_len = int(cigmatch.group(1))  # Length of current deletion
             if del_len >= minlength:
                 # Get start and end pos of deletion
-                del_pos_start = pos + ref_consumed # 1-based, deletion starts ON this position
-                del_pos_end = pos + ref_consumed + del_len - 1 # 1-based, deletion ends ON this position
-                outarr.append((del_pos_start, del_pos_end, 0, "D", "")) # If deletion, no insert sequence reported
+                del_pos_start = pos + ref_consumed  # 1-based, deletion starts ON this position
+                del_pos_end = pos + ref_consumed + del_len - \
+                    1  # 1-based, deletion ends ON this position
+                # If deletion, no insert sequence reported
+                outarr.append((del_pos_start, del_pos_end, 0, "D", ""))
         # Count ref and query consumed _after_ the insert has been accounted for
         if cigmatch.group(2) in SharedValues.REFCONSUMING:
             ref_consumed += int(cigmatch.group(1))
@@ -91,7 +97,7 @@ def getIndels(cigar, pos, minlength, qseq): # TODO: refactor with SharedFunction
     return(outarr)
 
 
-def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
+def getIndelJunctionSeqs(iesgff, iesconsseq, ref, flanklen):
     """Get sequence at indel junctions.
 
     Parameters
@@ -113,9 +119,9 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
     """
     outseqs = []
     for breakpointid in iesgff:
-        ctg = iesgff.getValue(breakpointid,'seqid')
-        start = int(iesgff.getValue(breakpointid,'start'))
-        end = int(iesgff.getValue(breakpointid,'end'))
+        ctg = iesgff.getValue(breakpointid, 'seqid')
+        start = int(iesgff.getValue(breakpointid, 'start'))
+        end = int(iesgff.getValue(breakpointid, 'end'))
         flankleftseq = ""
         flankrightseq = ""
         indel = ""
@@ -123,21 +129,23 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
         # Check if this is insertion junction or deletion region
         # GFF convention is to record zero-length features with start=end, and
         # junction site is to right of coordinate.
-        if start == end: # insertion junction
+        if start == end:  # insertion junction
             indel = "I"
         elif start < end:
             indel = "D"
         else:
-            raise Exception(f"Start cannot be less than end, feature {breakpointid}")
+            raise Exception(
+                f"Start cannot be less than end, feature {breakpointid}")
         # Get the left flanking junction on reference
         # Check whether sequence with flanking will run off the end
-        if start >= flanklen: # TODO Check off-by-one
-            if indel == "I": # For insert, feature starts on RIGHT of coordinate
+        if start >= flanklen:  # TODO Check off-by-one
+            if indel == "I":  # For insert, feature starts on RIGHT of coordinate
                 flankleftseq = ref[ctg][start - flanklen: start].seq.lower()
-            elif indel == "D": # For deletion, feature starts ON the coordinate
+            elif indel == "D":  # For deletion, feature starts ON the coordinate
                 flankleftseq = ref[ctg][start-1-flanklen:start-1].seq.lower()
-        else: # Pad the left side
-            flankleftseq = (flanklen - start) * "-" + ref[ctg][0:start].seq.lower()
+        else:  # Pad the left side
+            flankleftseq = (flanklen - start) * "-" + \
+                ref[ctg][0:start].seq.lower()
         # Get the right flanking junction on reference
         # Check whether sequence with flanking will run off the end
         if (end + flanklen) <= len(ref[ctg]):
@@ -146,28 +154,36 @@ def getIndelJunctionSeqs(iesgff,iesconsseq,ref,flanklen):
             flankrightseq = ref[ctg][end:].seq.lower()
         # Add the IES sequence fragment
         if indel == "I":
-            flankleftseq = flankleftseq + iesconsseq[breakpointid][0:flanklen].seq.upper()
-            flankrightseq = iesconsseq[breakpointid][-flanklen:].seq.upper() + flankrightseq
+            flankleftseq = flankleftseq + \
+                iesconsseq[breakpointid][0:flanklen].seq.upper()
+            flankrightseq = iesconsseq[breakpointid][-flanklen:].seq.upper() + \
+                flankrightseq
         elif indel == "D":
             # In GFF, start and end are 1-based and BOTH inclusive
-            flankleftseq = flankleftseq + ref[ctg][start-1: start-1+flanklen].seq.upper()
-            flankrightseq = ref[ctg][end-flanklen:end].seq.upper() + flankrightseq
+            flankleftseq = flankleftseq + \
+                ref[ctg][start-1: start-1+flanklen].seq.upper()
+            flankrightseq = ref[ctg][end -
+                                     flanklen:end].seq.upper() + flankrightseq
         # Get the reference sequence
-        if indel =="I":
+        if indel == "I":
             refunedited = ref[ctg][start-flanklen:end+flanklen].seq.lower()
-        elif indel =="D":
+        elif indel == "D":
             # Start minus one because for deletion, start is ON the deleted region
             refunedited = ref[ctg][start-flanklen-1:end+flanklen].seq.lower()
         # Find pointers if present
-        (pointer, pointerstart, pointerend)  = getPointers(ref[ctg], start, end, iesconsseq[breakpointid], breakpointid)
+        (pointer, pointerstart, pointerend) = getPointers(
+            ref[ctg], start, end, iesconsseq[breakpointid], breakpointid)
         if pointerstart != start:
-            logger.info(f"Position of pointer {breakpointid} has been adjusted")
+            logger.info(
+                f"Position of pointer {breakpointid} has been adjusted")
             start = pointerstart
             end = pointerend
         # Convert pointers to TA junctions if possible
-        (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
+        (tastart, taend, tapointer) = adjustPointerTA(
+            pointerstart, pointerend, pointer)
         # Maximize pointer lengths
-        (ppstart, ppend, pppointer) = adjustPointerMaxlength(ref[ctg], start, end, pointer, iesconsseq[breakpointid])
+        (ppstart, ppend, pppointer) = adjustPointerMaxlength(
+            ref[ctg], start, end, pointer, iesconsseq[breakpointid])
         # Put everything together and return
         outseqs.append([breakpointid,
                         str(ctg),
@@ -225,17 +241,18 @@ def getPointers(seq, start, end, iesseq, name):
         indel = "I"
     elif start < end:
         indel = "D"
-        iesseq = seq[start-1 : end]
+        iesseq = seq[start-1: end]
     else:
         raise Exception(f"Start cannot be less than end, feature {name}")
 
     # Remove gap characters from ies sequence
     if isinstance(iesseq, str):
-        iesseq = iesseq.replace("-","")
+        iesseq = iesseq.replace("-", "")
     elif isinstance(iesseq, SeqRecord):
         iesseq = iesseq.seq.ungap("-")
     else:
-        raise Exception(f"iesseq must be of type str or SeqRecord but is {type(iesseq)}")
+        raise Exception(
+            f"iesseq must be of type str or SeqRecord but is {type(iesseq)}")
 
     pointer = ""
     pointerstart, pointerend = start, end
@@ -253,7 +270,7 @@ def getPointers(seq, start, end, iesseq, name):
             break
     # check right of IES
     i = -1
-    if indel == "I": # beacuse GFF puts zero-length features to right of coordinate
+    if indel == "I":  # beacuse GFF puts zero-length features to right of coordinate
         refstart = start
     elif indel == "D":
         refstart = start - 1
@@ -269,7 +286,7 @@ def getPointers(seq, start, end, iesseq, name):
         pointer = None
     elif len(leftcheck) > len(rightcheck) and len(leftcheck) >= 2:
         pointer = leftcheck
-    elif len(rightcheck) > len(leftcheck) and len(rightcheck) >=2:
+    elif len(rightcheck) > len(leftcheck) and len(rightcheck) >= 2:
         pointer = rightcheck
         # If the insert position is to the right of the putative pointer seq,
         # report adjusted pointer position such that the insert position always
@@ -278,9 +295,10 @@ def getPointers(seq, start, end, iesseq, name):
         pointerend = pointerend - len(pointer)
     elif len(rightcheck) == len(leftcheck):
         logger.info(f"Breakpoint {name} has potential pointers on both sides")
-        pointer = "tie" # if both sides could potentially have a pointer
+        pointer = "tie"  # if both sides could potentially have a pointer
     else:
-        logger.warn(f"Unexpected result in pointer search for breakpoint {name}")
+        logger.warn(
+            f"Unexpected result in pointer search for breakpoint {name}")
     return(pointer, pointerstart, pointerend)
 
 
@@ -347,17 +365,17 @@ def adjustPointerMaxlength(seq, start, end, pointer, iesseq):
     str
         Adjusted pointer sequence
     """
-    # Get IES sequence for a deletion feature 
+    # Get IES sequence for a deletion feature
     if start < end:
         indel = "D"
-        iesseq = seq[start - 1 : end]
+        iesseq = seq[start - 1: end]
     elif start == end:
         indel = "I"
         if not iesseq:
-            raise Exception ("IES sequence is missing")
+            raise Exception("IES sequence is missing")
     # Look upstream of the pointer to try and extend match
     i = -1
-    if indel == "I": # beacuse GFF puts zero-length features to right of coordinate
+    if indel == "I":  # beacuse GFF puts zero-length features to right of coordinate
         refstart = start
     elif indel == "D":
         refstart = start - 1
@@ -373,7 +391,7 @@ def adjustPointerMaxlength(seq, start, end, pointer, iesseq):
     return(start + 1 + i, end + 1 + i, pointer)
 
 
-def alignSeqsMuscle(seqlist, muscle_path="muscle"): # TODO: Use SPOA instead?
+def alignSeqsMuscle(seqlist, muscle_path="muscle"):  # TODO: Use SPOA instead?
     """Align list of sequences with Muscle and return alignment
 
     Parameters
@@ -421,7 +439,8 @@ def alnFromSeqs(seqlist, threshold=0.7):
     elif isinstance(seqlist[0], SeqRecord):
         seqrecs = seqlist
     else:
-        raise Exception("sequence list must comprise str, Seq, or SeqRecord objects")
+        raise Exception(
+            "sequence list must comprise str, Seq, or SeqRecord objects")
     aln = alignSeqsMuscle(seqrecs)
     alninf = AlignInfo.SummaryInfo(aln)
     alncons = alninf.gap_consensus(threshold=threshold)
@@ -452,7 +471,8 @@ def alnDumbFromSeqs(seqlist, threshold=0.7):
     elif isinstance(seqlist[0], Bio.SeqRecord.SeqRecord):
         seqrecs = seqlist
     else:
-        raise Exception("sequence list must comprise str, Seq, or SeqRecord objects")
+        raise Exception(
+            "sequence list must comprise str, Seq, or SeqRecord objects")
     aln = MultipleSeqAlignment(seqrecs)
     alninf = AlignInfo.SummaryInfo(aln)
     alncons = alninf.dumb_consensus(threshold=threshold)
@@ -463,7 +483,7 @@ def alnDumbFromSeqs(seqlist, threshold=0.7):
 def spoaConsensus(seqs, mode=1):
     """Get consensus sequence from a set of PacBio subreads (or subread
     fragments) with SPOA
-    
+
     Parameters
     ----------
     seqs : list
@@ -472,7 +492,7 @@ def spoaConsensus(seqs, mode=1):
     mode : int
         Algorithm mode for SPOA, recommended 1 (global). Passed to `-l`
         argument.
-    
+
     Returns
     -------
     SeqRecord
@@ -481,7 +501,8 @@ def spoaConsensus(seqs, mode=1):
     fh = NamedTemporaryFile(suffix=".fasta", mode="w", delete=False)
     SeqIO.write(seqs, fh.name, "fasta")
     fh.close()
-    cons = subprocess.run(["spoa", f"-l {mode}", "-r 0", fh.name], capture_output=True).stdout.decode()
+    cons = subprocess.run(
+        ["spoa", f"-l {mode}", "-r 0", fh.name], capture_output=True).stdout.decode()
     cons = SeqIO.read(StringIO(cons), "fasta")
     os.remove(fh.name)
     return(cons)
@@ -489,7 +510,7 @@ def spoaConsensus(seqs, mode=1):
 
 def findLongestInsert(seqs, rname, rstart=0):
     """Find insert corresponding to longest gap in the reference sequence
-    
+
     Parameters
     ----------
     seqs : dict
@@ -497,7 +518,7 @@ def findLongestInsert(seqs, rname, rstart=0):
         "Consensus" and the reference called rname
     rstart : int
         Original start coordinate of the reference sequence
-    
+
     Returns
     -------
     str
@@ -507,21 +528,22 @@ def findLongestInsert(seqs, rname, rstart=0):
         0-based, the insert lies to the RIGHT of the coordinate
     """
     gaphits = [i for i in re.finditer(r"\-+", str(seqs[rname].seq))]
-    longestgap_coords = sorted(gaphits, reverse=True, key=lambda x: x.span()[1] - x.span()[0])[0].span()
+    longestgap_coords = sorted(gaphits, reverse=True, key=lambda x: x.span()[
+                               1] - x.span()[0])[0].span()
     # Find gaps in ref sequence before the longest insert
-    offset = sum([i.end() - i.start() for i in gaphits if i.end() < longestgap_coords[0]])
+    offset = sum([i.end() - i.start()
+                  for i in gaphits if i.end() < longestgap_coords[0]])
     # subtract 1 because insert should be to the right of the coordinate
     insert_start = rstart + longestgap_coords[0] - offset - 1
     return(str(seqs['Consensus'].seq[longestgap_coords[0]:longestgap_coords[1]]),
            insert_start)
 
 # TODO: complain if the 2nd largest gap is more than 50% the length of the
-# longest gap 
+# longest gap
 
 
 class IesRecords(object):
     """Records of putative IESs from mappings"""
-
 
     def __init__(self, alnfile, alnformat, refgenome):
         """Constructor for IesRecords
@@ -548,20 +570,19 @@ class IesRecords(object):
         """
         # dict to store sequences of detected inserts/deletions
         self._insSeqDict = defaultdict(      # contig
-                lambda: defaultdict(         # startpos
-                    lambda: defaultdict(     # endpos
-                        lambda: defaultdict( # indel length
-                            list)            # list of dicts
-                        )
-                    )
+            lambda: defaultdict(         # startpos
+                lambda: defaultdict(     # endpos
+                    lambda: defaultdict(  # indel length
+                        list)            # list of dicts
                 )
+            )
+        )
         # pysam.AlignmentFile object representing the BAM mapping
         self._alnfile = alnfile
         # Format of the alignment "bam" or "sam"
         self._alnformat = alnformat
         # Genome sequence used as reference for the mapping
         self._refgenome = refgenome
-
 
     def __str__(self):
         """Report summary stats of IesRecords object"""
@@ -570,35 +591,34 @@ class IesRecords(object):
         alnformat = self._alnformat
         mapped = self._alnfile.mapped
         return("bleties.IesRecords object with "
-                + "insSeqDict of length "
-                + str(insseqdictlen)
-                + " and alignment of format "
-                + str(alnformat)
-                + " with "
-                + str(nref)
-                + " references and "
-                + str(mapped)
-                + " mapped reads")
-
+               + "insSeqDict of length "
+               + str(insseqdictlen)
+               + " and alignment of format "
+               + str(alnformat)
+               + " with "
+               + str(nref)
+               + " references and "
+               + str(mapped)
+               + " mapped reads")
 
     def dump(self):
         """Data dump of IesRecords._insSeqDict in JSON format"""
-        outstr = json.dumps({"_insSeqDict" : self._insSeqDict}, sort_keys = True, indent = 2)
+        outstr = json.dumps(
+            {"_insSeqDict": self._insSeqDict}, sort_keys=True, indent=2)
         return(outstr)
-
 
     def _addIndelsFromCigar(self, alignedsegment, minlength):
         """Check if alignment contains indels above minimum length, and record
         the corresponding breakpoints relative to the reference, and the insert
         length. 
-        
+
         If the indel is an insert, insert length > 0. 
         If the indel is a deletion, insert length = 0. 
-        
+
         Recorded in self._insSeqDict, keyed by contig -> start pos -> end pos
         -> insert length -> dict, where dict has fields
         'indelseq','qstart','qend','qname','rstart','rend','rname'.
-        
+
         The coordinates in the dict keys are 1-based GFF type, whereas the
         coordinates in the dict are 0-based python type.
 
@@ -613,13 +633,13 @@ class IesRecords(object):
         rname = alignedsegment.reference_name
         qname = alignedsegment.query_name
         ins_tuples = getCigarOpQuerySeqs(alignedsegment.query_sequence,
-                            alignedsegment.cigartuples,
-                            alignedsegment.reference_start,
-                            "I")
+                                         alignedsegment.cigartuples,
+                                         alignedsegment.reference_start,
+                                         "I")
         del_tuples = getCigarOpQuerySeqs(alignedsegment.query_sequence,
-                            alignedsegment.cigartuples,
-                            alignedsegment.reference_start,
-                            "D")
+                                         alignedsegment.cigartuples,
+                                         alignedsegment.reference_start,
+                                         "D")
         if ins_tuples:
             for (indelseq, qstart, qend, rstart, rend) in ins_tuples:
                 if qend - qstart >= minlength:
@@ -629,10 +649,11 @@ class IesRecords(object):
                     indelstart = rstart
                     indelend = rend
                     indellen = len(indelseq)
-                    record = {'indelseq' : indelseq,
-                              'qstart' : qstart, 'qend': qend, 'qname': qname,
-                              'rstart' : rstart, 'rend': rend, 'rname' :rname} # using 0-based coordinates
-                    self._insSeqDict[rname][indelstart][indelend][indellen].append(record)
+                    record = {'indelseq': indelseq,
+                              'qstart': qstart, 'qend': qend, 'qname': qname,
+                              'rstart': rstart, 'rend': rend, 'rname': rname}  # using 0-based coordinates
+                    self._insSeqDict[rname][indelstart][indelend][indellen].append(
+                        record)
 
         if del_tuples:
             for (indelseq, qstart, qend, rstart, rend) in del_tuples:
@@ -642,11 +663,11 @@ class IesRecords(object):
                     indelstart = rstart + 1
                     indelend = rend
                     indellen = rend - rstart
-                    record = {'indelseq' : indelseq, # this will be a blank sequence
-                              'qstart' : qstart, 'qend': qend, 'qname': qname,
-                              'rstart' : rstart, 'rend': rend, 'rname' :rname} # using 0-based coordinates
-                    self._insSeqDict[rname][indelstart][indelend][indellen].append(record)
-
+                    record = {'indelseq': indelseq,  # this will be a blank sequence
+                              'qstart': qstart, 'qend': qend, 'qname': qname,
+                              'rstart': rstart, 'rend': rend, 'rname': rname}  # using 0-based coordinates
+                    self._insSeqDict[rname][indelstart][indelend][indellen].append(
+                        record)
 
     def findPutativeIes(self, minlength, ctg=None, start=None, stop=None):
         """Search alignment for clips and indels to identify putative IESs.
@@ -670,7 +691,6 @@ class IesRecords(object):
                 # total_mismatch = line.get_tag("NM") # Get number of mismatches # TODO record mismatches?
                 # Find indels (putative IESs) over the minimum length and record them
                 self._addIndelsFromCigar(line, minlength)
-
 
     def reportPutativeIesInsertFuzzy(self, mininsbreaks, mindelbreaks, dist_threshold=0.05):
         """Report putative IESs where insert lengths do not match exactly
@@ -708,24 +728,28 @@ class IesRecords(object):
                 for i in dd:
                     # Gather all sequences to be clustered
                     ins_seqs.extend([rec['indelseq'] for rec in dd[i]])
-                clust_seqs, clust_ids = get_clusters_from_seqlist(ins_seqs, dist_threshold)
+                clust_seqs, clust_ids = get_clusters_from_seqlist(
+                    ins_seqs, dist_threshold)
                 # For each cluster, report a putative IES
                 for clust in clust_seqs:
                     counts = defaultdict(int)
                     for i in clust:
                         counts[len(i)] += 1
                     totalcount = sum(counts.values())
-                    maxcounts = [l for l in counts if counts[l] == max(counts.values())]
+                    maxcounts = [l for l in counts if counts[l]
+                                 == max(counts.values())]
 
                     # Report only if above minimum
                     if totalcount >= mininsbreaks:
                         # Put together ID for this breakpoint
-                        if len(counts.keys()) == 1: # cluster of one length
+                        if len(counts.keys()) == 1:  # cluster of one length
                             prefix = f"BREAK_POINTS"
                         elif len(counts.keys()) > 1:
                             prefix = f"BREAK_POINTS_FUZZY"
-                        breakpointfields = [prefix, ctg, ins_start, ins_end] + [l for l in counts.keys()] 
-                        breakpointid = "_".join([str(i) for i in breakpointfields])
+                        breakpointfields = [
+                            prefix, ctg, ins_start, ins_end] + [l for l in counts.keys()]
+                        breakpointid = "_".join([str(i)
+                                                 for i in breakpointfields])
                         gfftype = "internal_eliminated_sequence_junction"
 
                         # Attributes list of key-value pairs
@@ -733,10 +757,11 @@ class IesRecords(object):
                         attr = ["ID=" + breakpointid,
                                 "IES_length="+"_".join([str(l) for l in maxcounts])]
                         # Report number of counts per insert length
-                        attr.append("cigar=" + " ".join([str(l) + "I*" + str(counts[l]) for l in counts]))
+                        attr.append(
+                            "cigar=" + " ".join([str(l) + "I*" + str(counts[l]) for l in counts]))
 
                         # Get indel consensus
-                        if len(counts.keys()) == 1: # cluster of one length
+                        if len(counts.keys()) == 1:  # cluster of one length
                             # take dumb consensus since all seqs are same length
                             consseq = alnDumbFromSeqs(clust)
                         else:
@@ -744,17 +769,22 @@ class IesRecords(object):
                             consseq = alnFromSeqs(clust)
 
             elif ins_end > ins_start:
-                del_len = ins_end - ins_start + 1 # GFF is end-inclusive
-                totalcount = len(self._insSeqDict[ctg][ins_start][ins_end][del_len])
+                del_len = ins_end - ins_start + 1  # GFF is end-inclusive
+                totalcount = len(
+                    self._insSeqDict[ctg][ins_start][ins_end][del_len])
                 if totalcount >= mindelbreaks:
-                    breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
+                    breakpointid = "_".join(["BREAK_POINTS", str(
+                        ctg), str(ins_start), str(ins_end), str(del_len)])
                     gfftype = "internal_eliminated_sequence"
-                    indelseq = str(self._refgenome[ctg].seq[ins_start - 1:ins_end]) # get sequence from ref genome
+                    # get sequence from ref genome
+                    indelseq = str(
+                        self._refgenome[ctg].seq[ins_start - 1:ins_end])
                     consseq = SeqRecord(Seq(indelseq, generic_dna))
                     # Build attributes field
                     attr = ["ID="+breakpointid,
                             "IES_length="+str(del_len)]
-                    attr.append("cigar=" + str(del_len) + "D*" + str(totalcount))
+                    attr.append("cigar=" + str(del_len) +
+                                "D*" + str(totalcount))
 
             else:
                 raise Exception("feature cannot start after it ends")
@@ -764,8 +794,8 @@ class IesRecords(object):
                 # Get average coverage of region of interest
                 if self._alnformat == "bam":
                     readcov = self._alnfile.count(str(ctg),
-                            start=int(ins_start) - 1,
-                            stop=int(ins_end))
+                                                  start=int(ins_start) - 1,
+                                                  stop=int(ins_end))
                     attr.append("average_coverage="+str(readcov))
 
                 # Provisional approximate IES retention score
@@ -779,7 +809,8 @@ class IesRecords(object):
                         provscore = round((readcov-totalcount)/readcov, 4)
 
                 # Find pointers if present
-                ins_start, ins_end, pointerdict = self.reportAdjustPointers(ctg, ins_start, ins_end, consseq, breakpointid)
+                ins_start, ins_end, pointerdict = self.reportAdjustPointers(
+                    ctg, ins_start, ins_end, consseq, breakpointid)
                 for i in pointerdict:
                     attr.append(f"{i}={str(pointerdict[i])}")
 
@@ -788,14 +819,14 @@ class IesRecords(object):
                 outseq[consseq.id] = consseq
 
                 outarr = [str(ctg),
-                        "MILRAA",
-                        gfftype,
-                        str(ins_start),
-                        str(ins_end),
-                        str(provscore),
-                        ".",
-                        ".",
-                        ";".join(attr)+";"]
+                          "MILRAA",
+                          gfftype,
+                          str(ins_start),
+                          str(ins_end),
+                          str(provscore),
+                          ".",
+                          ".",
+                          ";".join(attr)+";"]
                 gff.addEntry(outarr, None)
                 counter += 1
                 if counter % 1000 == 0:
@@ -805,7 +836,6 @@ class IesRecords(object):
         # TODO Fuzzy cluster both the indel positions on ref and the ins lengths
         # Deletions: fuzzy cluster start and end positions separately.
         # This is somewhat trickier, because of the way the data are structured
-
 
     def reportAdjustPointers(self, ctg, ins_start, ins_end, consseq, breakpointid):
         """For a given indel sequence, find pointers and check for TA junctions
@@ -837,29 +867,31 @@ class IesRecords(object):
         """
         out = {}
         # Find pointers if present
-        (pointer, pointerstart, pointerend)  = getPointers(self._refgenome[ctg], ins_start, ins_end, consseq, breakpointid)
+        (pointer, pointerstart, pointerend) = getPointers(
+            self._refgenome[ctg], ins_start, ins_end, consseq, breakpointid)
         if pointerstart != ins_start:
-            logger.info(f"Position of pointer {breakpointid} has been adjusted")
+            logger.info(
+                f"Position of pointer {breakpointid} has been adjusted")
             ins_start = pointerstart
             ins_end = pointerend
-        if pointer: # Add pointer seq to attributes field if present
+        if pointer:  # Add pointer seq to attributes field if present
             out['pointer_seq'] = pointer
         # Convert pointers to TA junctions if possible
-        (tastart, taend, tapointer) = adjustPointerTA(pointerstart, pointerend, pointer)
+        (tastart, taend, tapointer) = adjustPointerTA(
+            pointerstart, pointerend, pointer)
         # Add TA pointer sequence to attributes field if present
         if tapointer:
             out['ta_pointer_seq'] = tapointer
             out['ta_pointer_start'] = tastart
             out['ta_pointer_end'] = taend
         # Maximize pointer lengths, report if different from original
-        (ppstart, ppend, pppointer) = adjustPointerMaxlength(self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
+        (ppstart, ppend, pppointer) = adjustPointerMaxlength(
+            self._refgenome[ctg], ins_start, ins_end, pointer, consseq)
         if pppointer and pppointer != pointer:
             out['pp_pointer_seq'] = pppointer
             out['pp_pointer_start'] = ppstart
             out['pp_pointer_end'] = ppend
         return(ins_start, ins_end, out)
-
-
 
     def reportPutativeIes(self, mininsbreaks, mindelbreaks):
         """After clips and indels have been recorded, report putative IESs above
@@ -906,7 +938,8 @@ class IesRecords(object):
 
             # If the breakpoint is an insert type
             if evidencetype == "I" and countvalue >= mininsbreaks:
-                breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(ins_len)])
+                breakpointid = "_".join(["BREAK_POINTS", str(
+                    ctg), str(ins_start), str(ins_end), str(ins_len)])
                 indel_len = ins_len
                 gfftype = "internal_eliminated_sequence_junction"
                 # Prepare attributes list of key-value pairs
@@ -919,7 +952,8 @@ class IesRecords(object):
                 # Add 1 because both start and end are inclusive
                 del_len = int(ins_end) - int(ins_start) + 1
                 indel_len = del_len
-                breakpointid = "_".join(["BREAK_POINTS",str(ctg),str(ins_start),str(ins_end),str(del_len)])
+                breakpointid = "_".join(["BREAK_POINTS", str(
+                    ctg), str(ins_start), str(ins_end), str(del_len)])
                 gfftype = "internal_eliminated_sequence"
                 # Build attributes field
                 attr = ["ID="+breakpointid,
@@ -930,7 +964,8 @@ class IesRecords(object):
             if breakpointid and attr:
                 # Get read coverage from BAM file; SAM does not allow random access
                 if self._alnformat == "bam":
-                    readcov = self._alnfile.count(str(ctg), start=int(ins_start)-1, stop=int(ins_end)) # TODO: Check for off-by-one errors
+                    readcov = self._alnfile.count(str(ctg), start=int(
+                        ins_start)-1, stop=int(ins_end))  # TODO: Check for off-by-one errors
                     attr.append("average_coverage="+str(readcov))
 
                 # Provisional approximate IES retention score
@@ -943,13 +978,15 @@ class IesRecords(object):
                         provscore = round((readcov-countvalue)/readcov, 4)
 
                 # Get indel consensus
-                consseq = self.reportIndelConsensusSeq(ctg, ins_start, ins_end, indel_len)
+                consseq = self.reportIndelConsensusSeq(
+                    ctg, ins_start, ins_end, indel_len)
                 consseq.id = breakpointid
                 consseq.description = ";".join(attr)+";"
                 outseq[consseq.id] = consseq
 
                 # Find pointers if present
-                ins_start, ins_end, pointerdict = self.reportAdjustPointers(ctg, ins_start, ins_end, consseq, breakpointid)
+                ins_start, ins_end, pointerdict = self.reportAdjustPointers(
+                    ctg, ins_start, ins_end, consseq, breakpointid)
                 for i in pointerdict:
                     attr.append(f"{i}={str(pointerdict[i])}")
 
@@ -959,7 +996,8 @@ class IesRecords(object):
                           gfftype,             # 3 type
                           str(ins_start),      # 4 start
                           str(ins_end),        # 5 end
-                          str(provscore),      # 6 score - provisional IES retention score
+                          # 6 score - provisional IES retention score
+                          str(provscore),
                           ".",                 # 7 strand
                           ".",                 # 8 phase
                           ";".join(attr)+";"   # 9 attributes
@@ -967,7 +1005,6 @@ class IesRecords(object):
                 gff.addEntry(outarr, None)
 
         return(gff, outseq)
-
 
     def reportIndelConsensusSeq(self, ctg, indelstart, indelend, indellen):
         """Report consensus of indel sequence
@@ -990,7 +1027,8 @@ class IesRecords(object):
         """
         if indelstart == indelend:
             # From list of sequences as str, make a list of SeqRecord objects
-            seqrecs = [SeqRecord(Seq(i['indelseq'], generic_dna)) for i in self._insSeqDict[ctg][indelstart][indelend][indellen]]
+            seqrecs = [SeqRecord(Seq(i['indelseq'], generic_dna))
+                       for i in self._insSeqDict[ctg][indelstart][indelend][indellen]]
             # Make a pseudo-alignment from the list of SeqRecord objects
             aln = MultipleSeqAlignment(seqrecs)
             # Summarize alignment, and get dumb consensus sequence
@@ -1003,7 +1041,6 @@ class IesRecords(object):
             # Get sequence from reference gneome
             indelseq = str(self._refgenome[ctg].seq[indelstart - 1:indelend])
             return(SeqRecord(Seq(indelseq, generic_dna)))
-
 
     def reportIndelConsensusSeqFuzzy(self, ctg, indelstart, indelend, indellens):
         """Report consensus alignment of insert sequence when length of insert
@@ -1025,8 +1062,8 @@ class IesRecords(object):
         seqrecs = []
         for indellen in indellens:
             seqrecs.extend(
-                    [SeqRecord(Seq(i['indelseq'], generic_dna))
-                        for i in self._insSeqDict[ctg][indelstart][indelend][indellen]])
+                [SeqRecord(Seq(i['indelseq'], generic_dna))
+                 for i in self._insSeqDict[ctg][indelstart][indelend][indellen]])
         # Use Muscle to align these sequences
         aln = alignSeqsMuscle(seqrecs)
         # Summarize alignment, and get dumb consensus sequence
@@ -1038,7 +1075,6 @@ class IesRecords(object):
         alncons = alninf.gap_consensus()
         alnconsrec = SeqRecord(alncons)
         return(alnconsrec)
-
 
     def reportIndelReadMismatchPc(self, ctg, indelstart, indelend, indellen):
         """Report sequence mismatch % of query reads containing indel at a
@@ -1071,27 +1107,32 @@ class IesRecords(object):
         if indelend == indelstart:
             dummyend += 1
         # Get segments that overlap indel of interest
-        itrr = self._alnfile.fetch(ctg, indelstart - 1, dummyend - 1) # minus 1 for pysam uses 0-based coords
-        segs = [seg for seg in itrr] # Segments aligning to position of interest
+        # minus 1 for pysam uses 0-based coords
+        itrr = self._alnfile.fetch(ctg, indelstart - 1, dummyend - 1)
+        # Segments aligning to position of interest
+        segs = [seg for seg in itrr]
         # initialize lists to report mismatch percentages
         non_mm = []
         ins_mm = []
         # for each segment, check if it contains indel at position of interest
         for seg in segs:
-            indels = getIndels(seg.cigarstring, int(seg.reference_start), MIN_IES_LEN, seg.query_sequence)
-            indelcoords = set([(int(indel[0]),int(indel[1])) for indel in indels])
-            mismatch_pc = 100 * float(seg.get_tag("NM")) / float(seg.query_length) # number of mismatchs / query length * 100 pc
+            indels = getIndels(seg.cigarstring, int(
+                seg.reference_start), MIN_IES_LEN, seg.query_sequence)
+            indelcoords = set([(int(indel[0]), int(indel[1]))
+                               for indel in indels])
+            # number of mismatchs / query length * 100 pc
+            mismatch_pc = 100 * float(seg.get_tag("NM")) / \
+                float(seg.query_length)
             if (indelstart - 1, indelend - 1) in indelcoords:
                 ins_mm.append(mismatch_pc)
             else:
                 non_mm.append(mismatch_pc)
         return(ins_mm, non_mm)
 
-
     def getJuncClustersSeqs(self, clusters, rname, minseqs=10):
         """Get reference positions and alignment details for a set of
         coordinate clusters
-        
+
         Parameters
         ----------
         clusters : list
@@ -1102,7 +1143,7 @@ class IesRecords(object):
         minseqs : int
             Minimum number of subreads in a cluster to report. If this is too
             low, then the consensus insert sequence will not be accurate.
-        
+
         Returns
         -------
         list
@@ -1111,7 +1152,7 @@ class IesRecords(object):
             the insSeqDict that contain info on the insert sequence.
         """
         jcs = []
-        min_seqs = 10 # Minimum number of subreads in cluster to read
+        min_seqs = 10  # Minimum number of subreads in cluster to read
         for i in clusters:
             seqs = []
             for j in i:
@@ -1121,11 +1162,10 @@ class IesRecords(object):
                 jcs.append({"positions": i, "seqs": seqs})
         return(jcs)
 
-
     def extractFlankingFromJcs(self, jcs, rname,
-            margin=100, lower_threshold=None, upper_threshold=None):
+                               margin=100, lower_threshold=None, upper_threshold=None):
         """Extract insert of interest and flanking region from mapped reads
-        
+
         Parameters
         ----------
         jcs : dict
@@ -1143,7 +1183,7 @@ class IesRecords(object):
             Maximum insert length, expressed as multiple of the median insert
             length. Sequences above this may be sequencing or mapping errors
             and are ignored.
-        
+
         Returns
         -------
         list
@@ -1153,48 +1193,54 @@ class IesRecords(object):
         coords = (min(jcs['positions']) - 1, max(jcs['positions']))
         details = jcs['seqs']
         alns = self._alnfile.fetch(rname, coords[0], coords[1])
-        
+
         if lower_threshold and upper_threshold:
             # Keeping only sequnences within a defined range of median insert length
             lenmedian = median([len(i['indelseq']) for i in jcs['seqs']])
             lowthreshd = lower_threshold * lenmedian
             uppthreshd = upper_threshold * lenmedian
-            details = [i for i in jcs['seqs'] if len(i['indelseq']) < uppthreshd and len(i['indelseq']) > lowthreshd]
+            details = [i for i in jcs['seqs'] if len(
+                i['indelseq']) < uppthreshd and len(i['indelseq']) > lowthreshd]
             if len(details) == 0:
-                logger.info(f"Length thresholding discarded all inserts at coords {str(coords[0])} {str(coords[1])}")
+                logger.info(
+                    f"Length thresholding discarded all inserts at coords {str(coords[0])} {str(coords[1])}")
                 logger.info("Insert lengths could be bimodally distributed")
 
         if len(details) > 0:
             # Key by query name
-            subsetqnames = { i['qname']: {'qstart': i['qstart'], 'qend': i['qend']} for i in details}
-            coords = min([i['rstart'] for i in details]), max([i['rend'] for i in details])
+            subsetqnames = {i['qname']: {
+                'qstart': i['qstart'], 'qend': i['qend']} for i in details}
+            coords = min([i['rstart'] for i in details]), max(
+                [i['rend'] for i in details])
             extractedseqs = []
             extractedids = []
             for i in alns:
                 if (not i.is_supplementary) and (not i.is_secondary) and (not i.is_unmapped):
                     if i.query_name in subsetqnames:
-                        start = max([subsetqnames[i.query_name]['qstart'] - margin, 0])
-                        end = min([subsetqnames[i.query_name]['qend'] + margin, i.query_length])
-                        insertplusmargins = i.seq[start : end]
+                        start = max(
+                            [subsetqnames[i.query_name]['qstart'] - margin, 0])
+                        end = min([subsetqnames[i.query_name]
+                                   ['qend'] + margin, i.query_length])
+                        insertplusmargins = i.seq[start: end]
                         if len(insertplusmargins) == 0:
                             print(f"problem at {i.query_name}")
                             print(i.cigarstring)
                         extractedseqs.append(insertplusmargins)
                         extractedids.append(i.query_name)
-            extractedrecs = [SeqRecord(Seq(extractedseqs[i]), id=extractedids[i]) for i in range(len(extractedseqs))]
+            extractedrecs = [SeqRecord(
+                Seq(extractedseqs[i]), id=extractedids[i]) for i in range(len(extractedseqs))]
             return(extractedrecs, coords)
         else:
             return(None, None)
 
-
     def spoaConsensusToFlanking(self, seqs, rname, rstart, rend, margin=100, mode=1):
         """Get consensus of subreads and align to flanking regions on reference
         genome
-        
+
         Use SPOA to generate consensus sequence of subreads (or subread
         fragments) and align the consensus against flanking regions on
         reference genome contig.
-        
+
         Parameters
         ----------
         seqs : list
@@ -1208,7 +1254,7 @@ class IesRecords(object):
         margin : int
             Length (bp) to left and right of rstart and rend to extract from
             reference sequence to align against the subreads consensus.
-        
+
         Returns
         -------
         dict
@@ -1221,28 +1267,27 @@ class IesRecords(object):
         start = max([rstart-margin, 0])
         end = min([rend + margin, len(self._refgenome[rname].seq)])
         extract = self._refgenome[rname].seq[start:end]
-        seqobj = SeqRecord(extract,id=rname)
+        seqobj = SeqRecord(extract, id=rname)
         fh = NamedTemporaryFile(suffix=".fasta", mode="w", delete=False)
         SeqIO.write([seqobj, cons], fh.name, "fasta")
         fh.close()
         # key differences in settings: gap opening and extension penalties have
         # been changed to encourage long continuous gaps, which are what we
         # want to find when aligning IES+ consensus vs. IES- reference
-        cons2 = subprocess.run(["spoa", 
-                                "-e 0", # gap extension penalty (defaul -6)
-                                "-g -16", # gap opening penalthy (default -8)
-                                "-r 1", # alignment mode (global)
-                                fh.name], 
+        cons2 = subprocess.run(["spoa",
+                                "-e 0",  # gap extension penalty (defaul -6)
+                                "-g -16",  # gap opening penalthy (default -8)
+                                "-r 1",  # alignment mode (global)
+                                fh.name],
                                capture_output=True).stdout.decode()
         cons2 = SeqIO.parse(StringIO(cons2), "fasta")
-        cons2 = {i.id : i for i in cons2}
+        cons2 = {i.id: i for i in cons2}
         os.remove(fh.name)
         return(cons2)
 
-
     def reportPutativeIesInsertSubreads(self, mininsbreaks, mindelbreaks,
-            margin=100):
-        #TODO implement for deletions
+                                        margin=100):
+        # TODO implement for deletions
         """Report putative IES inserts from subreads
 
         This function is called after self._insSeqDict has been produced by the
@@ -1278,38 +1323,52 @@ class IesRecords(object):
         for rname in self._insSeqDict:
             # Find insert junctions (start == end) from insSeqDict
             # Find clusters that are no more than 2 bp apart
-            juncs = [pos for pos in self._insSeqDict[rname] if pos in self._insSeqDict[rname][pos]]
+            juncs = [pos for pos in self._insSeqDict[rname]
+                     if pos in self._insSeqDict[rname][pos]]
             juncs = [int(i) for i in juncs]
-            clusters = get_clusters(juncs, "bp", 3) # TODO allow user to change this threshold
-            logger.info(f"Unfiltered insert clusters in contig {rname}: {str(len(clusters))}")
+            # TODO allow user to change this threshold
+            clusters = get_clusters(juncs, "bp", 3)
+            logger.info(
+                f"Unfiltered insert clusters in contig {rname}: {str(len(clusters))}")
             # Get clusters
-            jcss = self.getJuncClustersSeqs(clusters, rname, minseqs=mininsbreaks)
-            logger.info(f"Insert clusters with cov > {str(mininsbreaks)} in contig {rname}: {str(len(jcss))}")
+            jcss = self.getJuncClustersSeqs(
+                clusters, rname, minseqs=mininsbreaks)
+            logger.info(
+                f"Insert clusters with cov > {str(mininsbreaks)} in contig {rname}: {str(len(jcss))}")
             # Extract reads and assemble consensus
             for jcs in jcss:
-                extr, coords = self.extractFlankingFromJcs(jcs, rname, margin, 0.75, 1.25) # TODO allow user to change these thresholds
+                # TODO allow user to change these thresholds
+                extr, coords = self.extractFlankingFromJcs(
+                    jcs, rname, margin, 0.75, 1.25)
                 if extr and coords:
                     # logging.debug(f"contig {rname} coordinates {str(coords[0])} {str(coords[1])}")
-                    aln = self.spoaConsensusToFlanking(extr, rname, coords[0], coords[1], margin=100, mode=1)
-                    consseq, adjpos = findLongestInsert(aln, rname, coords[0]-margin)
+                    aln = self.spoaConsensusToFlanking(
+                        extr, rname, coords[0], coords[1], margin=100, mode=1)
+                    consseq, adjpos = findLongestInsert(
+                        aln, rname, coords[0]-margin)
                     # Complain if predicted insert location from findLongestInsert
                     # is more than 5 bp away from the approximate insert location
                     problem = None
                     if adjpos < coords[0] and abs(adjpos - coords[0]) > 5:
-                        logger.info(f"Predicted insert further than 5 bp from preliminary position for {rname}, {str(adjpos)}")
+                        logger.info(
+                            f"Predicted insert further than 5 bp from preliminary position for {rname}, {str(adjpos)}")
                         problem = 1
                     elif adjpos > coords[1] and abs(adjpos - coords[1]) > 5:
-                        logger.info(f"Predicted insert further than 5 bp from preliminary position for {rname}, {str(adjpos)}")
+                        logger.info(
+                            f"Predicted insert further than 5 bp from preliminary position for {rname}, {str(adjpos)}")
                         problem = 1
                     # Put together GFF entry
-                    gffpos = adjpos + 1 # GFF convention
+                    gffpos = adjpos + 1  # GFF convention
                     breakpointid = f"BREAK_POINTS_SUBREADS_{rname}_{str(gffpos)}_{str(len(consseq))}"
                     gfftype = "internal_eliminated_sequence_junction"
-                    attr = [f"ID={breakpointid}", f"IES_length={str(len(consseq))}"] # TODO: subread coverage, physical coverage, CIGAR
+                    # TODO: subread coverage, physical coverage, CIGAR
+                    attr = [f"ID={breakpointid}",
+                            f"IES_length={str(len(consseq))}"]
 
                     # Get average coverage of region of interest
                     if self._alnformat == "bam":
-                        readcov = self._alnfile.count(str(rname), coords[0], coords[1])
+                        readcov = self._alnfile.count(
+                            str(rname), coords[0], coords[1])
                         attr.append("average_coverage="+str(readcov))
                     # Provisional approximate IES retention score
                     # R = IES+ / (IES+ + IES-)
@@ -1318,22 +1377,24 @@ class IesRecords(object):
                         if gfftype == "internal_eliminated_sequence_junction":
                             provscore = round(len(extr)/readcov, 4)
 
-                    consseq = SeqRecord(Seq(consseq), id=breakpointid, description=";".join(attr)+";")
+                    consseq = SeqRecord(
+                        Seq(consseq), id=breakpointid, description=";".join(attr)+";")
                     # Find pointers if present
-                    gffpos, gffpos, pointerdict = self.reportAdjustPointers(rname, gffpos, gffpos, consseq, breakpointid)
+                    gffpos, gffpos, pointerdict = self.reportAdjustPointers(
+                        rname, gffpos, gffpos, consseq, breakpointid)
                     for i in pointerdict:
                         attr.append(f"{i}={str(pointerdict[i])}")
 
                     # Put together GFF entry
                     outarr = [str(rname),
-                            "MILRAA",
-                            gfftype,
-                            str(gffpos),
-                            str(gffpos),
-                            str(provscore),
-                            ".",
-                            ".",
-                            ";".join(attr)+";"]
+                              "MILRAA",
+                              gfftype,
+                              str(gffpos),
+                              str(gffpos),
+                              str(provscore),
+                              ".",
+                              ".",
+                              ";".join(attr)+";"]
 
                     if problem:
                         outseq_problem[consseq.id] = consseq

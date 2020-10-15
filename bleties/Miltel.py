@@ -42,19 +42,19 @@ def softclipped_seqs_from_bam(alnfile):
                 logger.debug(f"Processed {str(counter)} entries")
             rname = rec.reference_name
             qname = rec.query_name
-            qlen = rec.query_length # includes soft-clips but not hard-clips
+            qlen = rec.query_length  # includes soft-clips but not hard-clips
             opseqs = getCigarOpQuerySeqs(
-                        rec.query_sequence, # includes soft-clips but not hard-clips
-                        rec.cigartuples,
-                        rec.reference_start,
-                        target_op="S")
+                rec.query_sequence,  # includes soft-clips but not hard-clips
+                rec.cigartuples,
+                rec.reference_start,
+                target_op="S")
             if opseqs and len(opseqs) > 0:
                 for (seq, qstart, qend, rstart, rend) in opseqs:
                     out.append({
-                        "seq": seq, 
+                        "seq": seq,
                         "qname": qname,
                         "qlen": qlen,
-                        "qstart": qstart, # coordinates 0-based [)
+                        "qstart": qstart,  # coordinates 0-based [)
                         "qend": qend,
                         "rname": rname,
                         "rstart": rstart,
@@ -78,9 +78,9 @@ def find_telomeres(seq, telomere="ACACCCTA", minlength=24):
         Minimum length of consecutive telomeres to detect (bp)
     """
     ncrf_out = subprocess.run(
-            ["NCRF", f"telomere:{telomere}", f"--minlength={str(minlength)}"],
-            capture_output=True,
-            input=str.encode(seq))
+        ["NCRF", f"telomere:{telomere}", f"--minlength={str(minlength)}"],
+        capture_output=True,
+        input=str.encode(seq))
     return(ncrf_out)
 
 
@@ -109,20 +109,21 @@ def parse_NCRF_output(ncrf):
         lines = [line.split() for line in lines if not line.startswith("#")]
         lines = [line for line in lines if len(line) > 0]
         if len(lines) % 2 != 0:
-            logger.error("Number of NCRF output lines is not a multiple of two")
+            logger.error(
+                "Number of NCRF output lines is not a multiple of two")
         else:
             out = []
             for i in range(int(len(lines)/2)):
                 seqname = lines[i*2][0]
-                alncoords = lines[i*2][3] # e.g. 1234-2345
-                orientation = lines[i*2 + 1][0][-1] # last character is + or -
-                score = int(lines[i*2 + 1][2].split("=")[1]) # e.g. score=1234
+                alncoords = lines[i*2][3]  # e.g. 1234-2345
+                orientation = lines[i*2 + 1][0][-1]  # last character is + or -
+                score = int(lines[i*2 + 1][2].split("=")[1])  # e.g. score=1234
                 alnstart, alnend = [int(i) for i in alncoords.split("-")]
                 out.append({"seqname": seqname,
-                    "alnstart" : alnstart,
-                    "alnend" : alnend,
-                    "orientation" : orientation,
-                    "score" : score})
+                            "alnstart": alnstart,
+                            "alnend": alnend,
+                            "orientation": orientation,
+                            "score": score})
             return(out)
 
 
@@ -141,26 +142,23 @@ class Miltel(object):
         """
         self._alnfile = alnfile
         self._refgenome = refgenome
-        self._clippedseqs = None # Dict to store clipped seq parses
-        self._clippeddict = None # Dict to store clipped seq parses
-
+        self._clippedseqs = None  # Dict to store clipped seq parses
+        self._clippeddict = None  # Dict to store clipped seq parses
 
     def dump(self):
         """Data dump of Miltel object in JSON format"""
-        outstr = json.dumps({"clippedseqs": self._clippedseqs, 
-                             "_clippeddict": self._clippeddict}, 
-                            indent = 2)
+        outstr = json.dumps({"clippedseqs": self._clippedseqs,
+                             "_clippeddict": self._clippeddict},
+                            indent=2)
         return(outstr)
-
 
     def get_softclips(self):
         """Parse BAM file for softclipped reads"""
         self._clippedseqs = softclipped_seqs_from_bam(self._alnfile)
 
-
     def find_telomeres(self, telomere="ACACCCTA", min_telomere_length=24):
         """Rekey softclip_seqs_from_bam output to a dict organized by reference
-        
+
         Search for telomeres in softclip seqs and parse NCRF output
 
         This function should be called after get_softclips()
@@ -178,10 +176,10 @@ class Miltel(object):
             dict keyed by rname -> rstart -> clip_orientation
             for soft clips, assume that rstart == rend
         """
-        self._clippeddict = defaultdict( # rname
-                                lambda: defaultdict( # rstart
-                                    lambda: defaultdict( # clip_orientation
-                                        list)))
+        self._clippeddict = defaultdict(  # rname
+            lambda: defaultdict(  # rstart
+                lambda: defaultdict(  # clip_orientation
+                    list)))
         counter = 0
         for rec in self._clippedseqs:
             counter += 1
@@ -195,16 +193,19 @@ class Miltel(object):
                     orientation = "right"
                 if orientation:
                     # Find telomere sequence
-                    ncrf = find_telomeres(rec['seq'], telomere, min_telomere_length)
+                    ncrf = find_telomeres(
+                        rec['seq'], telomere, min_telomere_length)
                     ncrf_parse = parse_NCRF_output(ncrf)
                     if ncrf_parse:
                         rec['ncrf_parse'] = ncrf_parse
-                    self._clippeddict[rec['rname']][rec['rstart']][orientation].append(rec)
+                    self._clippeddict[rec['rname']
+                                      ][rec['rstart']][orientation].append(rec)
                 else:
-                    logger.warn(f"No clipping orientation found for softclip {str(rec)}")
+                    logger.warn(
+                        f"No clipping orientation found for softclip {str(rec)}")
             else:
-                logger.warn(f"Softclip with nonzero extent on reference, {str(rec)}")
-
+                logger.warn(
+                    f"Softclip with nonzero extent on reference, {str(rec)}")
 
     def report_CBS_GFF(self):
         """Call putative chromosome breakage sites junctions from rekeyed dict
@@ -230,7 +231,7 @@ class Miltel(object):
                     # closest to the boundary
                     for alnrec in rec['ncrf_parse']:
                         if orientation == "left":
-                            # clip on left of read, so check distance from end of 
+                            # clip on left of read, so check distance from end of
                             # alignment to the end of the softclipped segment
                             currgap = len(rec['seq']) - alnrec['alnend']
                         elif orientation == "right":
@@ -248,31 +249,32 @@ class Miltel(object):
                     out_aln_gaps.append(gap)
             if len(out_aln_gaps) > 0:
                 gffid = f"CBS_{rname}_{str(rstart+1)}_{orientation}"
-                telomere_sense = "_".join(report_list_modes(out_aln_orientations))
-                telomere_gap_average = round(sum(out_aln_gaps)/len(out_aln_gaps), 3)
+                telomere_sense = "_".join(
+                    report_list_modes(out_aln_orientations))
+                telomere_gap_average = round(
+                    sum(out_aln_gaps)/len(out_aln_gaps), 3)
                 telomere_senses = report_summary_string(out_aln_orientations)
                 telomere_gaps = report_summary_string(out_aln_gaps)
-                attrs=[f"ID={gffid}",
-                       f"orientation={orientation}",
-                       f"telomere_sense={telomere_sense}",
-                       f"telomere_gap_average={telomere_gap_average}",
-                       f"telomere_senses={telomere_senses}",
-                       f"telomere_gaps={telomere_gaps}"]
-                out.addEntry( # self, linearr, gffid
+                attrs = [f"ID={gffid}",
+                         f"orientation={orientation}",
+                         f"telomere_sense={telomere_sense}",
+                         f"telomere_gap_average={telomere_gap_average}",
+                         f"telomere_senses={telomere_senses}",
+                         f"telomere_gaps={telomere_gaps}"]
+                out.addEntry(  # self, linearr, gffid
                     [rname, "MILTEL", "chromosome_breakage_site",
-                     rstart+1, rstart+1, # Convert to 1-based coords for GFF # TODO verify that +1 should not apply here because softclipping is not ref consuming
+                     rstart+1, rstart+1,  # Convert to 1-based coords for GFF # TODO verify that +1 should not apply here because softclipping is not ref consuming
                      len(out_aln_gaps),
                      '.', '.',
                      ";".join(attrs)],
-                     gffid)
+                    gffid)
         return(out)
-
 
     def report_other_clips_GFF_fasta(self, min_clip_length=50):
         """Call other clipped sequences and call consensus of their sequences
 
         This function must be called after find_telomeres
-        
+
         Parameters
         ----------
         min_clip_length : int
@@ -305,20 +307,21 @@ class Miltel(object):
             elif len(seqs) > 1:
                 # Align with Muscle and get consensus sequence
                 # TODO decide if better to have dumb or gap consensus for our purposes
-                logger.debug(f"Consensus from {str(len(seqs))} seqs for {gffid}")
+                logger.debug(
+                    f"Consensus from {str(len(seqs))} seqs for {gffid}")
                 seqs_cons = alnFromSeqs(seqs)
                 seqs_cons.id = f"{gffid}_cons"
                 out_seqs.append(seqs_cons)
 
             if len(seqs) > 0:
-                attrs=[f"ID={gffid}",
-                       f"orientation={orientation}"]
-                out_gff.addEntry( # self, linearr, gffid
+                attrs = [f"ID={gffid}",
+                         f"orientation={orientation}"]
+                out_gff.addEntry(  # self, linearr, gffid
                     [rname, "MILTEL", "clip_junction",
-                     rstart+1, rstart+1, # Convert to 1-based coords for GFF # TODO verify that +1 should not apply here because softclipping is not ref consuming
-                     len(seqs), # Number of clipped segments over threshold
+                     rstart+1, rstart+1,  # Convert to 1-based coords for GFF # TODO verify that +1 should not apply here because softclipping is not ref consuming
+                     len(seqs),  # Number of clipped segments over threshold
                      '.', '.',
                      ";".join(attrs)],
-                     gffid)
+                    gffid)
 
         return(out_gff, out_seqs)
