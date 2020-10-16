@@ -19,32 +19,6 @@ Input data
  * Ciliate MAC genome assembly, Fasta format.
  * PacBio HiFi or CCS read library mapping onto that assembly, sorted/indexed
    BAM format; mapper should report valid CIGAR string and NM tag.
-
-<!--
-Arguments
----------
-
-### Inputs
-
-### Outputs
-
-### Reporting parameters
-
-### Other
--->
-
-Differences of long read to short read alignments
--------------------------------------------------
-
-MILRAA is a reimplementation of the MIRAA module of the original ParTIES
-pipeline. The original MIRAA was used for Illumina short read data, whereas
-MILRAA should be used with long read data. ParTIES MIRAA uses an initial
-Bowtie2 mapping step (local mode), then looks for breakpoints in the alignment,
-which are identified as insert (I), soft clip (S), or hard clip (H) operations
-in the CIGAR string of the alignment.
-
-The insert size for Illumina paired end read libraries is typically around 400
-bp, so on average each read-pair would span at most one IES. Most read pairs are
 unlikely to span a complete IES nor contain the entire IES sequence. In
 comparison, a PacBio long read with lengths 10 kbp or more may span multiple
 IESs, and the entire IES sequence can potentially be read out form the sequence.
@@ -101,8 +75,8 @@ gcgc|----------|taatccgc (MDS only)
 Notice the pointer sequence `TAAT` repeated in the left side in the IES, and to
 the right of the junction in the MDS.
 
-The first sequence (MDS + IES), when mapped onto the MDS sequence, would have the CIGAR
-string `4M10I8M`. 
+The first sequence (MDS + IES), when mapped onto the MDS sequence, would have
+the CIGAR string `4M10I8M`. 
 
 However, it is also possible to map it another way, with the CIGAR string
 `8M10I4M`. The `TAAT` sequence now lies on the right side in the IES, and to
@@ -143,18 +117,25 @@ CCS reads vs subreads
 ---------------------
 
 PacBio sequence data is typically reported as "subreads" (see [PacBio SMRT
-primer](https://pacbiofileformats.readthedocs.io/en/10.0/Primer.html)). The
-multiple subreads from a single ZMW can be used to generate a consensus sequence
-with higher accuracy than individual subreads, known as [circular consensus
-sequencing](https://ccs.how), or CCS.
+primer](https://pacbiofileformats.readthedocs.io/en/10.0/Primer.html)).
+Briefly, subreads in PacBio sequencing correspond to individual passes of a DNA
+molecule in a zero-mode waveguide (ZMW), where the sequencing adapters have
+already been removed from the sequence. Because a single molecule in a ZMW can
+undergo multiple sequencing passes, it can be represented by more than one
+subread in the sequencing data. For improving sequence quality, multiple passes
+are advantageous: the multiple subreads from a single ZMW can be used to
+generate a consensus sequence with higher accuracy than individual subreads,
+known as [circular consensus sequencing](https://ccs.how), or CCS.
 
 CCS reads are typically highly accurate (errors less than 1%), compared to
 subreads which can have error rates of 5-15%. However, to generate CCS reads,
 the sequencing depth of a library must be relatively high.
 
 CCS reads and subreads are handled differently by MILRAA to predict the
-positions of indels. This is chosen with the option `--type ccs` or `--type
-subreads` respectively.
+positions of indels. This is chosen with the option `--type ccs` (default) or
+`--type subreads` respectively.
+
+### IES junction position and consensus sequence
 
 With CCS reads, the insert position reported by the mapper is assumed to be
 accurate. The insert sequence from an individual CCS read is also assumed to be
@@ -181,9 +162,14 @@ than 5 bp away from the original coordinates, an error is reported; this may
 represent inserts where the flanking regions on some reads are not homologous to
 the reference, e.g. from mapping of paralogs or from sequencing errors.
 
-<!--
-ZMW reads vs subreads and calculation of coverage for subread mode
--->
+### Read coverage
+
+Because the number of subreads produced can differ substantially between ZMWs,
+it is preferable to count the physical molecules, represented by the individual
+ZMWs, rather than the subreads, to represent the read coverage. For CCS reads,
+each CCS read originates from a single ZMW, so the CCS coverage is used
+directly as the read coverage.
+
 
 Fuzzy IES length matching
 -------------------------
@@ -238,10 +224,18 @@ defined by the `--min_del_coverage` option) contain a deletion relative to the
 reference assembly. In the GFF3 file, these are reported with
 `internal_eliminated_sequence` in the `type` column.
 
+#### IES retention score
+
 The `score` column (column 6) reports the provisional IES retention score for
 that putative IES feature. The IES retention score is defined as `IES+ / (IES+ +
 IES-)` where `IES+` is the number of IES+ reads and `IES-` the number of IES-
 reads for a given IES feature, in the mapped reads.
+
+For subread mappings, the ZMW coverage is used to calculate the score, not the
+subread coverage. For CCS reads, each read corresponds to one ZMW so the CCS
+read coverage is used directly.
+
+#### Attributes column
 
 In addition, the `attributes` column (column 9) reports more information that is
 relevant to IES analysis. Attributes are formatted as `tag=value` pairs,
@@ -268,8 +262,19 @@ delimited by semicolons `;`.
  * `pp_pointer_start`, `pp_pointer_end` - Adjusted start and end coordinates
      relative to a maximized pointer, if present.
 
+The following fields are reported when the mapping data are from subreads, i.e.
+with the option `--type subread`:
+
+ * `IES_subread_coverage` - Number of subreads mapping to this location
+     containing the IES.
+ * `IES_zmw_coverage` - Number of ZMWs mapping to this location containing the
+     IES.
+ * `average_subread_coverage` - Total number of subreads mapping to this
+     location.
+ * `average_zmw_coverage` - Total number of ZMWs mapping to this location.
+
 The output GFF3 file from MILRAA can be used to plot graphical summary of
-predicted IESs with the script `scripts/milraa_gff_ies_plot.py`.
+predicted IESs with the script `milraa_plot.py`.
 
 
 ### MILRAA Fasta output

@@ -48,8 +48,12 @@ Coordinates where clipped sequence segments contain telomeres are called
 putative `chromosome_breakage_site` in the `type` column (column 3). Because
 this is a feature of zero length, the `start` and `end` fields (columns 4 and 5)
 are equal, and the junction is to the right of the coordinate, following GFF
-convention. The `score` (column 6) counts the number of telomere-bearing reads
-clipped at that specific coordinate.
+convention. 
+
+The `score` (column 6) reports the breakage score, which is the number of
+telomere-bearing reads clipped at that specific coordinate, divided by the
+total read coverage at that coordinate (as reported in the `average_coverage`
+attribute, described below).
 
 The `attributes` (column 9) contain the following fields:
 
@@ -70,7 +74,6 @@ The `attributes` (column 9) contain the following fields:
  * `telomere_gaps` - String reporting the gap distances for each clipped read.
      For example if there were 2 reads with gap 0 and one with gap 4, then the
      string is `telomere_gaps=0*2 4*1`
-<!-- not yet implemented properly
- * `match_coverage` - Number of reads spanning this coordinate with an `M`
-     operation.
--->
+ * `average_coverage` - Total read coverage at the coordinate, excluding
+     secondary and supplementary mappings. Calculated the same way as the
+     corresponding field in MILRAA output.

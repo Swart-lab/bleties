@@ -75,4 +75,4 @@ statistics per read. The table has the following fields:
    where the read does not contain an insert (i.e. IES excised)
 
 The TSV file can be used as input to plot a graphical summary of the per-read
-IES retention scores, with the script `scripts/milcor_plot.py`.
+IES retention scores, with the script `milcor_plot.py`.
