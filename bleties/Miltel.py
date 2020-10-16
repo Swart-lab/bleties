@@ -154,6 +154,7 @@ class Miltel(object):
 
     def get_softclips(self):
         """Parse BAM file for softclipped reads"""
+        # TODO: do this for only a defined region of the alignment
         self._clippedseqs = softclipped_seqs_from_bam(self._alnfile)
 
     def find_telomeres(self, telomere="ACACCCTA", min_telomere_length=24):
@@ -255,16 +256,25 @@ class Miltel(object):
                     sum(out_aln_gaps)/len(out_aln_gaps), 3)
                 telomere_senses = report_summary_string(out_aln_orientations)
                 telomere_gaps = report_summary_string(out_aln_gaps)
+                readcov = self._alnfile.count(
+                    str(rname), start=int(rstart), stop=int(rstart)+1,
+                    read_callback=lambda r: (not r.is_supplementary) and (not r.is_secondary))
+                breakscore = None
+                if readcov > 0:
+                    # Round to 3 sig figs
+                    breakscore = float('%.3g' % float(len(out_aln_gaps)/readcov))
+                # attr.append(f"average_coverage={str(readcov)}")
                 attrs = [f"ID={gffid}",
                          f"orientation={orientation}",
                          f"telomere_sense={telomere_sense}",
                          f"telomere_gap_average={telomere_gap_average}",
                          f"telomere_senses={telomere_senses}",
-                         f"telomere_gaps={telomere_gaps}"]
+                         f"telomere_gaps={telomere_gaps}",
+                         f"average_coverage={str(readcov)}"]
                 out.addEntry(  # self, linearr, gffid
                     [rname, "MILTEL", "chromosome_breakage_site",
                      rstart+1, rstart+1,  # Convert to 1-based coords for GFF # TODO verify that +1 should not apply here because softclipping is not ref consuming
-                     len(out_aln_gaps),
+                     str(breakscore),
                      '.', '.',
                      ";".join(attrs)],
                     gffid)
