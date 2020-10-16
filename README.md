@@ -26,6 +26,12 @@ conda activate bleties
 pip install .
 ```
 
+Run tests after installation:
+
+```bash
+python -m unittest -v bleties.TestModule
+```
+
 
 Usage
 -----

@@ -23,10 +23,16 @@ Conda environment with the specified dependencies, then install bleties locally
 with `pip`:
 
 ```bash
+cd /path/to/bleties # path to this folder
 conda env create -f env.yaml -n bleties
 conda activate bleties
-cd /path/to/bleties # path to this folder
-pip install -e .
+pip install .
+```
+
+Run tests after installation:
+
+```bash
+python -m unittest -v bleties.TestModule
 ```
 
 
