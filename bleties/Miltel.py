@@ -19,12 +19,19 @@ from bleties.Milraa import alnFromSeqs
 logger = logging.getLogger("Miltel")
 
 
-def softclipped_seqs_from_bam(alnfile):
+def softclipped_seqs_from_bam(alnfile, ctg=None, start=None, stop=None):
     """Get softclipped query sequence segments from BAM mappings
 
     Parameters
     ----------
     alnfile : pysam.AlignmentFile
+        Alignment to be processed
+    ctg : str
+        Name of contig to be processed. If None, then process entire alignment.
+    start : int
+    stop : int
+        Coordinates in the contig to be processed. If None, then process entire
+        contig. 0-based python coordinates.
 
     Returns
     -------
@@ -35,7 +42,7 @@ def softclipped_seqs_from_bam(alnfile):
     """
     out = []
     counter = 0
-    for rec in alnfile.fetch():
+    for rec in alnfile.fetch(ctg, start, stop):
         if (not rec.is_supplementary) and (not rec.is_unmapped) and (not rec.is_secondary):
             counter += 1
             if counter % 1000 == 0:
@@ -152,10 +159,11 @@ class Miltel(object):
                             indent=2)
         return(outstr)
 
-    def get_softclips(self):
+    def get_softclips(self, ctg=None, start=None, stop=None):
         """Parse BAM file for softclipped reads"""
         # TODO: do this for only a defined region of the alignment
-        self._clippedseqs = softclipped_seqs_from_bam(self._alnfile)
+        self._clippedseqs = softclipped_seqs_from_bam(
+            self._alnfile, ctg, start, stop)
 
     def find_telomeres(self, telomere="ACACCCTA", min_telomere_length=24):
         """Rekey softclip_seqs_from_bam output to a dict organized by reference

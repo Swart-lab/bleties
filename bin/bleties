@@ -262,6 +262,15 @@ miltel_parser = subparsers.add_parser(
 # Input arguments
 miltel_parser.add_argument(
     "--bam", help="BAM file containing mapping, must be sorted and indexed")
+miltel_parser.add_argument(
+    "--contig", default=None, type=str,
+    help="Only process alignments from this contig")
+miltel_parser.add_argument(
+    "--start", default=None, type=int,
+    help="Start coordinate (1-based, inclusive) from contig to process")
+miltel_parser.add_argument(
+    "--stop", default=None, type=int,
+    help="Stop coordinate (1-based, inclusive) from contig to process")
 
 miltel_parser.add_argument(
     "--telomere", type=str, default="ACACCCTA",

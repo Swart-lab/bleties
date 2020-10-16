@@ -415,7 +415,11 @@ def miltel(args):
 
     logger.info("Getting softclipped sequences from aligned reads")
     cbscalls = Miltel.Miltel(alnfile, None)  # initialize Miltel object
-    cbscalls.get_softclips()
+    if args.contig:
+        logger.info(f"Processing only reads mapping to contig {args.contig}")
+        if args.start or args.stop:
+            logger.info(f"from {str(args.start)} : {str(args.stop)}")
+    cbscalls.get_softclips(args.contig, args.start, args.stop)
 
     logger.info(
         f"Searching for telomere repeats of {args.telomere} at least {str(args.min_telomere_length)} bp long, using NCRF")
