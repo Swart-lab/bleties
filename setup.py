@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='bleties',
-    version='0.1.3',
+    version='0.1.4',
     description='IES analysis in ciliate genomes with PacBio long reads',
     author='Brandon Seah',
     author_email='kb.seah@tuebingen.mpg.de',
