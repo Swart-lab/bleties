@@ -263,6 +263,10 @@ miltel_parser = subparsers.add_parser(
 miltel_parser.add_argument(
     "--bam", help="BAM file containing mapping, must be sorted and indexed")
 miltel_parser.add_argument(
+    "--ref",
+    help="""
+    FASTA file containing genomic contigs used as reference for the mapping""")
+miltel_parser.add_argument(
     "--contig", default=None, type=str,
     help="Only process alignments from this contig")
 miltel_parser.add_argument(

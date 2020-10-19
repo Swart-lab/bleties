@@ -425,7 +425,7 @@ class Gff(object):
         # Check that GFF line has only nine fields
         if len(linearr) != 9:
             raise Exception(
-                'GFF3 input encountered with incorrect number of fields')
+                f'GFF3 input encountered with incorrect number of fields: {linearr}')
         idval = ""
         idsearch = re.search(r"ID=([^;]+);", linearr[8])
         if idsearch:
@@ -550,7 +550,7 @@ class Gff(object):
         """
         for gffid in gff:
             if gffid not in self._gffDict:
-                self.addEntry(gffid, gff.getEntry(gffid))
+                self.addEntry(gff.getEntry(gffid), gffid)
             else:
                 raise Exception(
                     f"Attempting to merge two Gff objects with same ID {gffid} present in both")

@@ -96,6 +96,8 @@ def parse_NCRF_output(ncrf):
 
     Assumes NCRF output without --positionalevents option
 
+    NCRF output coordinates are 0-based end-exclusive
+
     Parameters
     ----------
     ncrf : byte
@@ -151,6 +153,7 @@ class Miltel(object):
         self._refgenome = refgenome
         self._clippedseqs = None  # Dict to store clipped seq parses
         self._clippeddict = None  # Dict to store clipped seq parses
+        self._reftelodict = None  # Dict to store ref telomere parses
 
     def dump(self):
         """Data dump of Miltel object in JSON format"""
@@ -161,7 +164,6 @@ class Miltel(object):
 
     def get_softclips(self, ctg=None, start=None, stop=None):
         """Parse BAM file for softclipped reads"""
-        # TODO: do this for only a defined region of the alignment
         self._clippedseqs = softclipped_seqs_from_bam(
             self._alnfile, ctg, start, stop)
 
@@ -215,6 +217,44 @@ class Miltel(object):
             else:
                 logger.warn(
                     f"Softclip with nonzero extent on reference, {str(rec)}")
+
+    def find_telomeres_ref(self, ctg=None, telomere="ACACCCTA", min_telomere_length=24):
+        """Find telomere sequences in reference genome assembly
+
+        Parameters
+        ----------
+        ctg : str
+            Name of contig to search, if None, then search all
+        telomere : str
+            Telomere sequence (5') to search
+        min_telomere_length : int
+            Minimum telomere alignment length to count
+        """
+        self._reftelodict = defaultdict(list) # key: rname
+            # list of dicts with following keys:
+            # keys: seqname alnstart alnend telomere orientation score
+        rnames = list(self._refgenome.keys())
+        # If only one contig specified, check that it is in the reference
+        if ctg:
+            if ctg in rnames:
+                rnames = [ctg]
+            else:
+                logger.warn(f"Contig {ctg} not found in reference genome headers")
+        for rname in rnames:
+            logger.debug(f"Searching for telomeres on reference contig {rname}")
+            ncrf = find_telomeres(
+                str(self._refgenome[rname].seq), telomere, min_telomere_length)
+            ncrf_parse = parse_NCRF_output(ncrf)
+            if ncrf_parse:
+                logger.info(
+                    f"{str(len(ncrf_parse))} telomere regions found on contig {rname}")
+                # rename seqname to rname
+                for rec in ncrf_parse:
+                    rec['seqname'] = rname
+                    rec['telomere'] = telomere
+                self._reftelodict[rname] = ncrf_parse
+            else:
+                logger.info(f"No telomeres found on contig {rname}")
 
     def report_CBS_GFF(self):
         """Call putative chromosome breakage sites junctions from rekeyed dict
@@ -281,11 +321,35 @@ class Miltel(object):
                          f"average_coverage={str(readcov)}"]
                 out.addEntry(  # self, linearr, gffid
                     [rname, "MILTEL", "chromosome_breakage_site",
-                     rstart+1, rstart+1,  # Convert to 1-based coords for GFF # TODO verify that +1 should not apply here because softclipping is not ref consuming
+                     rstart+1, rstart+1,  # Convert to 1-based coords for GFF: +1 should not apply here because softclipping is not ref consuming
                      str(breakscore),
                      '.', '.',
                      ";".join(attrs)],
                     gffid)
+        return(out)
+
+    def report_ref_telomeres(self):
+        """Report telomeric repeats found on reference genome to GFF3
+
+        Returns
+        -------
+        Gff
+            Feature table for telomeres found by NCRF
+        """
+        out = Gff()
+        if self._reftelodict:
+            for rname in self._reftelodict:
+                for rec in self._reftelodict[rname]:
+                    gffid = f"telomere_{rname}_{str(rec['alnstart'])}_{str(rec['alnend'])}"
+                    attrs = [f"ID={gffid}",
+                             f"telomere={rec['telomere']}"]
+                    out.addEntry(
+                        [rname, "NCRF", "telomere",
+                         rec['alnstart']+1, rec['alnend'],
+                         rec['score'], rec['orientation'], ".",
+                         ";".join(attrs)],
+                        gffid)
+            # keys: seqname alnstart alnend telomere orientation score
         return(out)
 
     def report_other_clips_GFF_fasta(self, min_clip_length=50):
@@ -336,7 +400,7 @@ class Miltel(object):
                          f"orientation={orientation}"]
                 out_gff.addEntry(  # self, linearr, gffid
                     [rname, "MILTEL", "clip_junction",
-                     rstart+1, rstart+1,  # Convert to 1-based coords for GFF # TODO verify that +1 should not apply here because softclipping is not ref consuming
+                     rstart+1, rstart+1,  # Convert to 1-based coords for GFF: +1 should not apply here because softclipping is not ref consuming
                      len(seqs),  # Number of clipped segments over threshold
                      '.', '.',
                      ";".join(attrs)],

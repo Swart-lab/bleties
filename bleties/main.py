@@ -404,17 +404,16 @@ def milcor(args):
 
 
 def miltel(args):
-    # TODO: Add Ref genome, for searching of clipped sequences
     logger = logging.getLogger("main.miltel")
     logger.info(f"BleTIES {__version__}")
     logger.info("Started BleTIES MILTEL")
     logger.info("Command line:")
     logger.info(" ".join(sys.argv))
 
-    alnfile = read_bam_ref(args.bam)
+    alnfile, refgenome = read_bam_ref(args.bam, args.ref)
 
     logger.info("Getting softclipped sequences from aligned reads")
-    cbscalls = Miltel.Miltel(alnfile, None)  # initialize Miltel object
+    cbscalls = Miltel.Miltel(alnfile, refgenome)  # initialize Miltel object
     if args.contig:
         logger.info(f"Processing only reads mapping to contig {args.contig}")
         if args.start or args.stop:
@@ -425,6 +424,14 @@ def miltel(args):
         f"Searching for telomere repeats of {args.telomere} at least {str(args.min_telomere_length)} bp long, using NCRF")
     cbscalls.find_telomeres(args.telomere, args.min_telomere_length)
     cbscalls_gff = cbscalls.report_CBS_GFF()
+
+    logger.info(
+        f"Searching for telomeres in reference contigs file {args.ref}")
+    cbscalls.find_telomeres_ref(
+        args.contig, args.telomere, args.min_telomere_length)
+    cbscalls_refgff = cbscalls.report_ref_telomeres()
+    # Combine into CBS annotations
+    cbscalls_gff.combineGff(cbscalls_refgff)
 
     logger.info(
         f"Writing chromosome breakage sites to file {args.out}.miltel.telomeric.gff3")
