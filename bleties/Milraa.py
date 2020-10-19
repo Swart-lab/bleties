@@ -1389,7 +1389,6 @@ class IesRecords(object):
                     gffpos = adjpos + 1  # GFF convention
                     breakpointid = f"BREAK_POINTS_SUBREADS_{rname}_{str(gffpos)}_{str(len(consseq))}"
                     gfftype = "internal_eliminated_sequence_junction"
-                    # TODO: CIGAR
                     extrzmwcov = subreadNamesToZmwCoverage(
                         [r.id for r in extr])
                     attr = [f"ID={breakpointid}",
@@ -1399,7 +1398,8 @@ class IesRecords(object):
                     # Get average coverage of region of interest
                     if self._alnformat == "bam":
                         regreads = self._alnfile.fetch(
-                            str(rname), coords[0], coords[1])
+                            str(rname), coords[0], coords[1]+1)
+                        # plus one because coordinates are end-exclusive
                         regnames = [r.query_name for r in regreads
                                     if (not r.is_supplementary)
                                     and (not r.is_secondary)]
@@ -1410,9 +1410,13 @@ class IesRecords(object):
                     # Provisional approximate IES retention score
                     # R = IES+ / (IES+ + IES-)
                     # here the denominator is simply average coverage
+                    provscore = None
                     if readcov:
                         if gfftype == "internal_eliminated_sequence_junction":
                             provscore = round(extrzmwcov/zmwcov, 4)
+                    else:
+                        logger.warn(
+                            f"Region {rname} {str(coords[0])} {str(coords[1])} lacks read coverage")
 
                     consseq = SeqRecord(
                         Seq(consseq), id=breakpointid, description=";".join(attr)+";")
