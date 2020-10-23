@@ -97,7 +97,7 @@ def milraa(args):
     iesrecords.findPutativeIes(args.min_ies_length,
                                args.contig, args.start, args.stop)
     if args.dump:
-        logger.info("Dumping data in JSON format to STDOUT")
+        logger.info(f"Dumping data in JSON format to file {args.out}.dump")
         with open(f"{args.out}.dump", "w") as fh:
             # sys.stderr.write(str(iesrecords) + "\n") # Print summary of IesRecords object
             fh.write(iesrecords.dump())  # Dump data to check
