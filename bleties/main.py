@@ -26,6 +26,8 @@ def check_env():
     dep_vers['pysam'] = pysam.__version__
     dep_vers['biopython'] =  biopython_v
     # Each program reports its version string differently
+    dep_vers['htslib'] = run(['htsfile','--version'], capture_output=True).stdout.decode().split("\n")[0]
+    dep_vers['htslib'] = re.search(r"\(htslib\) (\S+)", dep_vers['htslib']).group(1)
     dep_vers['spoa'] = run(['spoa','--version'], capture_output=True).stdout.decode().rstrip()
     dep_vers['NCRF'] = run(['NCRF','--version'], capture_output=True).stderr.decode().split("\n")[0]
     dep_vers['NCRF'] = re.search(r"version (\S+)", dep_vers['NCRF']).group(1)
