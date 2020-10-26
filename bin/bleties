@@ -15,6 +15,9 @@ parser.add_argument(
     "--log", default="bleties.log", help="Path to write log file")
 parser.add_argument(
     "-v", "--version", action="version", version=f"BleTIES {__version__}")
+parser.add_argument(
+    "--check_env", action="store_true",
+    help="Print versions of dependencies and exit")
 subparsers = parser.add_subparsers()
 
 # MILRAA -----------------------------------------------------------------------
@@ -358,6 +361,10 @@ insert_parser.set_defaults(func=main.insert)
 
 # Parse arguments --------------------------------------------------------------
 args = parser.parse_args()
+if args.check_env:
+    print("Dependencies:")
+    print("\n".join([f" - {dep}" for dep in main.check_env()]))
+    exit()
 
 # Logging
 logging.basicConfig(

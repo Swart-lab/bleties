@@ -6,15 +6,42 @@ import logging
 import pysam
 import json
 import statistics as stats
+from subprocess import run
 from scipy.stats import mannwhitneyu
 from scipy.stats import ttest_ind
 from collections import defaultdict
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
+from Bio import __version__ as biopython_v
 from bleties import Milraa, Milret, Milcor, Miltel, Insert
 from bleties import __version__
 from bleties import SharedFunctions
+
+
+def check_env():
+    """Report version numbers of dependencies"""
+    # Get versions
+    dep_vers = {}
+    dep_vers['pysam'] = pysam.__version__
+    dep_vers['biopython'] =  biopython_v
+    # Each program reports its version string differently
+    dep_vers['spoa'] = run(['spoa','--version'], capture_output=True).stdout.decode().rstrip()
+    dep_vers['NCRF'] = run(['NCRF','--version'], capture_output=True).stderr.decode().split("\n")[0]
+    dep_vers['NCRF'] = re.search(r"version (\S+)", dep_vers['NCRF']).group(1)
+    dep_vers['muscle'] = run(['muscle','-version'], capture_output=True).stdout.decode().rstrip()
+    dep_vers['muscle'] = re.search(r"v\S+", dep_vers['muscle']).group(0)
+    # Get paths
+    dep_paths = {}
+    for prog in ['spoa', 'NCRF', 'muscle']:
+        dep_paths[prog] = run(['which',prog], capture_output=True).stdout.decode().rstrip()
+    out = []
+    for prog in dep_vers:
+        if prog in dep_paths:
+            out.append(f"{prog}: {dep_vers[prog]} at {dep_paths[prog]}")
+        else:
+            out.append(f"{prog}: {dep_vers[prog]}")
+    return(out)
 
 
 def read_bam_ref(bam, fasta=None):
@@ -78,12 +105,20 @@ def read_bam_ref(bam, fasta=None):
         return(alnfile)
 
 
-def milraa(args):
-    logger = logging.getLogger("main.milraa")
+def run_boilerplate(logger):
     logger.info(f"BleTIES {__version__}")
-    logger.info("Started BleTIES MILRAA")
+    logger.info("Dependencies: ")
+    for dep in check_env():
+        logger.info(f" - {dep}")
     logger.info("Command line:")
     logger.info(" ".join(sys.argv))
+
+
+def milraa(args):
+    logger = logging.getLogger("main.milraa")
+    run_boilerplate(logger)
+    logger.info("Started BleTIES MILRAA")
+
     # Read input files
     alnfile, refgenome = read_bam_ref(args.bam, args.ref)
     # Initialize new IesRecords object to store putative IESs
@@ -184,10 +219,8 @@ def milraa(args):
 
 def miser(args):
     logger = logging.getLogger("main.miser")
-    logger.info(f"BleTIES {__version__}")
+    run_boilerplate(logger)
     logger.info("Started BleTIES MISER")
-    logger.info("Command line:")
-    logger.info(" ".join(sys.argv))
 
     # Read input files
     alnfile, refgenome = read_bam_ref(args.bam, args.ref)
@@ -310,10 +343,8 @@ def miser(args):
 
 def milret(args):
     logger = logging.getLogger("main.milret")
-    logger.info(f"BleTIES {__version__}")
+    run_boilerplate(logger)
     logger.info("Started BleTIES MILRET")
-    logger.info("Command line:")
-    logger.info(" ".join(sys.argv))
 
     # Read BAM file - SAM not supported because we need random access
     alnfile = read_bam_ref(args.bam)
@@ -347,10 +378,8 @@ def milret(args):
 
 def milcor(args):
     logger = logging.getLogger("main.milcor")
-    logger.info(f"BleTIES {__version__}")
+    run_boilerplate(logger)
     logger.info("Started BleTIES MILCOR")
-    logger.info("Command line:")
-    logger.info(" ".join(sys.argv))
 
     # Read BAM file - SAM not supported because we need random access
     alnfile = read_bam_ref(args.bam)
@@ -408,10 +437,8 @@ def milcor(args):
 
 def miltel(args):
     logger = logging.getLogger("main.miltel")
-    logger.info(f"BleTIES {__version__}")
+    run_boilerplate(logger)
     logger.info("Started BleTIES MILTEL")
-    logger.info("Command line:")
-    logger.info(" ".join(sys.argv))
 
     alnfile, refgenome = read_bam_ref(args.bam, args.ref)
 
@@ -467,10 +494,8 @@ def miltel(args):
 
 def insert(args):
     logger = logging.getLogger("main.insert")
-    logger.info(f"BleTIES {__version__}")
+    run_boilerplate(logger)
     logger.info("Started BleTIES Insert")
-    logger.info("Command line:")
-    logger.info(" ".join(sys.argv))
 
     logger.info("Reading input files")
     refgenome = SeqIO.to_dict(SeqIO.parse(args.ref, "fasta"))
