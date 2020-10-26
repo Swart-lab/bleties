@@ -90,6 +90,27 @@ milraa_parser.add_argument(
     Not yet tested extensively.
     """)
 
+# Params for subreads method
+milraa_parser.add_argument(
+    "--subreads_flank_len", default=100, type=int,
+    help="""
+    Length of flanking regions to extract on sides of insert from subreads,
+    before taking consensus of flanking + insert to realign to reference.
+    """)
+milraa_parser.add_argument(
+    "--subreads_pos_max_cluster_dist", default=2, type=int,
+    help="""
+    In subreads mode, max distance (bp) between inserts reported by the mapper
+    to report as a single cluster
+    """)
+milraa_parser.add_argument(
+    "--subreads_cons_len_threshold", default=0.25, type=float,
+    help="""
+    In subreads mode, max proportional difference in length of extracted
+    sequences in a cluster from median length to accept for sequences to
+    generate consensus
+    """)
+
 # Others
 milraa_parser.add_argument(
     "--dump", action="store_true",

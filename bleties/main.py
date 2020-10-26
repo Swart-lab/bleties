@@ -111,7 +111,9 @@ def milraa(args):
         logger.info(
             "Finding coordinates and consensus sequences of IESs from subread mappings")
         (iesgff, iesseq, iesgff_prob, iesseq_prob) = iesrecords.reportPutativeIesInsertSubreads(
-            args.min_break_coverage, args.min_del_coverage)
+            args.min_break_coverage, args.min_del_coverage,
+            args.subreads_flank_len, args.subreads_pos_max_cluster_dist,
+            args.subreads_cons_len_threshold)
 
     # Output files
     # Write gff version header and command line as comment

@@ -1352,7 +1352,8 @@ class IesRecords(object):
             return(None)
 
     def reportPutativeIesInsertSubreads(self, mininsbreaks, mindelbreaks,
-                                        margin=100):
+                                        margin=100, max_cluster_dist=2,
+                                        len_threshold=0.25):
         # TODO implement for deletions
         """Report putative IES inserts from subreads
 
@@ -1370,6 +1371,17 @@ class IesRecords(object):
             Length of flanking sequence (bp) to extract around insert position
             from reads for assembling consensus sequence, to anchor the
             consensus afterwards by alignment to the reference.
+        max_cluster_dist : int
+            The first step is to look for inserts reported by the mapper that
+            cluster together. This parameter sets the maximum distance (in bp)
+            between insert coordinates to consider as part of the same cluster.
+        len_threshold : float
+            For the extracted sequences used to generate consensus, keep only
+            those that are within a specific range of the median length. This
+            is similar to the length filtering in PacBio CCS pipeline. The
+            value should be a float between 0 and 1. For example if
+            len_threshold is 0.25, then only sequences between 0.75 and 1.25
+            times the median are used to generate consensus.
 
         Returns
         -------
@@ -1392,8 +1404,8 @@ class IesRecords(object):
             juncs = [pos for pos in self._insSeqDict[rname]
                      if pos in self._insSeqDict[rname][pos]]
             juncs = [int(i) for i in juncs]
-            # TODO allow user to change this threshold
-            clusters = get_clusters(juncs, "bp", 3)
+            # + 1 to max_cluster_dist because get_clusters is end-exclusive
+            clusters = get_clusters(juncs, "bp", max_cluster_dist + 1)
             logger.info(
                 f"Unfiltered insert clusters in contig {rname}: {str(len(clusters))}")
             # Get clusters
@@ -1403,9 +1415,10 @@ class IesRecords(object):
                 f"Insert clusters with cov > {str(mininsbreaks)} in contig {rname}: {str(len(jcss))}")
             # Extract reads and assemble consensus
             for jcs in jcss:
-                # TODO allow user to change these thresholds
+                # Check that extracted insert + flanking sequences are all
+                # within len_threshold of the median length
                 extr, coords = self.extractFlankingFromJcs(
-                    jcs, rname, margin, 0.75, 1.25)
+                    jcs, rname, margin, 1.0-len_threshold, 1.0+len_threshold)
                 aln = None
                 if extr and coords:
                     # logging.debug(f"contig {rname} coordinates {str(coords[0])} {str(coords[1])}")
