@@ -220,7 +220,8 @@ def miser(args):
             iesgff.getValue(bpid, 'seqid'),
             int(iesgff.getValue(bpid, 'start')),
             int(iesgff.getValue(bpid, 'end')),
-            int(iesgff.getAttr(bpid, 'IES_length'))
+            int(iesgff.getAttr(bpid, 'IES_length')),
+            int(args.min_ies_length)
         )
         # Perform test of mismatch % if more than 2 reads with inserts
         # (otherwise stdev meaningless)

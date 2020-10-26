@@ -261,8 +261,6 @@ def getPointers(seq, start, end, iesseq, name):
     # check left of IES
     i = 0
     while iesseq[i] == seq[end+i]:
-        # print(f"checkleft {name} {seq} {str(i)} {iesseq[i]} {seq[end+i]}") # for debugging
-        # print(iesseq)
         leftcheck += iesseq[i]
         i += 1
         # break out of loop if the next position runs off edge
@@ -275,7 +273,6 @@ def getPointers(seq, start, end, iesseq, name):
     elif indel == "D":
         refstart = start - 1
     while iesseq[i] == seq[refstart+i]:
-        # print(f"checkright {name} {seq} {str(i)} {iesseq[i]} {seq[refstart+i]}") # for debugging
         rightcheck = iesseq[i] + rightcheck
         i -= 1
         # break out of loop if next position runs off edge
@@ -563,6 +560,30 @@ def subreadNamesToZmwCoverage(qnames):
     zmwnames = ["/".join(n.split("/")[0:2]) for n in qnames]
     zmwnames = set(zmwnames)
     return(len(zmwnames))
+
+
+def alnRemoveGapOnlyCols(aln):
+    """Remove gap-only columns from a Bio.Align object
+
+    Parameters
+    ----------
+    aln : Bio.Align
+        Alignment to check
+
+    Returns
+    -------
+    Bio.Align
+        Alignment without the gap only columns
+    """
+    alninfo = AlignInfo.SummaryInfo(aln)
+    alncons = str(alninfo.gap_consensus(threshold=1))
+    gapcols = [hit.span() for hit in re.finditer(r"\-+", alncons)]
+    notgaps = get_not_gaps(0, len(alncons), gapcols)
+    alnnogaps = aln[:,notgaps[0][0]:notgaps[0][1]]
+    if len(notgaps) > 1:
+        for i in range(1,len(notgaps)):
+            alnnogaps = alnnogaps + aln[:, notgaps[i][0]:notgaps[i][1]]
+    return(alnnogaps)
 
 
 class IesRecords(object):
@@ -1101,7 +1122,8 @@ class IesRecords(object):
         alnconsrec = SeqRecord(alncons)
         return(alnconsrec)
 
-    def reportIndelReadMismatchPc(self, ctg, indelstart, indelend, indellen):
+    def reportIndelReadMismatchPc(
+            self, ctg, indelstart, indelend, indellen, minlength):
         """Report sequence mismatch % of query reads containing indel at a
         specific position vs. reads without indel.
         This is to flag indels that may originate from paralogs and hence are
@@ -1117,6 +1139,8 @@ class IesRecords(object):
             End position, 1 based
         indellen : int
             Length of indel
+        minlength : int
+            Minimum length of putative IES insert to allow
 
         Returns
         -------
@@ -1126,7 +1150,6 @@ class IesRecords(object):
                     at target position
             non_mm -- list of floats, mismatch % of query reads without indel at pos
         """
-        MIN_IES_LEN = 10                                                        # TODO: replace magic number
         # GFF allows start==end, but pysam does not recognise
         dummyend = indelend
         if indelend == indelstart:
@@ -1142,7 +1165,7 @@ class IesRecords(object):
         # for each segment, check if it contains indel at position of interest
         for seg in segs:
             indels = getIndels(seg.cigarstring, int(
-                seg.reference_start), MIN_IES_LEN, seg.query_sequence)
+                seg.reference_start), minlength, seg.query_sequence)
             indelcoords = set([(int(indel[0]), int(indel[1]))
                                for indel in indels])
             # number of mismatchs / query length * 100 pc
@@ -1231,8 +1254,8 @@ class IesRecords(object):
                 i['indelseq']) < uppthreshd and len(i['indelseq']) > lowthreshd]
             if len(details) == 0:
                 logger.info(
-                    f"Length thresholding discarded all inserts at coords {str(coords[0])} {str(coords[1])}")
-                logger.info("Insert lengths could be bimodally distributed")
+                    f"Length thresholding discarded all inserts at {rname} {str(coords[0])}-{str(coords[1])}")
+                logger.info("... insert lengths could be bimodally distributed")
 
         if len(details) > 0:
             # Key by query name
@@ -1251,8 +1274,8 @@ class IesRecords(object):
                                    ['qend'] + margin, i.query_length])
                         insertplusmargins = i.seq[start: end]
                         if len(insertplusmargins) == 0:
-                            print(f"problem at {i.query_name}")
-                            print(i.cigarstring)
+                            logger.debug(f"problem at {i.query_name}")
+                            logger.debug(i.cigarstring)
                         extractedseqs.append(insertplusmargins)
                         extractedids.append(i.query_name)
             extractedrecs = [SeqRecord(
@@ -1266,8 +1289,13 @@ class IesRecords(object):
         genome
 
         Use SPOA to generate consensus sequence of subreads (or subread
-        fragments) and align the consensus against flanking regions on
-        reference genome contig.
+        fragments) containing an insert relative to the reference, and align
+        the consensus against flanking regions on reference genome contig, in
+        order to identify the exact coordinate of the insert segment.
+
+        If the consensus with insert is shorter than the original reference
+        sequence without insert, then return None because it is likely to be an
+        artefact.
 
         Parameters
         ----------
@@ -1292,26 +1320,36 @@ class IesRecords(object):
         """
         cons = spoaConsensus(seqs, mode=mode)
         # account for inserts close to ends of contig
-        start = max([rstart-margin, 0])
+        start = max([rstart - margin, 0])
         end = min([rend + margin, len(self._refgenome[rname].seq)])
-        extract = self._refgenome[rname].seq[start:end]
-        seqobj = SeqRecord(extract, id=rname)
-        fh = NamedTemporaryFile(suffix=".fasta", mode="w", delete=False)
-        SeqIO.write([seqobj, cons], fh.name, "fasta")
-        fh.close()
-        # key differences in settings: gap opening and extension penalties have
-        # been changed to encourage long continuous gaps, which are what we
-        # want to find when aligning IES+ consensus vs. IES- reference
-        cons2 = subprocess.run(["spoa",
-                                "-e 0",  # gap extension penalty (defaul -6)
-                                "-g -16",  # gap opening penalthy (default -8)
-                                "-r 1",  # alignment mode (global)
-                                fh.name],
-                               capture_output=True).stdout.decode()
-        cons2 = SeqIO.parse(StringIO(cons2), "fasta")
-        cons2 = {i.id: i for i in cons2}
-        os.remove(fh.name)
-        return(cons2)
+        # Check that consensus of reads with insert is longer than original
+        # without insert
+        if len(cons) > (end - start):
+            extract = self._refgenome[rname].seq[start:end]
+            seqobj = SeqRecord(extract, id=rname)
+            fh = NamedTemporaryFile(suffix=".fasta", mode="w", delete=False)
+            SeqIO.write([seqobj, cons], fh.name, "fasta")
+            fh.close()
+            # key differences in settings: gap opening and extension penalties have
+            # been changed to encourage long continuous gaps, which are what we
+            # want to find when aligning IES+ consensus vs. IES- reference
+            cons2 = subprocess.run(["spoa",
+                                    "-e 0",  # gap extension penalty (default -6)
+                                    "-g -16",  # gap opening penalty (default -8)
+                                    "-r 1",  # alignment mode (global)
+                                    fh.name],
+                                   capture_output=True).stdout.decode()
+            cons2 = SeqIO.parse(StringIO(cons2), "fasta")
+            cons2 = MultipleSeqAlignment(cons2)
+            # SPOA v4.0.3 leaves trailing gap-only cols in aln; remove these
+            cons2 = alnRemoveGapOnlyCols(cons2)
+            cons2 = {i.id: i for i in cons2}  # each i is a SeqRecord object
+            os.remove(fh.name)
+            return(cons2)
+        else:
+            logger.info(
+                f"Inserts at {rname} {str(rstart)}-{str(rend)} anomalous; flanking + insert shorter than ref")
+            return(None)
 
     def reportPutativeIesInsertSubreads(self, mininsbreaks, mindelbreaks,
                                         margin=100):
@@ -1368,10 +1406,12 @@ class IesRecords(object):
                 # TODO allow user to change these thresholds
                 extr, coords = self.extractFlankingFromJcs(
                     jcs, rname, margin, 0.75, 1.25)
+                aln = None
                 if extr and coords:
                     # logging.debug(f"contig {rname} coordinates {str(coords[0])} {str(coords[1])}")
                     aln = self.spoaConsensusToFlanking(
                         extr, rname, coords[0], coords[1], margin=100, mode=1)
+                if aln:
                     consseq, adjpos = findLongestInsert(
                         aln, rname, coords[0]-margin)
                     # Complain if predicted insert location from findLongestInsert
@@ -1384,6 +1424,9 @@ class IesRecords(object):
                     elif adjpos > coords[1] and abs(adjpos - coords[1]) > 5:
                         logger.info(
                             f"Predicted insert further than 5 bp from preliminary position for {rname}, {str(adjpos)}")
+                        problem = 1
+                    if len(consseq) < 1:
+                        logger.info(f"Consensus sequence of zero length for {rname}, {str(adjpos)}")
                         problem = 1
                     # Put together GFF entry
                     gffpos = adjpos + 1  # GFF convention
@@ -1421,10 +1464,11 @@ class IesRecords(object):
                     consseq = SeqRecord(
                         Seq(consseq), id=breakpointid, description=";".join(attr)+";")
                     # Find pointers if present
-                    gffpos, gffpos, pointerdict = self.reportAdjustPointers(
-                        rname, gffpos, gffpos, consseq, breakpointid)
-                    for i in pointerdict:
-                        attr.append(f"{i}={str(pointerdict[i])}")
+                    if len(consseq) > 0:
+                        gffpos, gffpos, pointerdict = self.reportAdjustPointers(
+                            rname, gffpos, gffpos, consseq, breakpointid)
+                        for i in pointerdict:
+                            attr.append(f"{i}={str(pointerdict[i])}")
 
                     # Put together GFF entry
                     outarr = [str(rname),

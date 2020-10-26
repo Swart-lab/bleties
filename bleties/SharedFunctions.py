@@ -388,6 +388,35 @@ def report_list_modes(inlist):
     return(maxvals)
 
 
+def get_not_gaps(start, end, gaplist):
+    """Get inverse coords of gaps
+
+    Parameters
+    ----------
+    start : int
+    end : int
+        Coords for original sequence, 0-based pythonic
+    gaplist : list
+        list of (int, int) tuples specifying gaps. Must not be overlapping
+        otherwise GIGO
+
+    Returns
+    -------
+    list
+        list of (int, int) tuples specifying not-gaps
+    """
+    coords = [start]
+    sortedgaps = sorted(gaplist, key=lambda x: int(x[0]))
+    for tup in sortedgaps:
+        coords.extend([tup[0], tup[1]])
+    coords.append(end)
+    # Reslice
+    out = []
+    for i in range(int(len(coords)/2)):
+        out.append((coords[2*i], coords[2*i+1]))
+    return(out)
+
+
 class Gff(object):
     def __init__(self):
         """Construct Gff object

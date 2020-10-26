@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
 import unittest
+import re
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from Bio.Align import MultipleSeqAlignment, AlignInfo
 
 from bleties import Milraa
 from bleties import SharedFunctions
@@ -63,6 +65,14 @@ class TestSharedFunctions(unittest.TestCase):
         self.assertEqual(
             SharedFunctions.report_list_modes(inlist_tie),
             [1, 2])
+
+    def test_get_not_gaps(self):
+        start = 0
+        end = 1000
+        gaps = [(47, 51), (400, 640)]
+        self.assertEqual(
+            SharedFunctions.get_not_gaps(start, end, gaps),
+            [(0, 47), (51, 400), (640, 1000)])
 
 
 class TestMilraa(unittest.TestCase):
@@ -127,6 +137,20 @@ class TestMilraa(unittest.TestCase):
             Milraa.getIndels(cigar, 5, 2, qseq),
             [(10, 11, 0, "D", ""),
              (14, 14, 2, "I", "CC")])
+
+    def test_alnRemoveGapOnlyCols(self):
+        s1 = SeqRecord(Seq('A-TT---TTAA---'),id='s1',name='s1')
+        s2 = SeqRecord(Seq('AATT---TTAA---'),id='s2',name='s2')
+        aln = MultipleSeqAlignment([s1, s2])
+        s1_nogap = SeqRecord(Seq('A-TTTTAA'),id='s1',name='s1')
+        s2_nogap = SeqRecord(Seq('AATTTTAA'),id='s2',name='s2')
+        alnnogap = MultipleSeqAlignment([s1_nogap, s2_nogap])
+        aln = MultipleSeqAlignment([s1, s2])
+        # Use format() to report, because the Align objects will be compared
+        # by hash values which will not be equal
+        self.assertEqual(
+            Milraa.alnRemoveGapOnlyCols(aln).format('fasta'),
+            alnnogap.format('fasta'))
 
 
 # class TestMilret(unittest.TestCase):

@@ -6,7 +6,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import defaultdict
 
-from bleties.SharedFunctions import Gff
+from bleties.SharedFunctions import Gff, get_not_gaps
 
 
 logger = logging.getLogger("Insert")
@@ -194,34 +194,6 @@ class Insert(object):
                 self._newgff.changeValue(i['gffid'], 'start', i['newpos'])
                 self._newgff.changeValue(i['gffid'], 'end', i['newpos'])
 
-    def get_not_gaps(start, end, gaplist):
-        """Get inverse coords of gaps
-
-        Parameters
-        ----------
-        start : int
-        end : int
-            Coords for original sequence, 0-based pythonic
-        gaplist : list
-            list of (int, int) tuples specifying gaps. Must not be overlapping
-            otherwise GIGO
-
-        Returns
-        -------
-        list
-            list of (int, int) tuples specifying not-gaps
-        """
-        coords = [start]
-        sortedgaps = sorted(gaplist, key=lambda x: int(x[0]))
-        for tup in sortedgaps:
-            coords.extend([tup[0], tup[1]])
-        coords.append(end)
-        # Reslice
-        out = []
-        for i in range(int(len(coords)/2)):
-            out.append((coords[2*i], coords[2*i+1]))
-        return(out)
-
     def _addSequences(self):
         """Insert IES sequences to the reference assembly
 
@@ -249,7 +221,7 @@ class Insert(object):
         for seqid in dels:
             gaps = [(i['start'], i['end']) for i in dels[seqid]]
             end = len(self._refgenome[seqid].seq)
-            notgaps = Insert.get_not_gaps(0, end, gaps)
+            notgaps = get_not_gaps(0, end, gaps)
             newseq = ""
             for i in notgaps:
                 newseq += str(self._refgenome[seqid].seq[i[0]:i[1]])

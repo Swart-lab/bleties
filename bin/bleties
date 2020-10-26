@@ -131,6 +131,9 @@ miser_parser.add_argument(
 
 # Test parameters
 miser_parser.add_argument(
+    "--min_ies_length", type=int, default=15,
+    help="Minimum length of IES insert to allow")
+miser_parser.add_argument(
     "--spurious_ies_test", type=str, default="mann-whitney",
     help="""
     Test to use to evaluate spurious IESs by mismatch percentage comparisons,
