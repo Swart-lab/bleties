@@ -134,9 +134,8 @@ def milraa(args):
     iesrecords.findPutativeIes(args.min_ies_length,
                                args.contig, args.start, args.stop)
     if args.dump:
-        logger.info(f"Dumping data in JSON format to file {args.out}.dump")
-        with open(f"{args.out}.dump", "w") as fh:
-            # sys.stderr.write(str(iesrecords) + "\n") # Print summary of IesRecords object
+        logger.info(f"Dumping data in JSON format to file {args.out}.milraa.dump.json")
+        with open(f"{args.out}.milraa.dump.json", "w") as fh:
             fh.write(iesrecords.dump())  # Dump data to check
     # Get consensus locations and IES sequences
     if args.type == "ccs":
@@ -370,9 +369,11 @@ def milret(args):
         logger.info(
             "Counting all inserts at junctions as potential IESs, regardless of length")
         iesretentions.calculateRetentionScores()
-    iesretentions.reportRetentionScores(args.out)
+    logger.info(f"Reporting retention scores to file {args.out}.milret.tsv")
+    iesretentions.reportRetentionScores(f"{args.out}.milret.tsv")
     if args.dump:
-        iesretentions.dump(f"{args.out}.dump.json")
+        logger.info(f"Dumping internal data for troubleshooting to {args.out}.milret.dump.json")
+        iesretentions.dump(f"{args.out}.milret.dump.json")
 
     alnfile.close()
     logger.info("Finished MILRET")
@@ -486,8 +487,8 @@ def miltel(args):
 
     if args.dump:
         logger.info(
-            f"Dumping internal data to file {args.out}.dump.json for troubleshooting")
-        with open(f"{args.out}.dump.json", "w") as fh:
+            f"Dumping internal data to file {args.out}.miltel.dump.json for troubleshooting")
+        with open(f"{args.out}.miltel.dump.json", "w") as fh:
             fh.write(cbscalls.dump())
 
     alnfile.close()

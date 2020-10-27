@@ -78,9 +78,9 @@ Refer to the individual module pages for further information.
    as MIC/MAC in origin, from mapping of CCS reads to MAC assembly.
  * [MILTEL](miltel.md) -- Identify potential chromosome breakage sites with
    telomere addition, from mapping of CCS reads to MAC assembly.
- * Insert -- Utility for inserting IES sequences from a MAC reference
-   genome to generate MAC+IES hybrid sequence. Also can perform the reverse
-   operation.
+ * [Insert](insert.md) -- Utility for inserting IES sequences from a MAC
+   reference genome to generate MAC+IES hybrid sequence. Also can perform the
+   reverse operation.
 
 
 Citations

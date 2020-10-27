@@ -43,12 +43,21 @@ beginning/end of the telomeric repeat to the clipping junction is also counted
 Output
 ------
 
-MILTEL produces a GFF3 file with `MILTEL` in the `source` column (column 2).
-Coordinates where clipped sequence segments contain telomeres are called
-putative `chromosome_breakage_site` in the `type` column (column 3). Because
-this is a feature of zero length, the `start` and `end` fields (columns 4 and 5)
-are equal, and the junction is to the right of the coordinate, following GFF
-convention. 
+MILTEL produces the following output files, where `{OUT}` is the output prefix
+supplied to the `--out` option:
+
+ * `{OUT}.miltel.telomeric.gff3` - Alternative telomere addition sites /
+   chromosome breakage sites
+ * `{OUT}.miltel.othercalls.gff3` - Other soft- or hard-clips that do not
+   contain telomeric sequences
+ * `{OUT}.miltel.othercalls.fasta` - Sequences of the above other clips
+
+The GFF3 file for the alternative telomere addition sites has `MILTEL` in the
+`source` column (column 2).  Coordinates where clipped sequence segments
+contain telomeres are called putative `chromosome_breakage_site` in the `type`
+column (column 3). Because this is a feature of zero length, the `start` and
+`end` fields (columns 4 and 5) are equal, and the junction is to the right of
+the coordinate, following GFF convention.
 
 The `score` (column 6) reports the breakage score, which is the number of
 telomere-bearing reads clipped at that specific coordinate, divided by the
@@ -77,3 +86,6 @@ The `attributes` (column 9) contain the following fields:
  * `average_coverage` - Total read coverage at the coordinate, excluding
      secondary and supplementary mappings. Calculated the same way as the
      corresponding field in MILRAA output.
+
+With the `--dump` option, internal data are dumped in JSON format for
+troubleshooting to: `{OUT}.miltel.dump.json`.

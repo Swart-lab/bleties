@@ -205,6 +205,10 @@ With the `--fuzzy_ies` option, the following additional outputs are produced:
  * `{OUT}.milraa_ies_fuzzy.gff3`
  * `{OUT}.milraa_ies_fuzzy.fasta`
 
+With the `--dump` option, internal data is dumped in JSON format for
+troubleshooting to:
+
+ * `{OUT}.milraa.dump.json`
 
 ### MILRAA GFF3 output
 

@@ -67,7 +67,9 @@ expected length are still counted.
 Output
 ------
 
-MILRET produces a table in TSV format with the following fields:
+The main output of MILRET is a table in TSV format `{OUT}.milret.tsv`, where
+`{OUT}` is the output filename prefix supplied to the `--out` option. The TSV
+table contains the following fields:
 
  * `ID` - Unique identifier for each IES junction, as supplied in the input GFF
    file.
@@ -80,3 +82,6 @@ MILRET produces a table in TSV format with the following fields:
    an indel operation at the correct coordinate, but the length does not match
    the expected IES length, e.g. in the case of indels caused by sequencing
    errors, which are typically much shorter than real IESs.
+
+With the `--dump` option, internal data is dumped to JSON format for
+troubleshooting to `{OUT}.milret.dump.json`

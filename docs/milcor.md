@@ -62,7 +62,9 @@ Output
 ------
 
 The main output from MILCOR is a table in TSV format, with IES presence/absence
-statistics per read. The table has the following fields:
+statistics per read, with filename `{OUT}.milcor.tsv` where `{OUT}` is the
+output filename prefix supplied to the `--out` option. The table has the
+following fields:
 
  * `qname` - Name of the read, from BAM file
  * `rname` - Name of contig/scaffold in reference with the primary mapping of
@@ -76,3 +78,19 @@ statistics per read. The table has the following fields:
 
 The TSV file can be used as input to plot a graphical summary of the per-read
 IES retention scores, with the script `milcor_plot.py`.
+
+With the `--dump` option, internal data is dumped to JSON format for
+troubleshooting to `{OUT}.milcor.dump.json`.
+
+With the `--bin` option, binned reads are reported in Fasta format to the
+following files (see "Read binning" above):
+
+ * `{OUT}.milcor_bin_MAC.fasta` - IES- reads likely to be of MAC origin, with
+   per-read retention score below $1 - b$ where $b$ is the threshold value
+   supplied to `--bin_threshold`
+ * `{OUT}.milcor_bin_MIC.fasta` - IES+ reads likely of MIC origin
+ * `{OUT}.milcor_bin_other.fasta` - Reads with per-read retention score below
+   the thresholds for either MIC or MAC bins.
+ * `{OUT}.milcor_bin_noies.fasta` - Reads that do not span any annotated IES
+   junctions on their mapping to the reference genome, and hence cannot be
+   placed into either MIC or MAC bins.
