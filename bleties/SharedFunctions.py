@@ -456,7 +456,7 @@ class Gff(object):
             raise Exception(
                 f'GFF3 input encountered with incorrect number of fields: {linearr}')
         idval = ""
-        idsearch = re.search(r"ID=([^;]+);", linearr[8])
+        idsearch = re.search(r"ID=([^;]+)", linearr[8])
         if idsearch:
             idval = idsearch.group(1)
         elif gffid:
