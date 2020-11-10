@@ -350,6 +350,14 @@ insert_parser.add_argument(
     FASTA file containing sequences of IES features to be added. Sequence IDs
     must correspond to IDs in GFF file
     """)
+insert_parser.add_argument(
+    "--featuregff", type=str,
+    help="""
+    Optional: GFF file of features annotated on the MAC reference genome.
+    Coordinates will be updated after addition of IESs. If IES fall within a
+    feature, it will be split into multiple segments, given ID prefix .seg_0,
+    .seg_1, et seq. Not applicable when run in delete mode.
+    """)
 
 # Output arguments
 insert_parser.add_argument(

@@ -511,6 +511,16 @@ def insert(args):
             f"Inserting IESs to MAC reference to make MAC+IES hybrid reference")
         ins = Insert.Insert(refgenome, gff, ies)
         newrefgenome, newgff = ins.reportInsertedReference()
+        if args.featuregff:
+            logger.info(
+                f"Updating coords in feature table {args.featuregff}")
+            featuregff = SharedFunctions.Gff()
+            featuregff.file2gff(args.featuregff)
+            newfeaturegff = ins.updateFeatureGff(featuregff)
+            outfeaturegff = f"{args.out}.iesplus.feature_table.gff"
+            logger.info(
+                f"Writing new feature table to {outfeaturegff}")
+            newfeaturegff.gff2file(outfeaturegff, header=True)
         outfasta = f"{args.out}.iesplus.fasta"
         outgff = f"{args.out}.iesplus.gff"
     elif re.match(r"del", args.mode):

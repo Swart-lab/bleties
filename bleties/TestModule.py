@@ -167,6 +167,9 @@ class TestInsert(unittest.TestCase):
                "ctg1\t.\t.\t9\t9\t.\t.\t.\tID=ies2;",
                "ctg2\t.\t.\t9\t9\t.\t.\t.\tID=ies3;",
                "ctg2\t.\t.\t15\t18\t.\t.\t.\tID=ies4;"]
+    oldfeatures = ["ctg1\t.\tgene\t3\t7\t.\t.\t.\tID=gene1;key1=attr1;key2=attr2",
+                   "ctg1\t.\tgene\t12\t15\t.\t.\t.\tID=gene2"
+                   ]
 
     def test_reportInsertedReference(self):
         gff = SharedFunctions.Gff()
@@ -179,6 +182,25 @@ class TestInsert(unittest.TestCase):
         self.assertEqual(
             str(newfasta['ctg2'].seq),
             'GGGGGGGGGCCCCCGGGGGGGGGGG')
+
+    def test_updateFeatureGff(self):
+        iesgff = SharedFunctions.Gff()
+        iesgff.list2gff(TestInsert.gfflist)
+        ins = Insert.Insert(TestInsert.ref, iesgff, TestInsert.ies)
+        ins._filterInserts()
+        ins._updatePositionsInserts()
+        annotgff = SharedFunctions.Gff()
+        annotgff.list2gff(TestInsert.oldfeatures)
+        newgff = ins.updateFeatureGff(annotgff)
+        self.assertEqual(
+            [str(i) for i in newgff.getEntry('gene1.seg_0')],
+            ['ctg1','.','gene','3','5','.','.','.','ID=gene1.seg_0;key1=attr1;key2=attr2'])
+        self.assertEqual(
+            [str(i) for i in newgff.getEntry('gene1.seg_1')],
+            ['ctg1','.','gene','10','11','.','.','.','ID=gene1.seg_1;key1=attr1;key2=attr2'])
+        self.assertEqual(
+            [str(i) for i in newgff.getEntry('gene2')],
+            ['ctg1','.','gene','21','24','.','.','.','ID=gene2'])
 
     def test_reportDeletedReference(self):
         gff = SharedFunctions.Gff()

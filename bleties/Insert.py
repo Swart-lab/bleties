@@ -258,6 +258,79 @@ class Insert(object):
         logging.info(f"Total sequence length added: {str(addedlen)}")
         return(self._newgenome, self._newgff)
 
+    def updateFeatureGff(self, annot):
+        """Update coordinates of other annotations after filtering IES inserts
+
+        Run this after _updatePositionsInserts()
+
+        Parameters
+        ----------
+        annot : Gff
+            Genomic features with coordinates to be updated
+
+        Returns
+        -------
+        Gff
+            Feature table with updated coordinates
+        """
+        newgff = Gff()
+        for ctg in self._iesdict:
+            featids = [gffid for gffid in annot._gffDict if annot.getValue(gffid, 'seqid') == ctg]
+            for featid in featids:
+                featlist = annot.getEntry(featid)
+                # add up all offsets before this feature
+                offset = sum([int(self._iesdict[ctg][i]['seqlen']) 
+                              for i in self._iesdict[ctg] 
+                              if int(i) < int(annot.getValue(featid, 'start'))])
+                # check if any IES inserts fall inside the feature
+                istart = int(annot.getValue(featid, 'start'))
+                iend = int(annot.getValue(featid, 'end'))
+                # get start positions of each IES feature that is inside this 
+                # feature
+                iesinsides = [int(i) for i in self._iesdict[ctg]
+                              if int(i) >= istart and int(i) < iend]
+                iesinsides = sorted(iesinsides)
+                insidelen = sum([int(self._iesdict[ctg][str(i)]['seqlen']) for i in iesinsides])
+                # new start position
+                newints = [istart + offset]
+                # update coordinates with complement of new IES feature positions
+                for i in iesinsides: # already sorted
+                    # the following are already in GFF-coordinates
+                    newints.append(self._iesdict[ctg][str(i)]['newstart'])
+                    newints.append(self._iesdict[ctg][str(i)]['newend'] + 1)
+                # new end position
+                newints.append(iend + insidelen + offset)
+                # split to tuples of start-end coords for non-IES complement ranges
+                newints_tuples = []
+                for i in range(int(len(newints)/2)):
+                    newints_tuples.append((newints[i*2], newints[i*2 + 1]))
+                if len(newints_tuples) > 1:
+                    # feature is interrupted by IESs, split into segments
+                    for j in range(len(newints_tuples)):
+                        newfeatid = featid + '.seg_' + str(j)
+                        # split attributes field and rename ID value if present
+                        attrdict = {attr.strip().split('=')[0] : attr.strip().split('=')[1]
+                                    for attr in featlist[8].split(';') if attr}
+                        # Updates ID field if present, adds it if not
+                        attrdict['ID'] = newfeatid
+                        newattr = ';'.join([str(key) + '=' + str(attrdict[key])
+                                            for key in attrdict])
+                        # new GFF entry as list
+                        newfeat = featlist[0:3] + \
+                                  [newints_tuples[j][0], newints_tuples[j][1]] + \
+                                  featlist[5:8] + [newattr]
+                        # add entry to new Gff object
+                        newgff.addEntry(newfeat, newfeatid)
+                else:
+                    # new interval comprises only the new start and end, 
+                    # the feature is not broken up into segments
+                    # feature ID remains the same
+                    newfeat = featlist[0:3] + \
+                              [newints_tuples[0][0], newints_tuples[0][1]] + \
+                              featlist[5:9]
+                    newgff.addEntry(newfeat, featid)
+        return(newgff)
+
     def reportDeletedReference(self):
         """Remove IESs from reference MAC+IES genome, report modified MAC-IES
         assembly and GFF file containing updated positions
