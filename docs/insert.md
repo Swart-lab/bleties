@@ -25,6 +25,15 @@ is required, supplied to the `--iesfasta` option. The headers in this Fasta
 file should correspond to the `ID` value in the attributes field of the IES GFF
 file.
 
+If the genome has existing annotations in a GFF3 feature table, this can be
+supplied to the `--featuregff` option. The coordinates of the annotations will
+be updated after the insertion of IESs, and other annotation fields remain
+unchanged. If a feature is interrupted by one or more IESs, the feature will be
+split into two or more features, where the ID of the original feature is
+suffixed with `.seg_0`, `.seg_1` et seq. to distinguish them. The updating of
+an existing feature table is only available in insert mode, because the
+deletion or truncation of an existing feature annotation will require manual
+intervention or curation.
 
 Output
 ------

@@ -261,7 +261,10 @@ class Insert(object):
     def updateFeatureGff(self, annot):
         """Update coordinates of other annotations after filtering IES inserts
 
-        Run this after _updatePositionsInserts()
+        Run this after _updatePositionsInserts().This function only works with
+        insert mode, because in delete mode, the truncation or excision of
+        features with potential annotated functions must be curated manually by
+        the user.
 
         Parameters
         ----------
