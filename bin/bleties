@@ -46,7 +46,7 @@ milraa_parser.add_argument(
     "--stop", default=None, type=int,
     help="Stop coordinate (1-based, inclusive) from contig to process")
 milraa_parser.add_argument(
-    "--type", default="ccs", type=str,
+    "--type", default="subreads", type=str,
     help="Type of reads used for mapping, either 'ccs' or 'subreads'")
 
 # Output arguments
