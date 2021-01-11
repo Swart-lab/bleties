@@ -9,19 +9,34 @@ accurate. The outputs are the coordinates of the predicted IES indel positions,
 and IES consensus sequences.
 
 The recommended aligner is [minimap2](https://github.com/lh3/minimap2), with
-the options `--secondary=no --MD`, and with PacBio HiFi or CCS reads (use
-option `-ax asm20`).
+the options `--secondary=no --MD`, with PacBio subreads/CLR reads (use option
+`-ax map-pb`) or CCS/HiFi reads (use option `-ax asm20`).
 
 
 Input data
 ----------
 
  * Ciliate MAC genome assembly, Fasta format.
- * PacBio HiFi or CCS read library mapping onto that assembly, sorted/indexed
+ * PacBio read library mapping onto that assembly, sorted/indexed
    BAM format; mapper should report valid CIGAR string and NM tag.
+
+
+Differences of long read to short read alignments
+-------------------------------------------------
+
+MILRAA is analogous to the MIRAA module in the ParTIES pipeline that was
+originally designed to work with Illumina short read data. The original ParTIES
+MIRAA uses an initial Bowtie2 mapping step (local mode) and looks for
+breakpoints in the alignment, which are identified as insert (I), soft clip
+(S), or hard clip (H) operations from the CIGAR string of the SAM record. 
+
+The insert size for Illumina paired end libraries is typically 300-400 bp, so
+on average each read pair would span at most one IES. Most read pairs are
 unlikely to span a complete IES nor contain the entire IES sequence. In
 comparison, a PacBio long read with lengths 10 kbp or more may span multiple
-IESs, and the entire IES sequence can potentially be read out form the sequence.
+IESs, and the entire IES sequence can potentially be read out form the
+sequence.
+
 Therefore, MILRAA has the following differences to MIRAA:
 
  * Each read potentially covers multiple indels, unlike MIRAA which considers
@@ -113,7 +128,7 @@ The pointer sequences and adjusted coordinates are reported in the `attributes`
 field of the MILRAA GFF3 file, as described below.
 
 
-CCS reads vs subreads
+Subreads vs CCS reads
 ---------------------
 
 PacBio sequence data is typically reported as "subreads" (see [PacBio SMRT
@@ -131,20 +146,15 @@ CCS reads are typically highly accurate (errors less than 1%), compared to
 subreads which can have error rates of 5-15%. However, to generate CCS reads,
 the sequencing depth of a library must be relatively high.
 
-CCS reads and subreads are handled differently by MILRAA to predict the
-positions of indels. This is chosen with the option `--type ccs` (default) or
-`--type subreads` respectively.
+Subreads and CCS reads are handled differently by MILRAA to predict the
+positions of indels. This is chosen with the option `--type subreads` (default)
+or `--type ccs` respectively. The experimental `ccs` mode has been tested with
+PacBio HiFi Sequel II and may not work well with CCS reads from earlier PacBio
+generations with slightly higher error rates. `subreads` mode should work with
+CCS reads too.
+
 
 ### IES junction position and consensus sequence
-
-With CCS reads, the insert position reported by the mapper is assumed to be
-accurate. The insert sequence from an individual CCS read is also assumed to be
-accurate. However, even with CCS sequences the error rate is high enough that
-individual insert sequences at the same coordinate may vary from each other,
-including by indels. The higher the coverage, the more variants will be
-expected. Furthermore there is also the possibility that a site may experience
-alternative excisions, where the sequences excised may be of different lengths:
-see the section "Fuzzy IES length matching" below.
 
 With subreads, the error rate is high enough that the insert position reported
 by the mapper may not be accurate. Therefore, from the list of insert
@@ -162,17 +172,32 @@ than 5 bp away from the original coordinates, an error is reported; this may
 represent inserts where the flanking regions on some reads are not homologous to
 the reference, e.g. from mapping of paralogs or from sequencing errors.
 
+With CCS reads, the insert position reported by the mapper is assumed to be
+accurate. The insert sequence from an individual CCS read is also assumed to be
+accurate. However, even with CCS sequences the error rate is high enough that
+individual insert sequences at the same coordinate may vary from each other,
+including by indels. The higher the coverage, the more variants will be
+expected. Furthermore there is also the possibility that a site may experience
+alternative excisions, where the sequences excised may be of different lengths:
+see the section "Fuzzy IES length matching" below.
+
+
 ### Read coverage
 
 Because the number of subreads produced can differ substantially between ZMWs,
 it is preferable to count the physical molecules, represented by the individual
-ZMWs, rather than the subreads, to represent the read coverage. For CCS reads,
-each CCS read originates from a single ZMW, so the CCS coverage is used
-directly as the read coverage.
+ZMWs, rather than the subreads, to represent the read coverage. This
+information is parsed from the read names in the mapping file, which are
+assumed to follow PacBio convention. Therefore if the reads have been renamed,
+e.g. in a file downloaded from NCBI SRA, the subread vs. ZMW coverage reported
+will not be correct.
+
+For CCS reads, each CCS read originates from a single ZMW, so the CCS coverage
+is used directly as the read coverage.
 
 
-Fuzzy IES length matching
--------------------------
+Fuzzy IES length matching (CCS mode)
+------------------------------------
 
 The default mode for CCS read mappings is "strict", i.e. to define a given IES
 junction, all the insert operations at a given coordinate must have the same
@@ -210,6 +235,7 @@ troubleshooting to:
 
  * `{OUT}.milraa.dump.json`
 
+
 ### MILRAA GFF3 output
 
 The main output from MILRAA is a GFF3 file, with `MILRAA` in the `source` column
@@ -228,6 +254,7 @@ defined by the `--min_del_coverage` option) contain a deletion relative to the
 reference assembly. In the GFF3 file, these are reported with
 `internal_eliminated_sequence` in the `type` column.
 
+
 #### IES retention score
 
 The `score` column (column 6) reports the provisional IES retention score for
@@ -238,6 +265,7 @@ reads for a given IES feature, in the mapped reads.
 For subread mappings, the ZMW coverage is used to calculate the score, not the
 subread coverage. For CCS reads, each read corresponds to one ZMW so the CCS
 read coverage is used directly.
+
 
 #### Attributes column
 

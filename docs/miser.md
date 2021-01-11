@@ -1,6 +1,8 @@
 MISER - Method of IES Spurious or Erroneous Reporting
 =====================================================
 
+This is an experimental module, may fail in unexpected ways.
+
 Inputs
 ------
 

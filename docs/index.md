@@ -3,7 +3,7 @@ Blepharisma Toolbox for Interspersed DNA Elimination Studies (BleTIES)
 
 ![BLETIES logo](./bleties_logo.png)
 
-This is a reimplementation of [ParTIES](https://github.com/oarnaiz/ParTIES) for 
+This is a reimplementation of [ParTIES](https://github.com/oarnaiz/ParTIES) for
 long read alignments. 
 
 
@@ -11,8 +11,8 @@ Input data
 ----------
 
  * Ciliate MAC genome assembly, Fasta format.
- * PacBio HiFi or CCS read library mapping onto that assembly, sorted/indexed
-   BAM format; mapper should report valid CIGAR string and NM tag.
+ * PacBio read library mapping onto that assembly, sorted/indexed BAM format;
+   mapper should report valid CIGAR string and NM tag.
 
 
 Installation
@@ -39,8 +39,8 @@ python -m unittest -v bleties.TestModule
 Usage
 -----
 
-For help, use the `-h` or `--help` option, with or without the subworkflow 
-names:
+To list input arguments and options and their respective usage, use the `-h` or
+`--help` option, with or without the subworkflow names:
 
 ```
 bleties --help
@@ -51,7 +51,6 @@ bleties milcor --help
 bleties miltel --help
 bleties insert --help
 ```
-
 
 In addition there are two scripts for plotting the output from the MILRAA and
 MILCOR modules. See the `--help` messages for usage instructions:
@@ -68,9 +67,9 @@ Outline of workflow
 Refer to the individual module pages for further information.
 
  * [MILRAA](milraa.md) -- Identify putative IESs and IES junctions from a
-   mapping of PacBio CCS reads or subreads to reference genome assembly.
+   mapping of PacBio subreads or CCS reads to reference genome assembly.
  * [MISER](miser.md) -- Screen for potentially erroneous IES calls, to curate
-   the list of putative IES junctions.
+   the list of putative IES junctions (experimental!).
  * [MILRET](milret.md) -- Use curated IES junctions, or IES junction
    coordinates from third-party tools, to calculate IES retention scores from
    mapping of CCS reads to a reference MAC assembly.
