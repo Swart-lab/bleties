@@ -47,7 +47,7 @@ milraa_parser.add_argument(
     help="Stop coordinate (1-based, inclusive) from contig to process")
 milraa_parser.add_argument(
     "--type", default="subreads", type=str,
-    help="Type of reads used for mapping, either 'ccs' or 'subreads'")
+    help="Type of reads used for mapping, either 'subreads' or 'ccs'")
 
 # Output arguments
 milraa_parser.add_argument(
@@ -125,7 +125,7 @@ milraa_parser.set_defaults(func=main.milraa)
 # MISER ------------------------------------------------------------------------
 miser_parser = subparsers.add_parser(
     name="miser",
-    description="MISER - Method of IES Spurious or Erroneous Reporting",
+    description="MISER - Method of IES Spurious or Erroneous Reporting (experimental)",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 # Input arguments
