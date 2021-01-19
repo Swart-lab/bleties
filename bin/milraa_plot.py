@@ -30,6 +30,12 @@ parser.add_argument("--out", "-o", default="test",
             - ies_length_distribution
             - ies_length_distribution_detail
         """)
+parser.add_argument("--hist_len_min", default=26, type=int,
+        help="Minimum length to show in histogram of IES lengths (detail)")
+parser.add_argument("--hist_len_max", default=400, type=int,
+        help="Maximum length to show in histogram of IES lengths (detail)")
+parser.add_argument("--hist_style", default="facet",
+        help="Style for histograms of IES lengths, either 'facet' or 'stack'")
 args = parser.parse_args()
 
 # Import GFF records
@@ -123,26 +129,25 @@ plt.savefig(f"{args.out}.ies_length_distribution.png")
 
 
 # IES lengths and pointer types - closeup
+num_bins = args.hist_len_max - args.hist_len_min + 1
 plt.figure(figsize=(8,18))
 plt.subplot(311)
-plt.hist(df.query("length > 25 & length <= 400 & pointer == 'ta'")["length"],
-         bins=375)
+plt.hist(df.query(f"length >= {args.hist_len_min} & length <= {args.hist_len_max} & pointer == 'ta'")["length"],
+         bins=num_bins)
 plt.xlabel("Length (bp)")
 plt.ylabel("Number of putative IESs")
 plt.title("IES length distribution (detail) - TA junction")
-# plt.savefig(f"{args.out}.ies_stats_plots.png")
 
 plt.subplot(312)
-plt.hist(df.query("length > 25 & length <= 400 & pointer == 'pointer'")["length"],
-         bins=375)
+plt.hist(df.query(f"length >= {args.hist_len_min} & length <= {args.hist_len_max} & pointer == 'pointer'")["length"],
+         bins=num_bins)
 plt.xlabel("Length (bp)")
 plt.ylabel("Number of putative IESs")
 plt.title("IES length distribution (detail) - other pointer")
-# plt.savefig(f"{args.out}.ies_stats_plots.png")
 
 plt.subplot(313)
-plt.hist(df.query("length > 25 & length <= 400 & pointer == 'none'")["length"],
-         bins=375)
+plt.hist(df.query(f"length >= {args.hist_len_min} & length <= {args.hist_len_max} & pointer == 'none'")["length"],
+         bins=num_bins)
 plt.xlabel("Length (bp)")
 plt.ylabel("Number of putative IESs")
 plt.title("IES length distribution (detail) - no pointer")
