@@ -35,7 +35,7 @@ parser.add_argument("--hist_len_min", default=26, type=int,
 parser.add_argument("--hist_len_max", default=400, type=int,
         help="Maximum length to show in histogram of IES lengths (detail)")
 parser.add_argument("--hist_style", default="facet",
-        help="Style for histograms of IES lengths, either 'facet' or 'stack'")
+        help="Style for histograms of IES lengths: 'facet', 'bar', or 'barstacked'")
 args = parser.parse_args()
 
 # Import GFF records
@@ -103,53 +103,75 @@ plt.title("Retention score")
 plt.savefig(f"{args.out}.ies_retention_score.png")
 
 # IES lengths and pointer types
-plt.figure(figsize=(8,18))
-plt.subplot(311)
-plt.hist(df.query("pointer == 'ta'")["length"],
-         bins=100)
-plt.xlabel("Length (bp)")
-plt.ylabel("Number of putative IESs")
-plt.title("IES length distribution - TA junction")
+if args.hist_style == 'barstacked' or args.hist_style == 'bar':
+    plt.figure(figsize=(8,6))
+    plt.hist([df.query("pointer == 'ta'")["length"], 
+              df.query("pointer == 'pointer'")["length"],
+              df.query("pointer == 'none'")["length"]],
+        label=['TA','other pointer','no pointer'], histtype=args.hist_style, bins=100)
+    plt.legend()
+    plt.title("IES length distribution")
+    plt.savefig(f"{args.out}.ies_length_distribution.png")
+# otherwise plot separately in facets
+else:
+    plt.figure(figsize=(8,18))
+    plt.subplot(311)
+    plt.hist(df.query("pointer == 'ta'")["length"],
+             bins=100)
+    plt.xlabel("Length (bp)")
+    plt.ylabel("Number of putative IESs")
+    plt.title("IES length distribution - TA junction")
 
-plt.subplot(312)
-plt.hist(df.query("pointer == 'pointer'")["length"],
-         bins=100)
-plt.xlabel("Length (bp)")
-plt.ylabel("Number of putative IESs")
-plt.title("IES length distribution - other pointer")
+    plt.subplot(312)
+    plt.hist(df.query("pointer == 'pointer'")["length"],
+             bins=100)
+    plt.xlabel("Length (bp)")
+    plt.ylabel("Number of putative IESs")
+    plt.title("IES length distribution - other pointer")
 
-plt.subplot(313)
-plt.hist(df.query("pointer == 'none'")["length"],
-         bins=100)
-plt.xlabel("Length (bp)")
-plt.ylabel("Number of putative IESs")
-plt.title("IES length distribution - no pointer")
+    plt.subplot(313)
+    plt.hist(df.query("pointer == 'none'")["length"],
+             bins=100)
+    plt.xlabel("Length (bp)")
+    plt.ylabel("Number of putative IESs")
+    plt.title("IES length distribution - no pointer")
 
-plt.savefig(f"{args.out}.ies_length_distribution.png")
-
+    plt.savefig(f"{args.out}.ies_length_distribution.png")
 
 # IES lengths and pointer types - closeup
 num_bins = args.hist_len_max - args.hist_len_min + 1
-plt.figure(figsize=(8,18))
-plt.subplot(311)
-plt.hist(df.query(f"length >= {args.hist_len_min} & length <= {args.hist_len_max} & pointer == 'ta'")["length"],
-         bins=num_bins)
-plt.xlabel("Length (bp)")
-plt.ylabel("Number of putative IESs")
-plt.title("IES length distribution (detail) - TA junction")
 
-plt.subplot(312)
-plt.hist(df.query(f"length >= {args.hist_len_min} & length <= {args.hist_len_max} & pointer == 'pointer'")["length"],
-         bins=num_bins)
-plt.xlabel("Length (bp)")
-plt.ylabel("Number of putative IESs")
-plt.title("IES length distribution (detail) - other pointer")
+if args.hist_style == 'barstacked' or args.hist_style == 'bar':
+    plt.figure(figsize=(8,6))
+    plt.hist([df.query(f"length >= {args.hist_len_min} & length <= {args.hist_len_max} & pointer == 'ta'")["length"], 
+              df.query(f"length >= {args.hist_len_min} & length <= {args.hist_len_max} & pointer == 'pointer'")["length"],
+              df.query(f"length >= {args.hist_len_min} & length <= {args.hist_len_max} & pointer == 'none'")["length"]],
+        label=['TA','other pointer','no pointer'], histtype=args.hist_style, bins=num_bins)
+    plt.legend()
+    plt.title("IES length distribution (detail)")
+    plt.savefig(f"{args.out}.ies_length_distribution_detail.png")
+        
+else:
+    plt.figure(figsize=(8,18))
+    plt.subplot(311)
+    plt.hist(df.query(f"length >= {args.hist_len_min} & length <= {args.hist_len_max} & pointer == 'ta'")["length"],
+             bins=num_bins)
+    plt.xlabel("Length (bp)")
+    plt.ylabel("Number of putative IESs")
+    plt.title("IES length distribution (detail) - TA junction")
 
-plt.subplot(313)
-plt.hist(df.query(f"length >= {args.hist_len_min} & length <= {args.hist_len_max} & pointer == 'none'")["length"],
-         bins=num_bins)
-plt.xlabel("Length (bp)")
-plt.ylabel("Number of putative IESs")
-plt.title("IES length distribution (detail) - no pointer")
+    plt.subplot(312)
+    plt.hist(df.query(f"length >= {args.hist_len_min} & length <= {args.hist_len_max} & pointer == 'pointer'")["length"],
+             bins=num_bins)
+    plt.xlabel("Length (bp)")
+    plt.ylabel("Number of putative IESs")
+    plt.title("IES length distribution (detail) - other pointer")
 
-plt.savefig(f"{args.out}.ies_length_distribution_detail.png")
+    plt.subplot(313)
+    plt.hist(df.query(f"length >= {args.hist_len_min} & length <= {args.hist_len_max} & pointer == 'none'")["length"],
+             bins=num_bins)
+    plt.xlabel("Length (bp)")
+    plt.ylabel("Number of putative IESs")
+    plt.title("IES length distribution (detail) - no pointer")
+
+    plt.savefig(f"{args.out}.ies_length_distribution_detail.png")
