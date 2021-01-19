@@ -15,6 +15,8 @@ parser.add_argument("--table",
         help="MILCOR output table")
 parser.add_argument("--out", "-o", default="test",
         help="Prefix for output files")
+parser.add_argument("--out_fmt", default="png",
+        help="Format for output files, passed to matplotlib: 'png','pdf','svg'")
 args = parser.parse_args()
 
 
@@ -42,5 +44,5 @@ plt.xlabel("Fraction of IESs retained per read")
 plt.ylabel("Number of reads")
 plt.title("IES retention per read as fraction of total per read")
 
-plt.savefig(f"{args.out}.ies_retention_per_read.png")
+plt.savefig(f"{args.out}.ies_retention_per_read.{args.out_fmt}")
 

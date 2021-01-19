@@ -30,6 +30,8 @@ parser.add_argument("--out", "-o", default="test",
             - ies_length_distribution
             - ies_length_distribution_detail
         """)
+parser.add_argument("--out_fmt", default="png",
+        help="Format for output files, passed to matplotlib: 'png','pdf','svg'")
 parser.add_argument("--hist_len_min", default=26, type=int,
         help="Minimum length to show in histogram of IES lengths (detail)")
 parser.add_argument("--hist_len_max", default=400, type=int,
@@ -100,7 +102,7 @@ plt.legend()
 plt.xlabel("IES retention score")
 plt.ylabel("Number of putative IESs")
 plt.title("Retention score")
-plt.savefig(f"{args.out}.ies_retention_score.png")
+plt.savefig(f"{args.out}.ies_retention_score.{args.out_fmt}")
 
 # IES lengths and pointer types
 if args.hist_style == 'barstacked' or args.hist_style == 'bar':
@@ -111,7 +113,7 @@ if args.hist_style == 'barstacked' or args.hist_style == 'bar':
         label=['TA','other pointer','no pointer'], histtype=args.hist_style, bins=100)
     plt.legend()
     plt.title("IES length distribution")
-    plt.savefig(f"{args.out}.ies_length_distribution.png")
+    plt.savefig(f"{args.out}.ies_length_distribution.{args.out_fmt}")
 # otherwise plot separately in facets
 else:
     plt.figure(figsize=(8,18))
@@ -136,7 +138,7 @@ else:
     plt.ylabel("Number of putative IESs")
     plt.title("IES length distribution - no pointer")
 
-    plt.savefig(f"{args.out}.ies_length_distribution.png")
+    plt.savefig(f"{args.out}.ies_length_distribution.{args.out_fmt}")
 
 # IES lengths and pointer types - closeup
 num_bins = args.hist_len_max - args.hist_len_min + 1
@@ -149,7 +151,7 @@ if args.hist_style == 'barstacked' or args.hist_style == 'bar':
         label=['TA','other pointer','no pointer'], histtype=args.hist_style, bins=num_bins)
     plt.legend()
     plt.title("IES length distribution (detail)")
-    plt.savefig(f"{args.out}.ies_length_distribution_detail.png")
+    plt.savefig(f"{args.out}.ies_length_distribution_detail.{args.out_fmt}")
         
 else:
     plt.figure(figsize=(8,18))
@@ -174,4 +176,4 @@ else:
     plt.ylabel("Number of putative IESs")
     plt.title("IES length distribution (detail) - no pointer")
 
-    plt.savefig(f"{args.out}.ies_length_distribution_detail.png")
+    plt.savefig(f"{args.out}.ies_length_distribution_detail.{args.out_fmt}")
