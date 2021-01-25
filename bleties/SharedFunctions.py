@@ -547,7 +547,12 @@ class Gff(object):
         """
         if gffid in self._gffDict:
             if attribute in self._gffDict[gffid]['attrdict']:
+                print(f"Updating attribute {attribute} in {gffid} to {str(newvalue)}")
                 self._gffDict[gffid]['attrdict'][attribute] = newvalue
+                # Change attributes field
+                attrlist = [ attr + "=" + str(self._gffDict[gffid]['attrdict'][attr])
+                                for attr in self._gffDict[gffid]['attrdict']]
+                self._gffDict[gffid]['attributes'] = ";".join(attrlist)
             else:
                 logger.debug(
                     f"Unknown attribute {attribute} for GFF ID {gffid}")
