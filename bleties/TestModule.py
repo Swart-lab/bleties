@@ -159,17 +159,25 @@ class TestMilraa(unittest.TestCase):
 class TestInsert(unittest.TestCase):
     # Class variables used by several tests
     ref = {'ctg1': SeqRecord(Seq('AAAAAAAAAAAAAAAAAAAA'), id='ctg1'),
-           'ctg2': SeqRecord(Seq('GGGGGGGGGGGGGGGGGGGG'), id='ctg2')}
+           'ctg2': SeqRecord(Seq('GGGGGGGGGGGGGGGGGGGG'), id='ctg2'),
+           'ctg3': SeqRecord(Seq('CCCCCCCCCCTACCCCCCCC'), id='ctg3')
+           }
     ies = {'ies1': SeqRecord(Seq('TTTT'), id='ies1'),
            'ies2': SeqRecord(Seq('GGGGG'), id='ies2'),
-           'ies3': SeqRecord(Seq('CCCCC'), id='ies3')}
+           'ies3': SeqRecord(Seq('CCCCC'), id='ies3'),
+           'ies5': SeqRecord(Seq('TTTTT'), id='ies5'),
+           'ies6': SeqRecord(Seq('CTAGG'), id='ies6')}
     gfflist = ["ctg1\t.\t.\t5\t5\t.\t.\t.\tID=ies1;",
                "ctg1\t.\t.\t9\t9\t.\t.\t.\tID=ies2;",
                "ctg2\t.\t.\t9\t9\t.\t.\t.\tID=ies3;",
-               "ctg2\t.\t.\t15\t18\t.\t.\t.\tID=ies4;"]
+               "ctg2\t.\t.\t15\t18\t.\t.\t.\tID=ies4;",
+               "ctg3\t.\t.\t3\t3\t.\t.\t.\tID=ies5;",
+               "ctg3\t.\t.\t9\t9\t.\t.\t.\tID=ies6;ta_pointer_start=11;ta_pointer_end=11;"
+               ]
     oldfeatures = ["ctg1\t.\tgene\t3\t7\t.\t.\t.\tID=gene1;key1=attr1;key2=attr2",
                    "ctg1\t.\tgene\t12\t15\t.\t.\t.\tID=gene2"
                    ]
+
 
     def test_reportInsertedReference(self):
         gff = SharedFunctions.Gff()
@@ -182,6 +190,7 @@ class TestInsert(unittest.TestCase):
         self.assertEqual(
             str(newfasta['ctg2'].seq),
             'GGGGGGGGGCCCCCGGGGGGGGGGG')
+
 
     def test_updateFeatureGff(self):
         iesgff = SharedFunctions.Gff()
@@ -202,15 +211,32 @@ class TestInsert(unittest.TestCase):
             [str(i) for i in newgff.getEntry('gene2')],
             ['ctg1','.','gene','21','24','.','.','.','ID=gene2'])
 
+
+    def test_updateFeatureGff_tapointer(self):
+        iesgff = SharedFunctions.Gff()
+        iesgff.list2gff(TestInsert.gfflist)
+        ins = Insert.Insert(TestInsert.ref, iesgff, TestInsert.ies)
+        ins._filterInserts()
+        ins._updatePositionsInserts()
+        ins._updatePointerPositionsInserts()
+        ins._addSequences()
+        self.assertEqual(str(ins._newgff.getValue('ies6', 'start')), '15')
+        self.assertEqual(str(ins._newgff.getValue('ies6', 'end')), '19')
+        self.assertEqual(str(ins._newgff.getAttr('ies6', 'ta_pointer_start')), '16')
+        self.assertEqual(str(ins._newgff.getAttr('ies6', 'ta_pointer_end')), '20')
+
+
     def test_reportDeletedReference(self):
         gff = SharedFunctions.Gff()
         gff.list2gff(TestInsert.gfflist)
         # Insert sequences into reference
         ins = Insert.Insert(TestInsert.ref, gff, TestInsert.ies)
         newfasta, newgff = ins.reportInsertedReference()
+        # print("\n".join(newgff.gff2list())) # testing
         # Take them out again
         dels = Insert.Insert(newfasta, newgff, None)
         delfasta, delgff = dels.reportDeletedReference()
+        # print("\n".join(delgff.gff2list())) # testing
         # Check that they are the same sequence
         self.assertEqual(
             str(delfasta['ctg1'].seq),
@@ -218,6 +244,11 @@ class TestInsert(unittest.TestCase):
         self.assertEqual(
             str(delfasta['ctg2'].seq),
             str(TestInsert.ref['ctg2'].seq))
+        self.assertEqual(
+            str(delfasta['ctg3'].seq),
+            str(TestInsert.ref['ctg3'].seq))
+        self.assertEqual(str(delgff.getAttr('ies6', 'ta_pointer_start')), '11')
+        self.assertEqual(str(delgff.getAttr('ies6', 'ta_pointer_end')), '11')
 
 
 if __name__ == '__main__':

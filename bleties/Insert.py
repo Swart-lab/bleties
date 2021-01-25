@@ -72,15 +72,21 @@ class Insert(object):
                                     'seq': seq,
                                     'seqlen': len(seq),
                                     'gffid': gffid,
+                                    'oldstart': int(start),
+                                    'oldend': int(end) + len(seq),
                                     'newstart': int(start),
-                                    'newend': int(end) + len(seq)}
+                                    'newend': int(end) + len(seq)
+                                    }
                         else:
                             self._iesdict[ctg][start] = {
                                 'seq': seq,
                                 'seqlen': len(seq),
                                 'gffid': gffid,
+                                'oldstart': int(start),
+                                'oldend': int(start) + len(seq),
                                 'newstart': int(start),
-                                'newend': int(start) + len(seq)}
+                                'newend': int(start) + len(seq)
+                                }
                 else:
                     logger.warn(
                         f"Insert sequence ID {gffid} not in Fasta file!")
@@ -155,23 +161,75 @@ class Insert(object):
             for i in range(len(sp)):
                 seqlen = int(self._iesdict[ctg][sp[i]]['seqlen'])
                 for j in range(i, len(sp)):
-                    oldstart = int(self._iesdict[ctg][sp[j]]['newstart'])
-                    oldend = int(self._iesdict[ctg][sp[j]]['newend'])
                     gffid = self._iesdict[ctg][sp[j]]['gffid']
-                    newstart = oldstart
-                    newend = oldend
                     if j > i:  # don't add if this is the same entry
-                        newstart += seqlen
-                        newend += seqlen
-                    # New coordinates in dict are 0-based [), python convention
-                    self._iesdict[ctg][sp[j]]['newstart'] = newstart
-                    self._iesdict[ctg][sp[j]]['newend'] = newend
+                        # New coordinates in dict are 0-based [), python convention
+                        self._iesdict[ctg][sp[j]]['newstart'] += seqlen
+                        self._iesdict[ctg][sp[j]]['newend'] += seqlen
                     # Record new Gff entries with updated columns
                     # start coordinate needs to be changed to follow GFF
                     # convention
                     self._newgff.addEntry(self._gff.getEntry(gffid), gffid)
-                    self._newgff.changeValue(gffid, 'start', newstart + 1)
-                    self._newgff.changeValue(gffid, 'end', newend)
+                    self._newgff.changeValue(gffid, 'start', self._iesdict[ctg][sp[j]]['newstart'] + 1)
+                    self._newgff.changeValue(gffid, 'end', self._iesdict[ctg][sp[j]]['newend'])
+
+
+    def _updatePointerPositionsInserts(self):
+        """After updating coordinates of inserts, check for IES features that
+        contain TA or pointer coordinates in attributes field, which may or may
+        not differ from the start/end position, and update these too.
+        
+        Run this after _updatePositionsInserts()
+        """
+        for ctg in self._iesdict:
+            for start in self._iesdict[ctg]:
+                gffid = self._iesdict[ctg][start]['gffid']
+                offset = int(self._iesdict[ctg][start]['newstart']) - int(self._iesdict[ctg][start]['oldstart'])
+                # Check for TA or pointer coordinates in attributes of GFF and 
+                # update with offset
+                tps = self._newgff.getAttr(gffid, 'ta_pointer_start')
+                pps = self._newgff.getAttr(gffid, 'pp_pointer_start')
+                newend = self._iesdict[ctg][start]['newend']
+                if tps:
+                    # minus 1 because tps is with GFF coords and oldstart on python coords
+                    tps_offset = int(tps) - int(self._iesdict[ctg][start]['oldstart']) - 1
+                    self._newgff.changeAttr(gffid, 'ta_pointer_start', int(tps) + offset)
+                    self._newgff.changeAttr(gffid, 'ta_pointer_end', int(newend) + tps_offset)
+                if pps:
+                    # minus 1 because tps is with GFF coords and oldstart on python coords
+                    pps_offset = int(pps) - int(self._iesdict[ctg][start]['oldstart']) - 1
+                    self._newgff.changeAttr(gffid, 'pp_pointer_start', int(pps) + offset)
+                    self._newgff.changeAttr(gffid, 'pp_pointer_end', int(newend) + pps_offset)
+
+
+    def _updatePointerPositionsDeletions(self, dels):
+        """After updating coordinates of deletions, check for IES features that
+        contain TA or pointer coordinates in attributes field, which may or may
+        not differ from the start/end position, and update these too.
+        
+        Run this after _updatePositionsDeletions()
+        """
+        for ctg in dels:
+            for i in dels[ctg]:
+                gffid = i['gffid']
+                offset = int(i['newpos']) - int(i['start'])
+                # Check for TA or pointer coordinates in attributes of GFF and 
+                # update with offset
+                tps = self._newgff.getAttr(gffid, 'ta_pointer_start')
+                pps = self._newgff.getAttr(gffid, 'pp_pointer_start')
+                if tps:
+                    # minus 1 because tps is with GFF coords and oldstart on python coords
+                    tps_offset = int(tps) - int(i['start']) - 1
+                    self._newgff.changeAttr(gffid, 'ta_pointer_start', int(tps) + offset)
+                    # when IES is deleted, TA start == TA end because this is
+                    # now a zero-length junction-type feature
+                    self._newgff.changeAttr(gffid, 'ta_pointer_end', int(tps) + offset)
+                if pps:
+                    # minus 1 because tps is with GFF coords and oldstart on python coords
+                    pps_offset = int(pps) - int(i['start']) - 1
+                    self._newgff.changeAttr(gffid, 'pp_pointer_start', int(pps) + offset)
+                    self._newgff.changeAttr(gffid, 'pp_pointer_end', int(pps) + offset)
+
 
     def _updatePositionsDeletions(self, dels):
         """After filtering deletions and recording them, update their
@@ -194,6 +252,7 @@ class Insert(object):
                 self._newgff.changeValue(i['gffid'], 'start', i['newpos'])
                 self._newgff.changeValue(i['gffid'], 'end', i['newpos'])
 
+
     def _addSequences(self):
         """Insert IES sequences to the reference assembly
 
@@ -208,6 +267,7 @@ class Insert(object):
                 inspos = int(self._iesdict[ctg][i]['newstart'])
                 self._newgenome[ctg].seq = self._newgenome[ctg].seq[0:inspos] + \
                     insseq + self._newgenome[ctg].seq[inspos:]
+
 
     def _deleteSequences(self, dels):
         """
@@ -227,6 +287,7 @@ class Insert(object):
                 newseq += str(self._refgenome[seqid].seq[i[0]:i[1]])
             self._newgenome[seqid].seq = Seq(newseq)
 
+
     def reportInsertedReference(self):
         """Add IESs to reference genome, report modified MAC+IES assembly and
         GFF file containing updated positions
@@ -241,11 +302,15 @@ class Insert(object):
             dict of SeqRecords representing modified reference genome
         Gff
             IES records with updated region coords. Only the start and end
-            columns are changed, all other columns are inherited from the 
-            original GFF records
+            columns are changed, and the attributes for adjusted coordinates
+            relative to putative pointers or TA junctions: ta_pointer_start,
+            ta_pointer_end, pp_pointer_start, pp_pointer_end.
+
+            All other columns are inherited from the original GFF records
         """
         self._filterInserts()
         self._updatePositionsInserts()
+        self._updatePointerPositionsInserts() # update ta_pointer... pp_pointer...
         self._addSequences()
         # Count difference in size
         oldtotal = sum([len(self._refgenome[ctg].seq)
@@ -257,6 +322,7 @@ class Insert(object):
         logging.info(f"Modified contigs total length: {str(newtotal)}")
         logging.info(f"Total sequence length added: {str(addedlen)}")
         return(self._newgenome, self._newgff)
+
 
     def updateFeatureGff(self, annot):
         """Update coordinates of other annotations after filtering IES inserts
@@ -354,6 +420,7 @@ class Insert(object):
         """
         dels = self._filterDeletions()
         self._updatePositionsDeletions(dels)
+        self._updatePointerPositionsDeletions(dels)
         self._deleteSequences(dels)
         # Count difference in size
         oldtotal = sum([len(self._refgenome[ctg].seq)
