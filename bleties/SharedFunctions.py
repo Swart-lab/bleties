@@ -466,10 +466,7 @@ class Gff(object):
         # Make a dict of each GFF3 column name and value
         self._gffDict[idval] = dict(zip(SharedValues.GFF3COLUMNS, linearr))
         # Split attributes field into key-value pairs and make a dict of it
-        attrs = re.findall(r"([^;=]+)=([^;=]+)[;$]", linearr[8])
-        attrkeys = [match[0] for match in attrs]
-        attrvals = [match[1] for match in attrs]
-        attrdict = dict(zip(attrkeys, attrvals))
+        attrdict = {attr.split("=")[0] : attr.split("=")[1] for attr in linearr[8].rstrip(";").split(";")}
         self._gffDict[idval]['attrdict'] = attrdict
 
     def getValue(self, gffid, column):
@@ -547,7 +544,6 @@ class Gff(object):
         """
         if gffid in self._gffDict:
             if attribute in self._gffDict[gffid]['attrdict']:
-                print(f"Updating attribute {attribute} in {gffid} to {str(newvalue)}")
                 self._gffDict[gffid]['attrdict'][attribute] = newvalue
                 # Change attributes field
                 attrlist = [ attr + "=" + str(self._gffDict[gffid]['attrdict'][attr])
