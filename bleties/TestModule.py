@@ -172,7 +172,7 @@ class TestInsert(unittest.TestCase):
                "ctg2\t.\t.\t9\t9\t.\t.\t.\tID=ies3;",
                "ctg2\t.\t.\t15\t18\t.\t.\t.\tID=ies4;",
                "ctg3\t.\t.\t3\t3\t.\t.\t.\tID=ies5;",
-               "ctg3\t.\t.\t9\t9\t.\t.\t.\tID=ies6;ta_pointer_start=11;ta_pointer_end=11;"
+               "ctg3\t.\t.\t9\t9\t.\t.\t.\tID=ies6;ta_pointer_start=10;ta_pointer_end=10;"
                ]
     oldfeatures = ["ctg1\t.\tgene\t3\t7\t.\t.\t.\tID=gene1;key1=attr1;key2=attr2",
                    "ctg1\t.\tgene\t12\t15\t.\t.\t.\tID=gene2"
@@ -220,6 +220,7 @@ class TestInsert(unittest.TestCase):
         ins._updatePositionsInserts()
         ins._updatePointerPositionsInserts()
         ins._addSequences()
+        # print("\n".join(ins._newgff.gff2list())) # testing
         self.assertEqual(str(ins._newgff.getValue('ies6', 'start')), '15')
         self.assertEqual(str(ins._newgff.getValue('ies6', 'end')), '19')
         self.assertEqual(str(ins._newgff.getAttr('ies6', 'ta_pointer_start')), '16')
@@ -247,8 +248,8 @@ class TestInsert(unittest.TestCase):
         self.assertEqual(
             str(delfasta['ctg3'].seq),
             str(TestInsert.ref['ctg3'].seq))
-        self.assertEqual(str(delgff.getAttr('ies6', 'ta_pointer_start')), '11')
-        self.assertEqual(str(delgff.getAttr('ies6', 'ta_pointer_end')), '11')
+        self.assertEqual(str(delgff.getAttr('ies6', 'ta_pointer_start')), '10')
+        self.assertEqual(str(delgff.getAttr('ies6', 'ta_pointer_end')), '10')
 
 
 if __name__ == '__main__':
