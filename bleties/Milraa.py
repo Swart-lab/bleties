@@ -765,7 +765,11 @@ class IesRecords(object):
             if ctg not in self._refgenome:
                 logger.error(f"Sequence {ctg} not found in reference genome")
 
-            breakpointid = None
+            # Get average coverage of region of interest
+            if self._alnformat == "bam":
+                readcov = self._alnfile.count(
+                    str(ctg), start=int(ins_start) - 1, stop=int(ins_end),
+                    read_callback=lambda r: (not r.is_supplementary) and (not r.is_secondary))
 
             if ins_end == ins_start:
                 ins_seqs = []
@@ -805,6 +809,9 @@ class IesRecords(object):
                         # Report number of counts per insert length
                         attr.append(
                             "cigar=" + " ".join([str(l) + "I*" + str(counts[l]) for l in counts]))
+                        # append average coverage
+                        attr.append(f"average_coverage={str(readcov)}")
+                        provscore = round(totalcount/readcov, 4)
 
                         # Get indel consensus
                         if len(counts.keys()) == 1:  # cluster of one length
@@ -813,6 +820,23 @@ class IesRecords(object):
                         else:
                             # Otherwise use Muscle (potentially slower) to align
                             consseq = alnFromSeqs(clust)
+
+                        # Find pointers if present
+                        ins_start, ins_end, pointerdict = self.reportAdjustPointers(
+                            ctg, ins_start, ins_end, consseq, breakpointid)
+                        for i in pointerdict:
+                            attr.append(f"{i}={str(pointerdict[i])}")
+                        # Report consensus sequence
+                        consseq.id = breakpointid
+                        consseq.description = ";".join(attr)+";"
+                        outseq[consseq.id] = consseq
+                        # Add GFF entry
+                        outarr = [str(ctg), "MILRAA", gfftype, str(ins_start), str(ins_end),
+                                  str(provscore), ".", ".", ";".join(attr)+";"]
+                        gff.addEntry(outarr, None)
+                        counter += 1
+                        if counter % 1000 == 0:
+                            logger.info(f"Processed {counter} entries...")
 
             elif ins_end > ins_start:
                 del_len = ins_end - ins_start + 1  # GFF is end-inclusive
@@ -830,52 +854,29 @@ class IesRecords(object):
                     attr = [f"ID={breakpointid}",
                             f"IES_length={str(del_len)}"]
                     attr.append(f"cigar={str(del_len)}D*{str(totalcount)}")
+                    # append average coverage
+                    attr.append(f"average_coverage={str(readcov)}")
+                    provscore = round((readcov-totalcount)/readcov, 4)
+
+                    # Find pointers if present
+                    ins_start, ins_end, pointerdict = self.reportAdjustPointers(
+                        ctg, ins_start, ins_end, consseq, breakpointid)
+                    for i in pointerdict:
+                        attr.append(f"{i}={str(pointerdict[i])}")
+                    # Report consensus sequence
+                    consseq.id = breakpointid
+                    consseq.description = ";".join(attr)+";"
+                    outseq[consseq.id] = consseq
+                    # Add GFF entry
+                    outarr = [str(ctg), "MILRAA", gfftype, str(ins_start), str(ins_end),
+                              str(provscore), ".", ".", ";".join(attr)+";"]
+                    gff.addEntry(outarr, None)
+                    counter += 1
+                    if counter % 1000 == 0:
+                        logger.info(f"Processed {counter} entries...")
 
             else:
                 raise Exception("feature cannot start after it ends")
-
-            # Record to Gff
-            if breakpointid:
-                # Get average coverage of region of interest
-                if self._alnformat == "bam":
-                    readcov = self._alnfile.count(
-                        str(ctg), start=int(ins_start) - 1, stop=int(ins_end),
-                        read_callback=lambda r: (not r.is_supplementary) and (not r.is_secondary))
-                    attr.append(f"average_coverage={str(readcov)}")
-
-                # Provisional approximate IES retention score
-                # R = IES+ / (IES+ + IES-)
-                # here the denominator is simply average coverage
-                if readcov:
-                    if gfftype == "internal_eliminated_sequence_junction":
-                        provscore = round(totalcount/readcov, 4)
-                    elif gfftype == "internal_eliminated_sequence":
-                        # here deletions are counted
-                        provscore = round((readcov-totalcount)/readcov, 4)
-
-                # Find pointers if present
-                ins_start, ins_end, pointerdict = self.reportAdjustPointers(
-                    ctg, ins_start, ins_end, consseq, breakpointid)
-                for i in pointerdict:
-                    attr.append(f"{i}={str(pointerdict[i])}")
-
-                consseq.id = breakpointid
-                consseq.description = ";".join(attr)+";"
-                outseq[consseq.id] = consseq
-
-                outarr = [str(ctg),
-                          "MILRAA",
-                          gfftype,
-                          str(ins_start),
-                          str(ins_end),
-                          str(provscore),
-                          ".",
-                          ".",
-                          ";".join(attr)+";"]
-                gff.addEntry(outarr, None)
-                counter += 1
-                if counter % 1000 == 0:
-                    logger.info(f"Processed {counter} entries...")
 
         return(gff, outseq)
         # TODO Fuzzy cluster both the indel positions on ref and the ins lengths
