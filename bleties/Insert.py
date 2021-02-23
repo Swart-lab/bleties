@@ -185,22 +185,27 @@ class Insert(object):
             for start in self._iesdict[ctg]:
                 gffid = self._iesdict[ctg][start]['gffid']
                 offset = int(self._iesdict[ctg][start]['newstart']) - int(self._iesdict[ctg][start]['oldstart'])
+                # print(gffid) # testing
                 # print(f"Offset {str(offset)}") # testing
+                #
                 # Check for TA or pointer coordinates in attributes of GFF and 
                 # update with offset
                 tps = self._newgff.getAttr(gffid, 'ta_pointer_start')
                 pps = self._newgff.getAttr(gffid, 'pp_pointer_start')
                 newend = self._iesdict[ctg][start]['newend']
                 if tps:
-                    # do not minus 1 because for zero length features, the GFF
-                    # convention is to have feature on the right of the coord
+                    # plus 1 to starts because 'newstart' and 'newend' are
+                    # 0-based end exclusive coords, only converted to GFF
+                    # convention in self._newgff
                     tps_offset = int(tps) - int(self._iesdict[ctg][start]['oldstart'])
                     # print(f"tps offset {str(tps_offset)}") # testing
-                    self._newgff.changeAttr(gffid, 'ta_pointer_start', int(tps) + offset + tps_offset)
+                    # print(f"newstart {self._iesdict[ctg][start]['newstart']}")
+                    # print(f"newend {self._iesdict[ctg][start]['newend']}")
+                    self._newgff.changeAttr(gffid, 'ta_pointer_start', int(self._iesdict[ctg][start]['newstart']) + 1 + tps_offset)
                     self._newgff.changeAttr(gffid, 'ta_pointer_end', int(newend) + tps_offset)
                 if pps:
                     pps_offset = int(pps) - int(self._iesdict[ctg][start]['oldstart'])
-                    self._newgff.changeAttr(gffid, 'pp_pointer_start', int(pps) + offset + pps_offset)
+                    self._newgff.changeAttr(gffid, 'pp_pointer_start', int(self._iesdict[ctg][start]['newstart']) + 1 + pps_offset)
                     self._newgff.changeAttr(gffid, 'pp_pointer_end', int(newend) + pps_offset)
 
 

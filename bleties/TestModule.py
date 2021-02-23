@@ -160,19 +160,22 @@ class TestInsert(unittest.TestCase):
     # Class variables used by several tests
     ref = {'ctg1': SeqRecord(Seq('AAAAAAAAAAAAAAAAAAAA'), id='ctg1'),
            'ctg2': SeqRecord(Seq('GGGGGGGGGGGGGGGGGGGG'), id='ctg2'),
-           'ctg3': SeqRecord(Seq('CCCCCCCCCCTACCCCCCCC'), id='ctg3')
+           'ctg3': SeqRecord(Seq('CCCCCCCCCCTACCCCCCCC'), id='ctg3'),
+           'ctg4': SeqRecord(Seq('CCCCCCCCCCTACCCCCCCC'), id='ctg3')
            }
     ies = {'ies1': SeqRecord(Seq('TTTT'), id='ies1'),
            'ies2': SeqRecord(Seq('GGGGG'), id='ies2'),
            'ies3': SeqRecord(Seq('CCCCC'), id='ies3'),
            'ies5': SeqRecord(Seq('TTTTT'), id='ies5'),
-           'ies6': SeqRecord(Seq('CTAGG'), id='ies6')}
+           'ies6': SeqRecord(Seq('CTAGG'), id='ies6'),
+           'ies7': SeqRecord(Seq('TAGTG'), id='ies7')}
     gfflist = ["ctg1\t.\t.\t5\t5\t.\t.\t.\tID=ies1;",
                "ctg1\t.\t.\t9\t9\t.\t.\t.\tID=ies2;",
                "ctg2\t.\t.\t9\t9\t.\t.\t.\tID=ies3;",
                "ctg2\t.\t.\t15\t18\t.\t.\t.\tID=ies4;",
                "ctg3\t.\t.\t3\t3\t.\t.\t.\tID=ies5;",
-               "ctg3\t.\t.\t9\t9\t.\t.\t.\tID=ies6;ta_pointer_start=10;ta_pointer_end=10;"
+               "ctg3\t.\t.\t9\t9\t.\t.\t.\tID=ies6;ta_pointer_start=10;ta_pointer_end=10;",
+               "ctg4\t.\t.\t10\t10\t.\t.\t.\tID=ies7;ta_pointer_start=10;ta_pointer_end=10;"
                ]
     oldfeatures = ["ctg1\t.\tgene\t3\t7\t.\t.\t.\tID=gene1;key1=attr1;key2=attr2",
                    "ctg1\t.\tgene\t12\t15\t.\t.\t.\tID=gene2"
@@ -225,6 +228,10 @@ class TestInsert(unittest.TestCase):
         self.assertEqual(str(ins._newgff.getValue('ies6', 'end')), '19')
         self.assertEqual(str(ins._newgff.getAttr('ies6', 'ta_pointer_start')), '16')
         self.assertEqual(str(ins._newgff.getAttr('ies6', 'ta_pointer_end')), '20')
+        self.assertEqual(str(ins._newgff.getValue('ies7','start')), '11')
+        self.assertEqual(str(ins._newgff.getValue('ies7','end')), '15')
+        self.assertEqual(str(ins._newgff.getAttr('ies7','ta_pointer_start')), '11')
+        self.assertEqual(str(ins._newgff.getAttr('ies7','ta_pointer_end')), '15')
 
 
     def test_reportDeletedReference(self):
