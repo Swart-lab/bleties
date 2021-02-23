@@ -1353,7 +1353,7 @@ class IesRecords(object):
             return(None)
 
     def reportPutativeIesInsertSubreads(self, mininsbreaks, mindelbreaks,
-                                        margin=100, max_cluster_dist=2,
+                                        margin=100, max_cluster_dist=5,
                                         len_threshold=0.25):
         # TODO implement for deletions
         """Report putative IES inserts from subreads
@@ -1376,6 +1376,9 @@ class IesRecords(object):
             The first step is to look for inserts reported by the mapper that
             cluster together. This parameter sets the maximum distance (in bp)
             between insert coordinates to consider as part of the same cluster.
+            If the value is too low, then clusters of inserts which represent
+            the same IES may be erroneously grouped to separate clusters, and
+            appear as adjacent or overlapping IESs.
         len_threshold : float
             For the extracted sequences used to generate consensus, keep only
             those that are within a specific range of the median length. This

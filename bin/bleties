@@ -101,7 +101,7 @@ milraa_parser.add_argument(
     before taking consensus of flanking + insert to realign to reference.
     """)
 milraa_parser.add_argument(
-    "--subreads_pos_max_cluster_dist", default=2, type=int,
+    "--subreads_pos_max_cluster_dist", default=5, type=int,
     help="""
     In subreads mode, max distance (bp) between inserts reported by the mapper
     to report as a single cluster
