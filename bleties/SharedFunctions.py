@@ -525,7 +525,7 @@ class Gff(object):
                 return(self._gffDict[gffid]['attrdict'][attribute])
             else:
                 logger.debug(
-                    f"Unknown attribute {attribute} for GFF ID {gffid}")
+                    f"Attribute {attribute} not found for GFF ID {gffid}")
                 return(None)
         else:
             raise Exception("Unknown GFF3 ID " + gffid)
