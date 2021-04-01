@@ -153,6 +153,9 @@ PacBio HiFi Sequel II and may not work well with CCS reads from earlier PacBio
 generations with slightly higher error rates. `subreads` mode should work with
 CCS reads too.
 
+Diagram of MILRAA workflow for CCS reads vs. subreads:
+
+![MILRAA diagram](milraa_diagram.png)
 
 ### IES junction position and consensus sequence
 

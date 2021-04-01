@@ -81,6 +81,7 @@ Refer to the individual module pages for further information.
    reference genome to generate MAC+IES hybrid sequence. Also can perform the
    reverse operation.
 
+![BleTIES flowchart](bleties_flowchart.png)
 
 Citations
 ---------
