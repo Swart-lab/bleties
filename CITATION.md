@@ -6,6 +6,8 @@ the following way:
 
 (Citation pending)
 
+[![DOI](https://zenodo.org/badge/294123134.svg)](https://zenodo.org/badge/latestdoi/294123134)
+
 In addition, you should also cite the following dependencies that BleTIES is
 built upon: 
 

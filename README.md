@@ -3,6 +3,8 @@ Basic Long-read Enabled Toolkit for Interspersed DNA Elimination Studies (BleTIE
 
 ![BLETIES logo](./docs/bleties_logo.png)
 
+[![DOI](https://zenodo.org/badge/294123134.svg)](https://zenodo.org/badge/latestdoi/294123134)
+
 BleTIES is a tool for prediction and targeted assembly of internally eliminated
 sequences (IESs) in ciliate genomes, using single-molecule long read
 sequencing. The design and name of the software was inspired by
