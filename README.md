@@ -54,7 +54,10 @@ bleties miltel --help
 bleties insert --help
 ```
 
-Scripts for plotting and visualizing data are in the `scripts/` subfolder.
+Two scripts are available for plotting visualizations of MILRAA and MILCOR
+results: `milcor_plot.py` and `milraa_plot.py`.
+
+Additional useful scripts are in the folder `scripts/`
 
 Refer to the [full documentation](./docs/index.md) for more information.
 
