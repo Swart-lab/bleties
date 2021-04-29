@@ -10,15 +10,16 @@ and IES consensus sequences.
 
 The recommended aligner is [minimap2](https://github.com/lh3/minimap2), with
 the options `--secondary=no --MD`, with PacBio subreads/CLR reads (use option
-`-ax map-pb`) or CCS/HiFi reads (use option `-ax asm20`).
+`-ax map-pb`), or PacBio CCS/HiFi reads (use option `-ax asm20`) or Nanopore
+long reads (use option `ax map-ont`).
 
 
 Input data
 ----------
 
  * Ciliate MAC genome assembly, Fasta format.
- * PacBio read library mapping onto that assembly, sorted/indexed
-   BAM format; mapper should report valid CIGAR string and NM tag.
+ * Long read library mapping onto that assembly, sorted/indexed BAM format;
+   mapper should report valid CIGAR string and NM tag.
 
 
 Differences of long read to short read alignments
@@ -33,9 +34,8 @@ breakpoints in the alignment, which are identified as insert (I), soft clip
 The insert size for Illumina paired end libraries is typically 300-400 bp, so
 on average each read pair would span at most one IES. Most read pairs are
 unlikely to span a complete IES nor contain the entire IES sequence. In
-comparison, a PacBio long read with lengths 10 kbp or more may span multiple
-IESs, and the entire IES sequence can potentially be read out form the
-sequence.
+comparison, a long read with lengths 10 kbp or more may span multiple IESs, and
+the entire IES sequence can potentially be read out form the sequence.
 
 Therefore, MILRAA has the following differences to MIRAA:
 
@@ -43,7 +43,7 @@ Therefore, MILRAA has the following differences to MIRAA:
    one read as support for at most one IES.
  * Reads are not paired, so "insert size" is not an issue, and the entire insert
    sequence can be extracted from the reads.
- * However, the error rate of PacBio reads, even HiFi/CCS reads, is expected to
+ * However, the error rate of long reads, even HiFi/CCS reads, is expected to
    be higher, so extracted insert sequences are aligned to get a consensus IES
    sequence, and a minimum indel length is required for IES calling (because
    many short indels are expected from sequencing error).
@@ -153,9 +153,12 @@ PacBio HiFi Sequel II and may not work well with CCS reads from earlier PacBio
 generations with slightly higher error rates. `subreads` mode should work with
 CCS reads too.
 
+Uncorrected Nanopore reads should also be run with `--type subreads` mode.
+
 Diagram of MILRAA workflow for CCS reads vs. subreads:
 
 ![MILRAA diagram](milraa_diagram.png)
+
 
 ### IES junction position and consensus sequence
 

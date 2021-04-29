@@ -10,11 +10,10 @@ sequences (IESs) in ciliate genomes, using single-molecule long read
 sequencing. The design and name of the software was inspired by
 [ParTIES](https://github.com/oarnaiz/ParTIES).
 
-The required inputs are a ciliate MAC genome assembly, and a PacBio read
-library (subreads or error-corrected CCS reads) mapped onto that assembly. The
-mapper should report a valid CIGAR string and NM tag (for number of mismatches)
-per aligned read. Nanopore reads should in principle work as well, but have
-only been tested with simulated data.
+The required inputs are a ciliate MAC genome assembly, and a long read
+sequencing library (PacBio subreads or error-corrected CCS reads, or Nanopore
+reads) mapped onto that assembly. The mapper should report a valid CIGAR string
+and NM tag (for number of mismatches) per aligned read.
 
 
 Installation
