@@ -4,7 +4,7 @@ Blepharisma Toolbox for Interspersed DNA Elimination Studies (BleTIES)
 ![BLETIES logo](./bleties_logo.png)
 
 [![DOI](https://zenodo.org/badge/294123134.svg)](https://zenodo.org/badge/latestdoi/294123134)
-![Bioconda](https://img.shields.io/conda/vn/bioconda/bleties.svg)]
+![Bioconda](https://img.shields.io/conda/vn/bioconda/bleties.svg)
 ![License](https://img.shields.io/github/license/Swart-lab/bleties.svg)
 
 BleTIES is a tool for prediction and targeted assembly of internally eliminated
