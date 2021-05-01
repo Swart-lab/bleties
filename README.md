@@ -4,6 +4,8 @@ Basic Long-read Enabled Toolkit for Interspersed DNA Elimination Studies (BleTIE
 ![BLETIES logo](./docs/bleties_logo.png)
 
 [![DOI](https://zenodo.org/badge/294123134.svg)](https://zenodo.org/badge/latestdoi/294123134)
+![Bioconda](https://img.shields.io/conda/vn/bioconda/bleties.svg)]
+![License](https://img.shields.io/github/license/Swart-lab/bleties.svg)
 
 BleTIES is a tool for prediction and targeted assembly of internally eliminated
 sequences (IESs) in ciliate genomes, using single-molecule long read
@@ -19,14 +21,37 @@ and NM tag (for number of mismatches) per aligned read.
 Installation
 ------------
 
-Dependencies are specified as a Conda environment YAML file `env.yaml`. Create a
-Conda environment with the specified dependencies, then install bleties locally
-with `pip`:
+
+### Install released version with Conda
+
+The released versions are distributed via Bioconda, and can be installed with Conda:
 
 ```bash
-cd /path/to/bleties # path to this repo
-conda env create -f env.yaml -n bleties
+# Create new environment called "bleties"
+conda create -c conda-forge -c bioconda -n bleties bleties
+# Activate environment
 conda activate bleties
+# Check version and view help message
+bleties --version
+bleties --help
+# Run tests
+python -m unittest -v bleties.TestModule
+```
+
+
+### Install development version
+
+If you want to test the latest development version, clone this Git repository,
+then install with pip.
+
+Dependencies are specified as a Conda environment YAML file `env.yaml`. Create a
+Conda environment with the specified dependencies, then install with `pip`:
+
+```bash
+git clone git@github.com:Swart-lab/bleties.git
+cd bleties
+conda env create -f env.yaml -n bleties_dev
+conda activate bleties_dev
 pip install .
 ```
 
