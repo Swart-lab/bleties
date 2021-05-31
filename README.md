@@ -17,6 +17,8 @@ sequencing library (PacBio subreads or error-corrected CCS reads, or Nanopore
 reads) mapped onto that assembly. The mapper should report a valid CIGAR string
 and NM tag (for number of mismatches) per aligned read.
 
+Read more in our [preprint](https://doi.org/10.1101/2021.05.18.444610).
+
 
 Installation
 ------------
