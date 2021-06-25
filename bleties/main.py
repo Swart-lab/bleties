@@ -118,6 +118,7 @@ def run_boilerplate(logger):
 
 def milraa(args):
     logger = logging.getLogger("main.milraa")
+    logger.setLevel('DEBUG')
     run_boilerplate(logger)
     logger.info("Started BleTIES MILRAA")
 

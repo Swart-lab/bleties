@@ -1425,12 +1425,14 @@ class IesRecords(object):
                     jcs, rname, margin, 1.0-len_threshold, 1.0+len_threshold)
                 aln = None
                 if extr and coords:
-                    # logging.debug(f"contig {rname} coordinates {str(coords[0])} {str(coords[1])}")
+                    logging.debug(f"contig {rname} coordinates {str(coords[0])} {str(coords[1])}")
                     aln = self.spoaConsensusToFlanking(
-                        extr, rname, coords[0], coords[1], margin=100, mode=1)
+                        extr, rname, coords[0], coords[1], margin, mode=1)
                 if aln:
                     consseq, adjpos = findLongestInsert(
                         aln, rname, coords[0]-margin)
+                    logger.debug(f'consseq {str(consseq)}')
+                    logger.debug(f'adjpos {str(adjpos)}')
                     # Complain if predicted insert location from findLongestInsert
                     # is more than 5 bp away from the approximate insert location
                     problem = None
@@ -1482,6 +1484,8 @@ class IesRecords(object):
                         Seq(consseq), id=breakpointid, description=";".join(attr)+";")
                     # Find pointers if present
                     if len(consseq) > 0:
+                        logger.debug(f'report adjust pointers')
+                        logger.debug(f'rname {rname} gffpos {str(gffpos)} consseq {str(consseq.seq)} breakpointid {breakpointid}')
                         gffpos, gffpos, pointerdict = self.reportAdjustPointers(
                             rname, gffpos, gffpos, consseq, breakpointid)
                         for i in pointerdict:
