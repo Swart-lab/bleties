@@ -14,6 +14,12 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "--log", default="bleties.log", help="Path to write log file")
 parser.add_argument(
+    "--log_level", default="INFO",
+    help="""
+    Logging level; choose from: ERROR WARNING INFO DEBUG.
+    On screen messages will be at INFO level; see log file for DEBUG messages.
+    """)
+parser.add_argument(
     "-v", "--version", action="version", version=f"BleTIES {__version__}")
 parser.add_argument(
     "--check_env", action="store_true",
@@ -375,7 +381,7 @@ if args.check_env:
 # Logging
 logging.basicConfig(
     format='[%(asctime)s] %(name)-12s %(levelname)-8s %(message)s',
-    level=logging.DEBUG, filename=args.log, filemode="a")
+    level=args.log_level, filename=args.log, filemode="a")
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
 formatter = logging.Formatter("%(name)-24s %(levelname)-8s %(message)s")

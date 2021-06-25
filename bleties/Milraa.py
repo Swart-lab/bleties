@@ -1425,7 +1425,7 @@ class IesRecords(object):
                     jcs, rname, margin, 1.0-len_threshold, 1.0+len_threshold)
                 aln = None
                 if extr and coords:
-                    logging.debug(f"contig {rname} coordinates {str(coords[0])} {str(coords[1])}")
+                    logger.debug(f"contig {rname} coordinates {str(coords[0])} {str(coords[1])}")
                     aln = self.spoaConsensusToFlanking(
                         extr, rname, coords[0], coords[1], margin, mode=1)
                 if aln:
