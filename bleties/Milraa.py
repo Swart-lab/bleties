@@ -243,6 +243,7 @@ def getPointers(seq, start, end, iesseq, name):
         indel = "D"
         iesseq = seq[start-1: end]
     else:
+        logger.error(f'Start less than end for feature {name}')
         raise Exception(f"Start cannot be less than end, feature {name}")
 
     # Remove gap characters from ies sequence
@@ -251,21 +252,27 @@ def getPointers(seq, start, end, iesseq, name):
     elif isinstance(iesseq, SeqRecord):
         iesseq = iesseq.seq.ungap("-")
     else:
+        logger.error(f'iesseq not of type str or SeqRecord but is {str(type(iesseq))}')
         raise Exception(
-            f"iesseq must be of type str or SeqRecord but is {type(iesseq)}")
+            f"iesseq must be of type str or SeqRecord but is {str(type(iesseq))}")
 
     pointer = ""
     pointerstart, pointerend = start, end
     leftcheck = ""
     rightcheck = ""
     # check left of IES
-    i = 0
-    while iesseq[i] == seq[end+i]:
-        leftcheck += iesseq[i]
-        i += 1
-        # break out of loop if the next position runs off edge
-        if i >= len(iesseq) or end+i >= len(seq):
-            break
+    if end < len(seq):
+        # Do not check pointer if insert position at end of reference seq
+        i = 0
+        while iesseq[i] == seq[end+i]:
+            leftcheck += iesseq[i]
+            i += 1
+            # break out of loop if the next position runs off edge
+            if i >= len(iesseq) or end+i >= len(seq):
+                break
+    else:
+        logger.debug(
+            f'insert position {str(end)} at or beyond length of ref sequence {str(len(seq))}: skip check left pointer')
     # check right of IES
     i = -1
     if indel == "I":  # beacuse GFF puts zero-length features to right of coordinate
