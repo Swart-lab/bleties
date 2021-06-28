@@ -24,19 +24,19 @@ def check_env():
     # Get versions
     dep_vers = {}
     dep_vers['pysam'] = pysam.__version__
-    dep_vers['biopython'] =  biopython_v
+    dep_vers['biopython'] = biopython_v
     # Each program reports its version string differently
-    dep_vers['htslib'] = run(['htsfile','--version'], capture_output=True).stdout.decode().split("\n")[0]
+    dep_vers['htslib'] = run(['htsfile', '--version'], capture_output=True).stdout.decode().split("\n")[0]
     dep_vers['htslib'] = re.search(r"\(htslib\) (\S+)", dep_vers['htslib']).group(1)
-    dep_vers['spoa'] = run(['spoa','--version'], capture_output=True).stdout.decode().rstrip()
-    dep_vers['NCRF'] = run(['NCRF','--version'], capture_output=True).stderr.decode().split("\n")[0]
+    dep_vers['spoa'] = run(['spoa', '--version'], capture_output=True).stdout.decode().rstrip()
+    dep_vers['NCRF'] = run(['NCRF', '--version'], capture_output=True).stderr.decode().split("\n")[0]
     dep_vers['NCRF'] = re.search(r"version (\S+)", dep_vers['NCRF']).group(1)
-    dep_vers['muscle'] = run(['muscle','-version'], capture_output=True).stdout.decode().rstrip()
+    dep_vers['muscle'] = run(['muscle', '-version'], capture_output=True).stdout.decode().rstrip()
     dep_vers['muscle'] = re.search(r"v\S+", dep_vers['muscle']).group(0)
     # Get paths
     dep_paths = {}
     for prog in ['spoa', 'NCRF', 'muscle']:
-        dep_paths[prog] = run(['which',prog], capture_output=True).stdout.decode().rstrip()
+        dep_paths[prog] = run(['which', prog], capture_output=True).stdout.decode().rstrip()
     out = []
     for prog in dep_vers:
         if prog in dep_paths:
@@ -108,6 +108,7 @@ def read_bam_ref(bam, fasta=None):
 
 
 def run_boilerplate(logger):
+    """Basic info on BleTIES run for log"""
     logger.info(f"BleTIES {__version__}")
     logger.info("Dependencies: ")
     for dep in check_env():
