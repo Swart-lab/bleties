@@ -80,6 +80,9 @@ bleties miltel --help
 bleties insert --help
 ```
 
+The main module for IES reconstruction is MILRAA. At the moment, it only
+handles non-scrambled IESs.
+
 Two scripts are available for plotting visualizations of MILRAA and MILCOR
 results: `milcor_plot.py` and `milraa_plot.py`.
 

@@ -6,7 +6,8 @@ mapping of long sequencing reads onto a reference genome assembly. The reads
 must first be aligned to the reference, which is assumed to be somatic (MAC) but
 possibly with some IESs retained in the assembly. The alignment is assumed to be
 accurate. The outputs are the coordinates of the predicted IES indel positions,
-and IES consensus sequences.
+and IES consensus sequences. At the moment, MILRAA only handles non-scrambled
+IESs.
 
 The recommended aligner is [minimap2](https://github.com/lh3/minimap2), with
 the options `--secondary=no --MD`, with PacBio subreads/CLR reads (use option
