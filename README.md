@@ -15,7 +15,8 @@ sequencing. The design and name of the software was inspired by
 The required inputs are a ciliate MAC genome assembly, and a long read
 sequencing library (PacBio subreads or error-corrected CCS reads, or Nanopore
 reads) mapped onto that assembly. The mapper should report a valid CIGAR string
-and NM tag (for number of mismatches) per aligned read.
+and NM tag (for number of mismatches) per aligned read. The mapping is assumed
+to be accurate.
 
 Read more in our [preprint](https://doi.org/10.1101/2021.05.18.444610).
 

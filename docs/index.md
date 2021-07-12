@@ -19,7 +19,7 @@ Input data
  * Ciliate MAC genome assembly, Fasta format.
  * Long read library (PacBio subreads or CCS, Nanopore reads) mapping onto that
    assembly, sorted/indexed BAM format; mapper should report valid CIGAR string
-   and NM tag.
+   and NM tag. The mapping is assumed to be accurate.
 
 
 Installation

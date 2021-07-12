@@ -223,6 +223,22 @@ the output Fasta file (with the `-` character), but gaps are ignored when
 predicting a pointer sequence.
 
 
+Potential limitations of MILRAA
+-------------------------------
+
+ * Scrambled IESs are not supported. Depending on the software, these are
+   likely to be reported by the mapper as clips in the alignment.
+ * Accurate mapping is assumed. Mismappings may result in misprediction of
+   IESs. These can be caused by long repetitive elements in the genome, e.g.
+   paralogs, mobile elements, and genome duplication events. Repeat annotation
+   on the reference assembly is recommended. IES predictions that fall within
+   repetitive regions should be treated with caution.
+ * Long IESs (longer than average read length) are less likely to be predicted
+   and assembled, because MILRAA only considers reads that completely span
+   potential IESs. Therefore, retention scores for long IESs will potentially
+   also be underestimated.
+
+
 Output
 ------
 
