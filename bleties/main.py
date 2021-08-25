@@ -509,19 +509,28 @@ def insert(args):
     if re.match(r"ins", args.mode):
         ies = SeqIO.to_dict(SeqIO.parse(args.iesfasta, "fasta"))
         logger.info(
-            f"Inserting IESs to MAC reference to make MAC+IES hybrid reference")
+            "Inserting IESs to MAC reference to make MAC+IES hybrid reference")
         ins = Insert.Insert(refgenome, gff, ies)
         newrefgenome, newgff = ins.reportInsertedReference()
         if args.featuregff:
             logger.info(
                 f"Updating coords in feature table {args.featuregff}")
-            featuregff = SharedFunctions.Gff()
-            featuregff.file2gff(args.featuregff)
-            newfeaturegff = ins.updateFeatureGff(featuregff)
+            # Slurp file into memory as list of lists
+            with open(args.featuregff, 'r') as fh:
+                feats = [line.rstrip().split("\t")
+                         for line in fh
+                         if line[0] != '#'
+                         and len(line.rstrip().split("\t")) == 9]
+            # Update coordinates of feature table to account for inserted IESs
+            newfeaturegff = ins.updateFeatureGff(feats)
             outfeaturegff = f"{args.out}.iesplus.feature_table.gff"
             logger.info(
                 f"Writing new feature table to {outfeaturegff}")
-            newfeaturegff.gff2file(outfeaturegff, header=True)
+            with open(outfeaturegff, 'w') as fh:
+                fh.write("##gff-version 3\n")
+                for line in newfeaturegff:
+                    fh.write("\t".join(line))
+                    fh.write("\n")
         outfasta = f"{args.out}.iesplus.fasta"
         outgff = f"{args.out}.iesplus.gff"
     elif re.match(r"del", args.mode):
