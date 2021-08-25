@@ -177,8 +177,11 @@ class TestInsert(unittest.TestCase):
                "ctg3\t.\t.\t9\t9\t.\t.\t.\tID=ies6;ta_pointer_start=10;ta_pointer_end=10;",
                "ctg4\t.\t.\t10\t10\t.\t.\t.\tID=ies7;ta_pointer_start=10;ta_pointer_end=10;"
                ]
+    # feature table relative to old coordinates to be updated
     oldfeatures = ["ctg1\t.\tgene\t3\t7\t.\t.\t.\tID=gene1;key1=attr1;key2=attr2",
-                   "ctg1\t.\tgene\t12\t15\t.\t.\t.\tID=gene2"
+                   "ctg1\t.\tgene\t12\t15\t.\t.\t.\tID=gene2",
+                   "ctg1\t.\tCDS\t3\t7\t.\t+\t0\tID=cds1;key1=attr1;key2=attr2",
+                   "ctg1\t.\tCDS\t12\t15\t.\t+\t0\tID=cds1"
                    ]
 
 
@@ -201,18 +204,23 @@ class TestInsert(unittest.TestCase):
         ins = Insert.Insert(TestInsert.ref, iesgff, TestInsert.ies)
         ins._filterInserts()
         ins._updatePositionsInserts()
-        annotgff = SharedFunctions.Gff()
-        annotgff.list2gff(TestInsert.oldfeatures)
-        newgff = ins.updateFeatureGff(annotgff)
+        feats = [i.split("\t") for i in TestInsert.oldfeatures]
+        newgff = ins.updateFeatureGff(feats)
         self.assertEqual(
-            [str(i) for i in newgff.getEntry('gene1.seg_0')],
-            ['ctg1','.','gene','3','5','.','.','.','ID=gene1.seg_0;key1=attr1;key2=attr2'])
+            [[str(elem) for elem in i] for i in newgff if re.match('ID=gene1.seg_0;', i[8])],
+            [['ctg1','.','gene','3','5','.','.','.','ID=gene1.seg_0;key1=attr1;key2=attr2']])
         self.assertEqual(
-            [str(i) for i in newgff.getEntry('gene1.seg_1')],
-            ['ctg1','.','gene','10','11','.','.','.','ID=gene1.seg_1;key1=attr1;key2=attr2'])
+            [[str(elem) for elem in i] for i in newgff if re.match('ID=gene1.seg_1;', i[8])],
+            [['ctg1','.','gene','10','11','.','.','.','ID=gene1.seg_1;key1=attr1;key2=attr2']])
         self.assertEqual(
-            [str(i) for i in newgff.getEntry('gene2')],
-            ['ctg1','.','gene','21','24','.','.','.','ID=gene2'])
+            [[str(elem) for elem in i] for i in newgff if re.match('ID=gene2', i[8])],
+            [['ctg1','.','gene','21','24','.','.','.','ID=gene2']])
+        # Test multi-segment feature spanning several lines
+        self.assertEqual(
+            [[str(elem) for elem in i] for i in newgff if re.match('ID=cds1', i[8])],
+            [['ctg1','.','CDS','3','5','.','+','0','ID=cds1.seg_0;key1=attr1;key2=attr2'],
+             ['ctg1','.','CDS','10','11','.','+','0','ID=cds1.seg_1;key1=attr1;key2=attr2'],
+             ['ctg1','.','CDS','21','24','.','+','0','ID=cds1']])
 
 
     def test_updateFeatureGff_tapointer(self):
