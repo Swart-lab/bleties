@@ -331,7 +331,7 @@ class Insert(object):
         return(self._newgenome, self._newgff)
 
 
-    def updateFeatureGff(self, annot):
+    def updateFeatureGff(self, feats):
         """Update coordinates of other annotations after filtering IES inserts
 
         Run this after _updatePositionsInserts().This function only works with
@@ -341,42 +341,51 @@ class Insert(object):
 
         Parameters
         ----------
-        annot : Gff
-            Genomic features with coordinates to be updated
+        feats : list
+            list of lists; each element represents single GFF3 line split on
+            tabs into columns
 
         Returns
         -------
-        Gff
-            Feature table with updated coordinates
+        list
+            list of lists; each element represents single GFF3 line. Do not use
+            the SharedFunctions.Gff class because that implementation does not
+            account for multi-segment features with the same ID but split
+            across several lines.
         """
-        newgff = Gff()
+        newgff = []
         for ctg in self._iesdict:
-            featids = [gffid for gffid in annot._gffDict if annot.getValue(gffid, 'seqid') == ctg]
-            for featid in featids:
-                featlist = annot.getEntry(featid)
+            for feat in [f for f in feats if f[0] == ctg]:
+                # Get ID from attributes
+                attrdict = {attr.strip().split('=')[0] : attr.strip().split('=')[1]
+                            for attr in feat[8].split(';') if attr}
+                featid = attrdict['ID']
                 # add up all offsets before this feature
                 offset = sum([int(self._iesdict[ctg][i]['seqlen']) 
                               for i in self._iesdict[ctg] 
-                              if int(i) < int(annot.getValue(featid, 'start'))])
+                              if int(i) < int(feat[3])])
                 # check if any IES inserts fall inside the feature
-                istart = int(annot.getValue(featid, 'start'))
-                iend = int(annot.getValue(featid, 'end'))
-                # get start positions of each IES feature that is inside this 
-                # feature
+                istart = int(feat[3])
+                iend = int(feat[4])
+                # get start positions of each IES feature that is inside
+                # this feature
                 iesinsides = [int(i) for i in self._iesdict[ctg]
                               if int(i) >= istart and int(i) < iend]
                 iesinsides = sorted(iesinsides)
-                insidelen = sum([int(self._iesdict[ctg][str(i)]['seqlen']) for i in iesinsides])
+                insidelen = sum([int(self._iesdict[ctg][str(i)]['seqlen'])
+                                 for i in iesinsides])
                 # new start position
                 newints = [istart + offset]
-                # update coordinates with complement of new IES feature positions
-                for i in iesinsides: # already sorted
+                # update coordinates with complement of new IES feature
+                # positions
+                for i in iesinsides:  # already sorted
                     # the following are already in GFF-coordinates
                     newints.append(self._iesdict[ctg][str(i)]['newstart'])
                     newints.append(self._iesdict[ctg][str(i)]['newend'] + 1)
                 # new end position
                 newints.append(iend + insidelen + offset)
-                # split to tuples of start-end coords for non-IES complement ranges
+                # split to tuples of start-end coords for non-IES complement
+                # ranges
                 newints_tuples = []
                 for i in range(int(len(newints)/2)):
                     newints_tuples.append((newints[i*2], newints[i*2 + 1]))
@@ -384,27 +393,24 @@ class Insert(object):
                     # feature is interrupted by IESs, split into segments
                     for j in range(len(newints_tuples)):
                         newfeatid = featid + '.seg_' + str(j)
-                        # split attributes field and rename ID value if present
-                        attrdict = {attr.strip().split('=')[0] : attr.strip().split('=')[1]
-                                    for attr in featlist[8].split(';') if attr}
                         # Updates ID field if present, adds it if not
                         attrdict['ID'] = newfeatid
                         newattr = ';'.join([str(key) + '=' + str(attrdict[key])
                                             for key in attrdict])
                         # new GFF entry as list
-                        newfeat = featlist[0:3] + \
-                                  [newints_tuples[j][0], newints_tuples[j][1]] + \
-                                  featlist[5:8] + [newattr]
+                        newfeat = feat[0:3] + \
+                            [newints_tuples[j][0], newints_tuples[j][1]] + \
+                            feat[5:8] + [newattr]
                         # add entry to new Gff object
-                        newgff.addEntry(newfeat, newfeatid)
+                        newgff.append(newfeat)
                 else:
                     # new interval comprises only the new start and end, 
                     # the feature is not broken up into segments
                     # feature ID remains the same
-                    newfeat = featlist[0:3] + \
-                              [newints_tuples[0][0], newints_tuples[0][1]] + \
-                              featlist[5:9]
-                    newgff.addEntry(newfeat, featid)
+                    newfeat = feat[0:3] + \
+                        [newints_tuples[0][0], newints_tuples[0][1]] + \
+                        feat[5:9]
+                    newgff.append(newfeat)
         return(newgff)
 
     def reportDeletedReference(self):
