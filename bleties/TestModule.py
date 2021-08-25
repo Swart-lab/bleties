@@ -161,7 +161,7 @@ class TestInsert(unittest.TestCase):
     ref = {'ctg1': SeqRecord(Seq('AAAAAAAAAAAAAAAAAAAA'), id='ctg1'),
            'ctg2': SeqRecord(Seq('GGGGGGGGGGGGGGGGGGGG'), id='ctg2'),
            'ctg3': SeqRecord(Seq('CCCCCCCCCCTACCCCCCCC'), id='ctg3'),
-           'ctg4': SeqRecord(Seq('CCCCCCCCCCTACCCCCCCC'), id='ctg3')
+           'ctg4': SeqRecord(Seq('CCCCCCCCCCTACCCCCCCC'), id='ctg4')
            }
     ies = {'ies1': SeqRecord(Seq('TTTT'), id='ies1'),
            'ies2': SeqRecord(Seq('GGGGG'), id='ies2'),
