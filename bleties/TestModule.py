@@ -205,13 +205,11 @@ class TestInsert(unittest.TestCase):
         ins._filterInserts()
         ins._updatePositionsInserts()
         feats = [i.split("\t") for i in TestInsert.oldfeatures]
-        newgff = ins.updateFeatureGff(feats)
+        newgff = ins.updateFeatureGff(feats, addsuffix=True)
         self.assertEqual(
-            [[str(elem) for elem in i] for i in newgff if re.match('ID=gene1.seg_0;', i[8])],
-            [['ctg1','.','gene','3','5','.','.','.','ID=gene1.seg_0;key1=attr1;key2=attr2']])
-        self.assertEqual(
-            [[str(elem) for elem in i] for i in newgff if re.match('ID=gene1.seg_1;', i[8])],
-            [['ctg1','.','gene','10','11','.','.','.','ID=gene1.seg_1;key1=attr1;key2=attr2']])
+            [[str(elem) for elem in i] for i in newgff if re.match('ID=gene1.', i[8])],
+            [['ctg1','.','gene','3','5','.','.','.','ID=gene1.seg_0;key1=attr1;key2=attr2'],
+             ['ctg1','.','gene','10','11','.','.','.','ID=gene1.seg_1;key1=attr1;key2=attr2']])
         self.assertEqual(
             [[str(elem) for elem in i] for i in newgff if re.match('ID=gene2', i[8])],
             [['ctg1','.','gene','21','24','.','.','.','ID=gene2']])
@@ -221,6 +219,12 @@ class TestInsert(unittest.TestCase):
             [['ctg1','.','CDS','3','5','.','+','0','ID=cds1.seg_0;key1=attr1;key2=attr2'],
              ['ctg1','.','CDS','10','11','.','+','0','ID=cds1.seg_1;key1=attr1;key2=attr2'],
              ['ctg1','.','CDS','21','24','.','+','0','ID=cds1']])
+        # Test feature without added suffix
+        newgff_nosuffix = ins.updateFeatureGff(feats, addsuffix=False)
+        self.assertEqual(
+            [[str(elem) for elem in i] for i in newgff_nosuffix if re.match('ID=gene1;', i[8])],
+            [['ctg1','.','gene','3','5','.','.','.','ID=gene1;key1=attr1;key2=attr2'],
+             ['ctg1','.','gene','10','11','.','.','.','ID=gene1;key1=attr1;key2=attr2']])
 
 
     def test_updateFeatureGff_tapointer(self):

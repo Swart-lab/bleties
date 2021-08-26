@@ -331,7 +331,7 @@ class Insert(object):
         return(self._newgenome, self._newgff)
 
 
-    def updateFeatureGff(self, feats):
+    def updateFeatureGff(self, feats, addsuffix=False):
         """Update coordinates of other annotations after filtering IES inserts
 
         Run this after _updatePositionsInserts().This function only works with
@@ -344,6 +344,8 @@ class Insert(object):
         feats : list
             list of lists; each element represents single GFF3 line split on
             tabs into columns
+        addsuffix : bool
+            Add suffix ".seg_#" to each split feature's ID?
 
         Returns
         -------
@@ -392,7 +394,10 @@ class Insert(object):
                 if len(newints_tuples) > 1:
                     # feature is interrupted by IESs, split into segments
                     for j in range(len(newints_tuples)):
-                        newfeatid = featid + '.seg_' + str(j)
+                        newfeatid = featid
+                        # Add suffix ".seg_#" if requested
+                        if addsuffix:
+                            newfeatid = featid + '.seg_' + str(j)
                         # Updates ID field if present, adds it if not
                         attrdict['ID'] = newfeatid
                         newattr = ';'.join([str(key) + '=' + str(attrdict[key])

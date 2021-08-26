@@ -360,10 +360,15 @@ insert_parser.add_argument(
     "--featuregff", type=str,
     help="""
     Optional: GFF file of features annotated on the MAC reference genome.
-    Coordinates will be updated after addition of IESs. If IES fall within a
-    feature, it will be split into multiple segments, given ID prefix .seg_0,
-    .seg_1, et seq. Not applicable when run in delete mode.
+    Coordinates will be updated after addition of IESs. Not applicable when run
+    in delete mode.
     """)
+insert_parser.add_argument(
+    "--addsuffix", action="store_true",
+    help="""
+    Optional: If feature is split because IES is inserted within it, number the
+    segments with ID suffix .seg_0, .seg_1, et seq. in the GFF output file.
+    Only relevant if --featuregff is specified."""
 
 # Output arguments
 insert_parser.add_argument(

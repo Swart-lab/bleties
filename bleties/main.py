@@ -522,7 +522,7 @@ def insert(args):
                          if line[0] != '#'
                          and len(line.rstrip().split("\t")) == 9]
             # Update coordinates of feature table to account for inserted IESs
-            newfeaturegff = ins.updateFeatureGff(feats)
+            newfeaturegff = ins.updateFeatureGff(feats, args.addsuffix)
             outfeaturegff = f"{args.out}.iesplus.feature_table.gff"
             logger.info(
                 f"Writing new feature table to {outfeaturegff}")
