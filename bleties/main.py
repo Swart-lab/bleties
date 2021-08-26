@@ -529,7 +529,7 @@ def insert(args):
             with open(outfeaturegff, 'w') as fh:
                 fh.write("##gff-version 3\n")
                 for line in newfeaturegff:
-                    fh.write("\t".join(line))
+                    fh.write("\t".join([str(i) for i in line]))
                     fh.write("\n")
         outfasta = f"{args.out}.iesplus.fasta"
         outgff = f"{args.out}.iesplus.gff"
