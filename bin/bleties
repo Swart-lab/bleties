@@ -368,7 +368,8 @@ insert_parser.add_argument(
     help="""
     Optional: If feature is split because IES is inserted within it, number the
     segments with ID suffix .seg_0, .seg_1, et seq. in the GFF output file.
-    Only relevant if --featuregff is specified."""
+    Only relevant if --featuregff is specified.
+    """)
 
 # Output arguments
 insert_parser.add_argument(
