@@ -18,7 +18,7 @@ reads) mapped onto that assembly. The mapper should report a valid CIGAR string
 and NM tag (for number of mismatches) per aligned read. The mapping is assumed
 to be accurate.
 
-Read more in our [preprint](https://doi.org/10.1101/2021.05.18.444610).
+Read more in our [paper](https://doi.org/10.1093/bioinformatics/btab613).
 
 
 Installation

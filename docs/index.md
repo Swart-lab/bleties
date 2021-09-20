@@ -116,5 +116,9 @@ Refer to the individual module pages for further information.
 Citations
 ---------
 
-BleTIES is research software. Please [cite us](../CITATION.md) if you use the
+BleTIES is research software. Please [cite us](CITATION.md) if you use the
 software in a publication.
+
+> Brandon K. B. Seah, Estienne C. Swart. (2021) BleTIES: Annotation of natural
+> genome editing in ciliates using long read sequencing. *Bioinformatics*
+> btab613; doi: https://doi.org/10.1093/bioinformatics/btab613
