@@ -102,7 +102,7 @@ Refer to the individual module pages for further information.
    the list of putative IES junctions (experimental!).
  * [MILRET](milret.md) -- Use curated IES junctions, or IES junction
    coordinates from third-party tools, to calculate IES retention scores from
-   mapping of CCS reads to a reference MAC assembly.
+   mapping of CCS reads to a reference MAC (IES-) assembly.
  * [MILCOR](milcor.md) -- Calculate per-read IES retention scores and bin reads
    as MIC/MAC in origin, from mapping of CCS reads to MAC assembly.
  * [MILTEL](miltel.md) -- Identify potential chromosome breakage sites with

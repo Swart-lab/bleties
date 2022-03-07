@@ -10,7 +10,7 @@ Inputs
 ------
 
  * Mapping of PacBio HiFi/CCS reads to reference genome
- * Reference assembly
+ * Reference MAC assembly (IES-, without IES sequences inserted)
  * Feature table (GFF3) of IES junctions, either from [MILRAA](milraa.md)
    output or third party tool
 

@@ -205,7 +205,8 @@ milret_parser.add_argument(
 milret_parser.add_argument(
     "--ref",
     help="""
-    FASTA file containing genomic contigs used as reference for the mapping""")
+    FASTA file containing MAC genomic contigs (without IESs) used as reference
+    for the mapping""")
 milret_parser.add_argument(
     "--ies",
     help="""
